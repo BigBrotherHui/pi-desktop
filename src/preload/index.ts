@@ -15,6 +15,7 @@ import type {
   InstalledPackage,
   InstalledSkill,
   CatalogPackage,
+  PackageUpdate,
   FileTreeNode,
   FileSearchResult,
   FileChangeEvent,
@@ -188,7 +189,9 @@ interface PiDesktopAPI {
     listInstalled(): Promise<InstalledPackage[]>
     install(spec: string): Promise<{ success: boolean; output: string }>
     remove(spec: string): Promise<{ success: boolean; output: string }>
-    update(spec?: string): Promise<{ success: boolean; output: string }>
+    update(spec: string): Promise<{ success: boolean; output: string }>
+    updateAll(): Promise<{ success: boolean; output: string }>
+    checkUpdates(): Promise<PackageUpdate[]>
     fetchCatalog(query?: string): Promise<CatalogPackage[]>
   }
 
@@ -442,6 +445,8 @@ const api: PiDesktopAPI = {
     install: (spec) => ipcRenderer.invoke(IPC_CHANNELS.PACKAGE_INSTALL, spec),
     remove: (spec) => ipcRenderer.invoke(IPC_CHANNELS.PACKAGE_REMOVE, spec),
     update: (spec) => ipcRenderer.invoke(IPC_CHANNELS.PACKAGE_UPDATE, spec),
+    updateAll: () => ipcRenderer.invoke(IPC_CHANNELS.PACKAGE_UPDATE_ALL),
+    checkUpdates: () => ipcRenderer.invoke(IPC_CHANNELS.PACKAGE_CHECK_UPDATES),
     fetchCatalog: (query) => ipcRenderer.invoke(IPC_CHANNELS.PACKAGE_CATALOG_FETCH, query),
   },
 

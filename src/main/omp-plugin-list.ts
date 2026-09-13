@@ -14,21 +14,8 @@ import type { InstalledPackage } from '../shared/ipc-contracts'
  * `omp plugin uninstall` expects, so it doubles as the row's source.
  */
 export function parseOmpPluginList(output: string, pluginsDir: string): InstalledPackage[] {
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(output)
-  } catch {
-    // The CLI may prefix warnings; retry on the outermost JSON object.
-    const start = output.indexOf('{')
-    const end = output.lastIndexOf('}')
-    if (start === -1 || end <= start) return []
-    try {
-      parsed = JSON.parse(output.slice(start, end + 1))
-    } catch {
-      return []
-    }
-  }
-  if (typeof parsed !== 'object' || parsed === null) return []
+  const parsed = parseListJson(output)
+  if (!parsed) return []
 
   const packages: InstalledPackage[] = []
   for (const entries of Object.values(parsed)) {
@@ -39,6 +26,62 @@ export function parseOmpPluginList(output: string, pluginsDir: string): Installe
     }
   }
   return packages
+}
+
+/**
+ * An npm-installed OMP plugin with the runtime state a reinstall resets:
+ * `omp install` re-enables the plugin and replaces its feature selection, so
+ * an update must carry both across. `enabledFeatures` is null when the plugin
+ * runs its default features.
+ */
+export interface OmpNpmPlugin {
+  name: string
+  version: string | null
+  enabled: boolean
+  enabledFeatures: string[] | null
+}
+
+/** The `npm` rows of `omp plugin list --json`; marketplace rows are skipped. */
+export function parseOmpNpmPlugins(output: string): OmpNpmPlugin[] {
+  const parsed = parseListJson(output)
+  const rows = parsed?.npm
+  if (!Array.isArray(rows)) return []
+
+  const plugins: OmpNpmPlugin[] = []
+  for (const row of rows) {
+    if (typeof row !== 'object' || row === null) continue
+    const e = row as Record<string, unknown>
+    const name = nonEmptyString(e.name)
+    if (!name) continue
+    plugins.push({
+      name,
+      version: nonEmptyString(e.version),
+      enabled: e.enabled !== false,
+      enabledFeatures: Array.isArray(e.enabledFeatures)
+        ? e.enabledFeatures.filter((feature): feature is string => typeof feature === 'string')
+        : null,
+    })
+  }
+  return plugins
+}
+
+function parseListJson(output: string): Record<string, unknown> | null {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(output)
+  } catch {
+    // The CLI may prefix warnings; retry on the outermost JSON object.
+    const start = output.indexOf('{')
+    const end = output.lastIndexOf('}')
+    if (start === -1 || end <= start) return null
+    try {
+      parsed = JSON.parse(output.slice(start, end + 1))
+    } catch {
+      return null
+    }
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null
+  return parsed as Record<string, unknown>
 }
 
 function ompPluginEntry(entry: unknown, pluginsDir: string): InstalledPackage | null {

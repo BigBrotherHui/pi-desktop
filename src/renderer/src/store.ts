@@ -41,6 +41,7 @@ import type {
   InstalledPackage,
   InstalledSkill,
   CatalogPackage,
+  PackageUpdate,
   TimelineEvent,
   PermissionMode,
   Note,
@@ -347,9 +348,11 @@ interface AppState {
   // Packages
   installedPackages: InstalledPackage[]
   catalogPackages: CatalogPackage[]
-  packageLoading: boolean // install/remove operations (affects the Installed tab)
+  packageLoading: boolean // install/remove/update operations (affects the Installed tab)
   catalogLoading: boolean // catalog crawl (Catalog tab only)
   packageNotification: { type: 'success' | 'error'; message: string } | null
+  packageUpdates: PackageUpdate[] // installed packages with a newer registry version
+  packageUpdatesChecking: boolean
 
   // Skills
   installedSkills: InstalledSkill[]
@@ -545,6 +548,9 @@ interface AppActions {
   loadInstalledPackages: () => Promise<void>
   installPackage: (spec: string) => Promise<void>
   removePackage: (spec: string) => Promise<void>
+  updatePackage: (spec: string) => Promise<void>
+  updateAllPackages: () => Promise<void>
+  checkPackageUpdates: () => Promise<void>
   loadCatalog: () => Promise<void>
   clearPackageNotification: () => void
 
@@ -789,8 +795,8 @@ function closeMostRecentRunning(
 
 // ─── Store ───────────────────────────────────────────────────────────────────
 
-type CouncilStoreGet = () => AppState & AppActions
-type CouncilStoreSet = (partial: Partial<AppState & AppActions>) => void
+type StoreGet = () => AppState & AppActions
+type StoreSet = (partial: Partial<AppState & AppActions>) => void
 
 interface ArbiterStepBase {
   request: string
@@ -806,8 +812,8 @@ interface ArbiterStepBase {
 async function runArbiterStep(
   payload: CouncilArbiterRequest,
   base: ArbiterStepBase,
-  get: CouncilStoreGet,
-  set: CouncilStoreSet,
+  get: StoreGet,
+  set: StoreSet,
 ): Promise<{ plan?: string; error?: string }> {
   set({ councilRun: { phase: 'merging', request: base.request, results: base.results, consensus: '' } })
   const unsubscribe = window.piDesktop.council.onProgress(({ chunk }) => {
@@ -824,6 +830,38 @@ async function runArbiterStep(
     unsubscribe()
   }
 }
+
+/**
+ * Run one package install/remove/update under the Installed tab's shared
+ * loading flag and notification banner. The list refreshes even on failure:
+ * a multi-package update can fail after changing some packages.
+ */
+async function runPackageMutation(
+  get: StoreGet,
+  set: StoreSet,
+  mutation: () => Promise<{ success: boolean; output: string }>,
+  successMessage: string,
+  failureMessage: string,
+): Promise<void> {
+  set({ packageLoading: true, packageNotification: null })
+  try {
+    const result = await mutation()
+    await get().loadInstalledPackages()
+    set({
+      packageNotification: result.success
+        ? { type: 'success', message: successMessage }
+        : { type: 'error', message: result.output || failureMessage },
+    })
+  } catch (err) {
+    set({ packageNotification: { type: 'error', message: err instanceof Error ? err.message : String(err) } })
+  } finally {
+    set({ packageLoading: false })
+  }
+}
+
+// Only the newest update check may write its result: a check started before an
+// update finished would otherwise overwrite the fresh one with stale versions.
+let latestPackageUpdateCheck = 0
 
 export const useAppStore = create<AppState & AppActions>((set, get) => ({
   // ─── Initial State ────────────────────────────────────────────────────
@@ -889,6 +927,8 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
   packageLoading: false,
   catalogLoading: false,
   packageNotification: null,
+  packageUpdates: [],
+  packageUpdatesChecking: false,
 
   installedSkills: [],
 
@@ -2774,37 +2814,52 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
     }
   },
 
-  installPackage: async (spec) => {
-    set({ packageLoading: true, packageNotification: null })
-    try {
-      const result = await window.piDesktop.packages.install(spec)
-      if (result.success) {
-        await get().loadInstalledPackages()
-        set({ packageNotification: { type: 'success', message: `Installed ${spec}. Restart Pi to load it.` } })
-      } else {
-        set({ packageNotification: { type: 'error', message: result.output || 'Install failed' } })
-      }
-    } catch (err) {
-      set({ packageNotification: { type: 'error', message: err instanceof Error ? err.message : String(err) } })
-    } finally {
-      set({ packageLoading: false })
-    }
+  installPackage: (spec) =>
+    runPackageMutation(
+      get,
+      set,
+      () => window.piDesktop.packages.install(spec),
+      `Installed ${spec}. Restart Pi to load it.`,
+      'Install failed',
+    ),
+
+  removePackage: (spec) =>
+    runPackageMutation(get, set, () => window.piDesktop.packages.remove(spec), `Removed ${spec}`, 'Remove failed'),
+
+  // Updates re-check afterwards, even on failure, since an "Update all" can
+  // partly succeed.
+  updatePackage: async (spec) => {
+    await runPackageMutation(
+      get,
+      set,
+      () => window.piDesktop.packages.update(spec),
+      `Updated ${spec}. Restart Pi to load it.`,
+      'Update failed',
+    )
+    await get().checkPackageUpdates()
   },
 
-  removePackage: async (spec) => {
-    set({ packageLoading: true, packageNotification: null })
+  updateAllPackages: async () => {
+    await runPackageMutation(
+      get,
+      set,
+      () => window.piDesktop.packages.updateAll(),
+      'Updated packages. Restart Pi to load them.',
+      'Update failed',
+    )
+    await get().checkPackageUpdates()
+  },
+
+  checkPackageUpdates: async () => {
+    const checkId = ++latestPackageUpdateCheck
+    set({ packageUpdatesChecking: true })
     try {
-      const result = await window.piDesktop.packages.remove(spec)
-      if (result.success) {
-        await get().loadInstalledPackages()
-        set({ packageNotification: { type: 'success', message: `Removed ${spec}` } })
-      } else {
-        set({ packageNotification: { type: 'error', message: result.output || 'Remove failed' } })
-      }
-    } catch (err) {
-      set({ packageNotification: { type: 'error', message: err instanceof Error ? err.message : String(err) } })
+      const updates = await window.piDesktop.packages.checkUpdates()
+      if (checkId === latestPackageUpdateCheck) set({ packageUpdates: updates })
+    } catch {
+      // Silent failure: keep the last known result
     } finally {
-      set({ packageLoading: false })
+      if (checkId === latestPackageUpdateCheck) set({ packageUpdatesChecking: false })
     }
   },
 

@@ -1,6 +1,6 @@
 import { useAppStore } from '../store'
 import { isRpcSkillPath } from '../../../shared/ipc-contracts'
-import type { CatalogPackage, InstalledSkill } from '../../../shared/ipc-contracts'
+import type { CatalogPackage, InstalledSkill, PackageUpdate } from '../../../shared/ipc-contracts'
 import { filterCatalog } from '../../../shared/package-filter'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { clsx } from 'clsx'
@@ -17,6 +17,8 @@ import {
   CheckCircle2,
   AlertCircle,
   X,
+  RefreshCw,
+  CircleArrowUp,
 } from 'lucide-react'
 
 export function PackageBrowser(): React.JSX.Element {
@@ -28,6 +30,11 @@ export function PackageBrowser(): React.JSX.Element {
   const loadInstalledPackages = useAppStore((state) => state.loadInstalledPackages)
   const installPackage = useAppStore((state) => state.installPackage)
   const removePackage = useAppStore((state) => state.removePackage)
+  const packageUpdates = useAppStore((state) => state.packageUpdates)
+  const packageUpdatesChecking = useAppStore((state) => state.packageUpdatesChecking)
+  const updatePackage = useAppStore((state) => state.updatePackage)
+  const updateAllPackages = useAppStore((state) => state.updateAllPackages)
+  const checkPackageUpdates = useAppStore((state) => state.checkPackageUpdates)
   const loadCatalog = useAppStore((state) => state.loadCatalog)
   const clearPackageNotification = useAppStore((state) => state.clearPackageNotification)
   const installedSkills = useAppStore((state) => state.installedSkills)
@@ -39,15 +46,21 @@ export function PackageBrowser(): React.JSX.Element {
     () => new Set(installedPackages.map((p) => p.name)),
     [installedPackages]
   )
+  const updatesBySource = useMemo(
+    () => new Map(packageUpdates.map((update) => [update.source, update])),
+    [packageUpdates]
+  )
 
   const [activeTab, setActiveTab] = useState<'installed' | 'catalog' | 'skills'>('installed')
 
   // Installed packages and skills are local/fast — load them up front so the
-  // default Installed tab paints immediately.
+  // default Installed tab paints immediately. The update check needs the
+  // network, so it runs alongside and fills in badges when it resolves.
   useEffect(() => {
     loadInstalledPackages()
     loadSkills()
-  }, [loadInstalledPackages, loadSkills])
+    checkPackageUpdates()
+  }, [loadInstalledPackages, loadSkills, checkPackageUpdates])
 
   // The catalog requires a (prefetched) network crawl — load it lazily the first
   // time the Catalog tab is opened, so opening Packages never blocks on it.
@@ -60,6 +73,9 @@ export function PackageBrowser(): React.JSX.Element {
   }, [activeTab, loadCatalog])
 
   const handleRemove = useCallback((spec: string) => { removePackage(spec) }, [removePackage])
+  const handleUpdate = useCallback((spec: string) => { updatePackage(spec) }, [updatePackage])
+  const handleUpdateAll = useCallback(() => { updateAllPackages() }, [updateAllPackages])
+  const handleCheckUpdates = useCallback(() => { checkPackageUpdates() }, [checkPackageUpdates])
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
@@ -128,7 +144,12 @@ export function PackageBrowser(): React.JSX.Element {
           <InstalledTab
             packages={installedPackages}
             loading={packageLoading}
+            updates={updatesBySource}
+            checkingUpdates={packageUpdatesChecking}
             onRemove={handleRemove}
+            onUpdate={handleUpdate}
+            onUpdateAll={handleUpdateAll}
+            onCheckUpdates={handleCheckUpdates}
           />
         )}
         {activeTab === 'catalog' && (
@@ -232,11 +253,21 @@ function TabButton({
 const InstalledTab = memo(function InstalledTab({
   packages,
   loading,
+  updates,
+  checkingUpdates,
   onRemove,
+  onUpdate,
+  onUpdateAll,
+  onCheckUpdates,
 }: {
   packages: Array<{ name: string; source: string; type: string; version: string | null }>
   loading: boolean
+  updates: Map<string, PackageUpdate>
+  checkingUpdates: boolean
   onRemove: (spec: string) => void
+  onUpdate: (spec: string) => void
+  onUpdateAll: () => void
+  onCheckUpdates: () => void
 }): React.JSX.Element {
   if (loading) {
     return (
@@ -256,47 +287,98 @@ const InstalledTab = memo(function InstalledTab({
     )
   }
 
+  // Updates can outlive a removed package until the next check; count listed ones only.
+  const outdatedCount = packages.filter((pkg) => updates.has(pkg.source)).length
+
   return (
     <div className="space-y-2">
-      {packages.map((pkg) => (
-        <div
-          key={pkg.source}
-          className="flex items-center justify-between rounded-lg border border-border bg-surface/50 px-4 py-3"
-        >
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-primary">{pkg.name}</span>
-              {pkg.version && (
-                <span className="rounded bg-card px-1.5 py-0.5 text-[10px] text-dim">
-                  v{pkg.version}
-                </span>
-              )}
-              <span className="rounded bg-accent-bg px-1.5 py-0.5 text-[10px] text-accent-fg">
-                {pkg.type}
-              </span>
-            </div>
-            <div className="mt-0.5 text-xs text-dim truncate">{pkg.source}</div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => window.piDesktop.system.openExternal(`https://www.npmjs.com/package/${pkg.name}`)}
-              className="rounded p-1.5 text-dim hover:bg-surface-hover hover:text-secondary transition-colors"
-              title="View on npm"
-            >
-              <ExternalLink size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={() => onRemove(pkg.source)}
-              className="rounded p-1.5 text-dim hover:bg-error-bg hover:text-error transition-colors"
-              title="Remove package"
-            >
-              <Trash2 size={14} />
-            </button>
-          </div>
+      <div className="flex items-center justify-between gap-2 pb-1">
+        <span className="text-xs text-dim">
+          {checkingUpdates
+            ? 'Checking for updates…'
+            : outdatedCount > 0
+              ? `${outdatedCount} update${outdatedCount === 1 ? '' : 's'} available`
+              : ''}
+        </span>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onCheckUpdates}
+            disabled={checkingUpdates}
+            className="rounded p-1.5 text-dim hover:bg-surface-hover hover:text-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Check for updates"
+            aria-label="Check for updates"
+          >
+            <RefreshCw size={14} className={clsx(checkingUpdates && 'animate-spin')} />
+          </button>
+          <button
+            type="button"
+            onClick={onUpdateAll}
+            className="flex items-center gap-1 rounded bg-accent px-2.5 py-1 text-xs text-white hover:bg-accent-hover transition-colors"
+          >
+            <CircleArrowUp size={12} />
+            Update all
+          </button>
         </div>
-      ))}
+      </div>
+      {packages.map((pkg) => {
+        const update = updates.get(pkg.source)
+        return (
+          <div
+            key={pkg.source}
+            className="flex items-center justify-between rounded-lg border border-border bg-surface/50 px-4 py-3"
+          >
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-primary">{pkg.name}</span>
+                {pkg.version && (
+                  <span className="rounded bg-card px-1.5 py-0.5 text-[10px] text-dim">
+                    v{pkg.version}
+                  </span>
+                )}
+                <span className="rounded bg-accent-bg px-1.5 py-0.5 text-[10px] text-accent-fg">
+                  {pkg.type}
+                </span>
+                {update && (
+                  <span className="rounded bg-warning-bg px-1.5 py-0.5 text-[10px] text-warning">
+                    v{update.installedVersion} → v{update.latestVersion}
+                  </span>
+                )}
+              </div>
+              <div className="mt-0.5 text-xs text-dim truncate">{pkg.source}</div>
+            </div>
+            <div className="flex items-center gap-2">
+              {update && (
+                <button
+                  type="button"
+                  onClick={() => onUpdate(pkg.source)}
+                  className="rounded p-1.5 text-dim hover:bg-accent-bg hover:text-accent-fg transition-colors"
+                  title={`Update to v${update.latestVersion}`}
+                  aria-label={`Update ${pkg.name}`}
+                >
+                  <CircleArrowUp size={14} />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => window.piDesktop.system.openExternal(`https://www.npmjs.com/package/${pkg.name}`)}
+                className="rounded p-1.5 text-dim hover:bg-surface-hover hover:text-secondary transition-colors"
+                title="View on npm"
+              >
+                <ExternalLink size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => onRemove(pkg.source)}
+                className="rounded p-1.5 text-dim hover:bg-error-bg hover:text-error transition-colors"
+                title="Remove package"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 })

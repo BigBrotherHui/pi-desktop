@@ -18,15 +18,12 @@ export async function runPiCli(
 ): Promise<{ success: boolean; output: string }> {
   try {
     const cli = engine ? getPiCliForEngine(engine) : getPiCli()
-    // OMP keeps `install` as a Pi-compatible alias but names the other plugin
-    // mutations explicitly. Preserve the package panel's existing contract
-    // while routing those two verbs to OMP's native commands.
-    const cliArgs = cli.kind === 'omp'
-      ? args[0] === 'remove'
-        ? ['plugin', 'uninstall', ...args.slice(1)]
-        : args[0] === 'update'
-        ? ['plugin', 'upgrade', ...args.slice(1)]
-        : args
+    // OMP keeps `install` as a Pi-compatible alias but names removal
+    // explicitly. Preserve the package panel's existing contract while routing
+    // that verb to OMP's native command. Updates differ per plugin kind under
+    // OMP, so package-handlers builds those argv lists itself.
+    const cliArgs = cli.kind === 'omp' && args[0] === 'remove'
+      ? ['plugin', 'uninstall', ...args.slice(1)]
       : args
     // Package specs reach this argv from the renderer, and shell:true means
     // Node quotes nothing — buildPiInvocation escapes the whole invocation for

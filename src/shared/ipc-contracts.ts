@@ -116,6 +116,8 @@ export const IPC_CHANNELS = {
   PACKAGE_INSTALL: 'package:install',
   PACKAGE_REMOVE: 'package:remove',
   PACKAGE_UPDATE: 'package:update',
+  PACKAGE_UPDATE_ALL: 'package:update-all',
+  PACKAGE_CHECK_UPDATES: 'package:check-updates',
   PACKAGE_CATALOG_FETCH: 'package:catalog-fetch',
 
   // Skills
@@ -1290,6 +1292,13 @@ export interface InstalledPackage {
   type: 'extension' | 'skill' | 'prompt' | 'theme' | 'package'
   version: string | null
   path: string
+}
+
+/** An installed package with a newer registry version; `source` matches its InstalledPackage. */
+export interface PackageUpdate {
+  source: string
+  installedVersion: string
+  latestVersion: string
 }
 
 export interface CatalogPackage {

@@ -46,6 +46,7 @@ src/
 │   ├── models-config.ts          # Custom models.json validate/merge
 │   ├── package-filter.ts         # Tokenized catalog search, shared main+renderer
 │   ├── package-spec.ts           # Validate package specs before the Pi CLI runs
+│   ├── version-compare.ts        # x.y.z-prerelease ordering (app and package update checks)
 │   ├── path-compare.ts           # Platform-aware path equality (win32 case-fold); main+renderer
 │   ├── folder-drop.ts            # Pure helpers for drag-drop folder → workspace
 │   ├── untrusted-data.ts         # Wrap file/agent text as a labeled untrusted-data block
@@ -85,6 +86,7 @@ src/
 │   ├── session-name.ts           # Read a session's display name from its .jsonl
 │   ├── activity-stats.ts         # Persisted per-day message/token/model stats store
 │   ├── package-catalog.ts        # pi.dev catalog crawl, concurrent + prefetched + cached
+│   ├── package-updates.ts        # npm-registry update check + OMP npm-plugin update spec
 │   ├── auto-tag.ts               # Machine-derived session tags
 │   ├── archived-sessions.ts      # Archived session persistence
 │   ├── app-data-paths.ts         # Resolve app data directories
@@ -214,7 +216,7 @@ src/
 - Every surface that names the running agent (status bar, empty chat, permission prompts, Diagnostics, session tags) reads `shared/agent-engine-label.ts`; the permission extension gets the label via `PI_DESKTOP_AGENT_LABEL`. Session rows show the Pi/OMP tag only when both engines appear in one list.
 - OMP specifics: protocol-v2 chunked frames are decoded with the limits the engine advertises in its ready frame; OMP starts subagents in a new process group, so shutdown walks the descendant tree before signalling; OMP's plugin verbs back the package actions.
 - OMP RPC gaps the GUI bridges: OMP has no `fork`/`clone`/`get_fork_messages`/`get_commands`. Fork maps to OMP's `branch` (same entryId argument), fork candidates are read from the session file (`omp-fork-points.ts`), the Clone action is hidden under OMP, and the command catalog uses `get_available_commands` (`skills-mcp-handlers.ts`).
-- Per-engine config files: Pi keeps `~/.pi/agent/models.json` (JSON); OMP 18 keeps `~/.omp/agent/models.yml` (YAML) — `models-file.ts` resolves and (de)serializes both. OMP's installed-package list comes from `omp plugin list --json` (`omp-plugin-list.ts`), not from a settings.json `packages` array.
+- Per-engine config files: Pi keeps `~/.pi/agent/models.json` (JSON); OMP 18 keeps `~/.omp/agent/models.yml` (YAML) — `models-file.ts` resolves and (de)serializes both. OMP's installed-package list comes from `omp plugin list --json` (`omp-plugin-list.ts`), not from a settings.json `packages` array. `omp plugin upgrade` covers marketplace plugins only, so an npm plugin updates by reinstalling from its dist-tag with its feature selection and disabled state carried over (`package-updates.ts`).
 - Session names: Pi appends `session_info` records; OMP rewrites a fixed first-line `{"type":"title"}` slot. `session-name.ts`/`session-metadata.ts` read both (session_info outranks the title slot).
 - Skills are listed per engine (`skills-discovery.ts`): Pi scans `~/.pi/agent/skills`, `~/.agents/skills` and project `.pi/skills`/`.agents/skills` recursively; OMP scans `.omp`, `.claude` and `.agents` roots one level deep. Skills only the other engine can load are never shown. When the engine is running, plugin-shipped skills from its command catalog are merged in (`rpc:`-prefixed pseudo-paths render from the description).
 
@@ -377,7 +379,7 @@ All communication between renderer and main goes through a typed preload bridge:
 Renderer → preload (contextBridge) → IPC → main handlers → Pi RPC / File system
 ```
 
-- 139 IPC channels, all validated (count drifts as features land — check `IPC_CHANNELS` in `src/shared/ipc-contracts.ts` for the current number rather than trusting this doc)
+- 141 IPC channels, all validated (count drifts as features land — check `IPC_CHANNELS` in `src/shared/ipc-contracts.ts` for the current number rather than trusting this doc)
 - Pi events forwarded from main to renderer via `webContents.send`
 - Extension UI protocol supported (select, confirm, input, editor dialogs)
 
