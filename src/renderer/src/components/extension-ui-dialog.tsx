@@ -1,7 +1,12 @@
 import { useAppStore } from '../store'
 import { useState, useEffect } from 'react'
-import { X, AlertCircle, HelpCircle } from 'lucide-react'
+import { X, AlertCircle, HelpCircle, EyeOff, Eye } from 'lucide-react'
 import { clsx } from 'clsx'
+import {
+  DIALOG_TOGGLE_LABEL,
+  isDialogToggleKey,
+  splitPromptText,
+} from './extension-ui-dialog-helpers'
 
 // Stacking tiers for the two extension-UI surfaces, which can be on screen at
 // the same time. The toast MUST outrank the dialog's full-screen backdrop: at
@@ -21,6 +26,30 @@ export function ExtensionUiDialog(): React.JSX.Element | null {
   const dismissExtensionUi = useAppStore((state) => state.dismissExtensionUi)
   const dismissExtensionNotify = useAppStore((state) => state.dismissExtensionNotify)
 
+  // Temporary hide (issue #61): the prompt stays unanswered in the store while
+  // the user reads the chat behind it. Keyed by request id so a new prompt is
+  // always shown, and a hidden one reappears via the pill, Escape/Alt+O, or
+  // any click on the pill.
+  const [hiddenRequestId, setHiddenRequestId] = useState<string | null>(null)
+  const hidden = request !== null && hiddenRequestId === request.id
+  const hide = (): void => setHiddenRequestId(request?.id ?? null)
+  const show = (): void => setHiddenRequestId(null)
+
+  useEffect(() => {
+    if (!request) return
+    const onKey = (e: KeyboardEvent): void => {
+      if (isDialogToggleKey(e)) {
+        e.preventDefault()
+        setHiddenRequestId((current) => (current === request.id ? null : request.id))
+      } else if (e.key === 'Escape' && hiddenRequestId !== request.id) {
+        e.preventDefault()
+        setHiddenRequestId(request.id)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [request, hiddenRequestId])
+
   // The toast lives in its own store slot so it can coexist with a blocking
   // dialog instead of clobbering it; dismissal only touches the toast slot.
   // Keyed by request id so a notification arriving mid-countdown remounts the
@@ -33,13 +62,15 @@ export function ExtensionUiDialog(): React.JSX.Element | null {
   // Dialog slot: the store routes only select/confirm/input/editor here.
   const dialog = ((): React.JSX.Element | null => {
     if (!request) return null
+    if (hidden) return <HiddenPromptPill onShow={show} />
+    const frame = { onCancel: dismissExtensionUi, onHide: hide }
     switch (request.method) {
       case 'select':
         return (
           <SelectDialog
             request={request}
             onSelect={(value) => respondExtensionUi(request.id, { value })}
-            onCancel={() => dismissExtensionUi()}
+            {...frame}
           />
         )
       case 'confirm':
@@ -48,7 +79,7 @@ export function ExtensionUiDialog(): React.JSX.Element | null {
             request={request}
             onConfirm={() => respondExtensionUi(request.id, { confirmed: true })}
             onDeny={() => respondExtensionUi(request.id, { confirmed: false })}
-            onCancel={() => dismissExtensionUi()}
+            {...frame}
           />
         )
       case 'input':
@@ -56,7 +87,7 @@ export function ExtensionUiDialog(): React.JSX.Element | null {
           <InputDialog
             request={request}
             onSubmit={(value) => respondExtensionUi(request.id, { value })}
-            onCancel={() => dismissExtensionUi()}
+            {...frame}
           />
         )
       case 'editor':
@@ -64,7 +95,7 @@ export function ExtensionUiDialog(): React.JSX.Element | null {
           <EditorDialog
             request={request}
             onSubmit={(value) => respondExtensionUi(request.id, { value })}
-            onCancel={() => dismissExtensionUi()}
+            {...frame}
           />
         )
       default:
@@ -79,6 +110,28 @@ export function ExtensionUiDialog(): React.JSX.Element | null {
       {toast}
       {dialog}
     </>
+  )
+}
+
+// ─── Hidden Prompt Pill ──────────────────────────────────────────────────────
+
+// Stand-in for a temporarily hidden prompt. Bottom-centre keeps it clear of
+// the bottom-right notify toast.
+function HiddenPromptPill({ onShow }: { onShow: () => void }): React.JSX.Element {
+  return (
+    <div
+      className="fixed bottom-10 left-1/2 -translate-x-1/2 animate-fade-in"
+      style={{ zIndex: DIALOG_OVERLAY_Z_INDEX }}
+    >
+      <button
+        onClick={onShow}
+        className="flex items-center gap-2 rounded-full border border-border-strong bg-surface px-4 py-2 text-sm text-primary shadow-lg hover:bg-surface-hover transition-colors"
+      >
+        <Eye size={14} className="text-accent-fg" />
+        Pi is waiting for an answer
+        <span className="text-xs text-dim">Show ({DIALOG_TOGGLE_LABEL})</span>
+      </button>
+    </div>
   )
 }
 
@@ -117,18 +170,24 @@ function NotifyToast({
 
 // ─── Select Dialog ───────────────────────────────────────────────────────────
 
+/** Cancel answers the prompt with a deny; hide keeps it pending off-screen. */
+interface DialogFrameProps {
+  onCancel: () => void
+  onHide: () => void
+}
+
 function SelectDialog({
   request,
   onSelect,
   onCancel,
-}: {
+  onHide,
+}: DialogFrameProps & {
   request: { id: string; title?: string; options?: string[]; timeout?: number }
   onSelect: (value: string) => void
-  onCancel: () => void
 }): React.JSX.Element {
   return (
-    <DialogOverlay onCancel={onCancel}>
-      <DialogBox title={request.title ?? 'Select'} onCancel={onCancel}>
+    <DialogOverlay onBackdropClick={onHide}>
+      <DialogBox prompt={request.title ?? 'Select'} onCancel={onCancel} onHide={onHide}>
         <div className="space-y-1">
           {(request.options ?? []).map((option) => (
             <button
@@ -153,18 +212,16 @@ function ConfirmDialog({
   onConfirm,
   onDeny,
   onCancel,
-}: {
+  onHide,
+}: DialogFrameProps & {
   request: { id: string; title?: string; message?: string }
   onConfirm: () => void
   onDeny: () => void
-  onCancel: () => void
 }): React.JSX.Element {
   return (
-    <DialogOverlay onCancel={onCancel}>
-      <DialogBox title={request.title ?? 'Confirm'} onCancel={onCancel}>
-        {request.message && (
-          <p className="mb-4 text-sm text-muted">{request.message}</p>
-        )}
+    <DialogOverlay onBackdropClick={onHide}>
+      <DialogBox prompt={request.title ?? 'Confirm'} onCancel={onCancel} onHide={onHide}>
+        {request.message && <PromptBody text={request.message} />}
         <div className="flex justify-end gap-2">
           <button
             onClick={onDeny}
@@ -190,16 +247,16 @@ function InputDialog({
   request,
   onSubmit,
   onCancel,
-}: {
+  onHide,
+}: DialogFrameProps & {
   request: { id: string; title?: string; placeholder?: string }
   onSubmit: (value: string) => void
-  onCancel: () => void
 }): React.JSX.Element {
   const [value, setValue] = useState('')
 
   return (
-    <DialogOverlay onCancel={onCancel}>
-      <DialogBox title={request.title ?? 'Input'} onCancel={onCancel}>
+    <DialogOverlay onBackdropClick={onHide}>
+      <DialogBox prompt={request.title ?? 'Input'} onCancel={onCancel} onHide={onHide}>
         <input
           type="text"
           placeholder={request.placeholder ?? ''}
@@ -236,16 +293,16 @@ function EditorDialog({
   request,
   onSubmit,
   onCancel,
-}: {
+  onHide,
+}: DialogFrameProps & {
   request: { id: string; title?: string; prefill?: string }
   onSubmit: (value: string) => void
-  onCancel: () => void
 }): React.JSX.Element {
   const [value, setValue] = useState(request.prefill ?? '')
 
   return (
-    <DialogOverlay onCancel={onCancel}>
-      <DialogBox title={request.title ?? 'Edit'} onCancel={onCancel} wide>
+    <DialogOverlay onBackdropClick={onHide}>
+      <DialogBox prompt={request.title ?? 'Edit'} onCancel={onCancel} onHide={onHide} wide>
         <textarea
           value={value}
           onChange={(e) => setValue(e.target.value)}
@@ -296,9 +353,9 @@ export function AppConfirmDialog(): React.JSX.Element | null {
   if (!request) return null
 
   return (
-    <DialogOverlay onCancel={() => resolveConfirm(false)}>
-      <DialogBox title={request.title ?? 'Confirm'} onCancel={() => resolveConfirm(false)}>
-        <p className="mb-4 whitespace-pre-line text-sm text-muted">{request.message}</p>
+    <DialogOverlay onBackdropClick={() => resolveConfirm(false)}>
+      <DialogBox prompt={request.title ?? 'Confirm'} onCancel={() => resolveConfirm(false)}>
+        <PromptBody text={request.message} />
         <div className="flex justify-end gap-2">
           <button
             onClick={() => resolveConfirm(false)}
@@ -325,19 +382,24 @@ export function AppConfirmDialog(): React.JSX.Element | null {
 
 // ─── Shared Dialog Components ────────────────────────────────────────────────
 
+// Body text keeps the extension's own line breaks (issue #61).
+function PromptBody({ text }: { text: string }): React.JSX.Element {
+  return <p className="mb-4 whitespace-pre-wrap break-words text-sm text-muted">{text}</p>
+}
+
 function DialogOverlay({
   children,
-  onCancel,
+  onBackdropClick,
 }: {
   children: React.ReactNode
-  onCancel: () => void
+  onBackdropClick: () => void
 }): React.JSX.Element {
   return (
     <div
       className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in"
       style={{ zIndex: DIALOG_OVERLAY_Z_INDEX }}
       onClick={(e) => {
-        if (e.target === e.currentTarget) onCancel()
+        if (e.target === e.currentTarget) onBackdropClick()
       }}
     >
       {children}
@@ -345,34 +407,53 @@ function DialogOverlay({
   )
 }
 
+// The prompt's first line is the heading; any further lines become body text
+// above the children so multi-line questions read as the extension wrote them.
 function DialogBox({
-  title,
+  prompt,
   children,
   onCancel,
+  onHide,
   wide,
 }: {
-  title: string
+  prompt: string
   children: React.ReactNode
   onCancel: () => void
+  onHide?: () => void
   wide?: boolean
 }): React.JSX.Element {
+  const { heading, body } = splitPromptText(prompt)
   return (
     <div
       className={clsx(
-        'mx-4 rounded-xl border border-border-strong bg-surface shadow-2xl',
+        'mx-4 flex max-h-[85vh] flex-col rounded-xl border border-border-strong bg-surface shadow-2xl',
         wide ? 'w-full max-w-2xl' : 'w-full max-w-md'
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <h3 className="text-sm font-medium text-primary">{title}</h3>
-        <button onClick={onCancel} className="text-dim hover:text-secondary">
-          <X size={14} />
-        </button>
+      <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
+        <h3 className="min-w-0 break-words text-sm font-medium text-primary">{heading}</h3>
+        <div className="flex shrink-0 items-center gap-2">
+          {onHide && (
+            <button
+              onClick={onHide}
+              title={`Hide for now (${DIALOG_TOGGLE_LABEL})`}
+              className="text-dim hover:text-secondary"
+            >
+              <EyeOff size={14} />
+            </button>
+          )}
+          <button onClick={onCancel} title="Cancel" className="text-dim hover:text-secondary">
+            <X size={14} />
+          </button>
+        </div>
       </div>
 
       {/* Content */}
-      <div className="p-4">{children}</div>
+      <div className="min-h-0 overflow-y-auto p-4">
+        {body && <PromptBody text={body} />}
+        {children}
+      </div>
     </div>
   )
 }
