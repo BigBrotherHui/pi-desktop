@@ -2,10 +2,12 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
   BUILTIN_SOURCE,
+  commandDisplayName,
   filterCommands,
   groupCommands,
   invocationToken,
   isSlashCommandToken,
+  skillDisplayName,
   type PiCommand,
 } from './pi-command'
 
@@ -71,6 +73,22 @@ test('skill invocation token adds the skill: prefix and trailing space', () => {
 
 test('skill invocation token does not double an existing skill: prefix', () => {
   assert.equal(invocationToken('skill:plan', 'skill'), '/skill:plan ')
+})
+
+test('skillDisplayName strips the skill: prefix only once and only at the start', () => {
+  assert.equal(skillDisplayName('skill:plan'), 'plan')
+  assert.equal(skillDisplayName('plan'), 'plan')
+  assert.equal(skillDisplayName('my-skill:plan'), 'my-skill:plan')
+})
+
+test('commandDisplayName drops the skill: prefix from skills (issue #60)', () => {
+  assert.equal(commandDisplayName(cmds[0]), 'web-search')
+})
+
+test('commandDisplayName shows built-ins in slash form and others as-is', () => {
+  assert.equal(commandDisplayName({ name: 'compact', description: '', source: BUILTIN_SOURCE }), '/compact')
+  assert.equal(commandDisplayName(cmds[1]), 'review')
+  assert.equal(commandDisplayName(cmds[2]), 'deploy')
 })
 
 test('non-skill invocation token is /name with trailing space', () => {

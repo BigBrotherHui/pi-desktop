@@ -2,6 +2,7 @@ import { readdir, readFile } from 'fs/promises'
 import { join } from 'path'
 import { existsSync } from 'fs'
 import { RPC_SKILL_PATH_PREFIX, type InstalledSkill } from '../shared/ipc-contracts'
+import { skillDisplayName } from '../shared/pi-command'
 
 /**
  * Per-engine skill discovery for the Skills panel.
@@ -164,8 +165,7 @@ export function mergeRpcSkills(skills: InstalledSkill[], commands: unknown[]): v
     if (typeof entry !== 'object' || entry === null) continue
     const cmd = entry as { name?: unknown; description?: unknown; source?: unknown; path?: unknown }
     if (cmd.source !== 'skill' || typeof cmd.name !== 'string') continue
-    // Both engines list skills under their invocation token ("skill:foo").
-    const name = cmd.name.startsWith('skill:') ? cmd.name.slice('skill:'.length) : cmd.name
+    const name = skillDisplayName(cmd.name)
     if (!name || seen.has(name)) continue
     seen.add(name)
     skills.push({

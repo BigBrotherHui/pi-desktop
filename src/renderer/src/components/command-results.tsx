@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import { BUILTIN_SOURCE, type CommandGroup, type PiCommand } from '../../../shared/pi-command'
+import { BUILTIN_SOURCE, commandDisplayName, type CommandGroup, type PiCommand } from '../../../shared/pi-command'
 
 const SOURCE_BADGE: Record<string, string> = {
   skill: 'bg-special-bg text-special',
@@ -56,10 +56,12 @@ export function CommandResults({
                 >
                   {cmd.source}
                 </span>
-                <span className="truncate text-sm text-primary">
-                  {cmd.source === BUILTIN_SOURCE ? `/${cmd.name}` : cmd.name}
+                {/* The name never shrinks (issue #60): the description is the
+                    part that truncates when the row runs out of room. */}
+                <span className="shrink-0 whitespace-nowrap text-sm text-primary">
+                  {commandDisplayName(cmd)}
                 </span>
-                <span className="ml-auto line-clamp-1 text-xs text-dim">{cmd.description}</span>
+                <span className="ml-auto min-w-0 truncate text-xs text-dim">{cmd.description}</span>
               </button>
             )
           })}

@@ -12,6 +12,24 @@ export interface PiCommand {
  */
 export const BUILTIN_SOURCE = 'builtin'
 
+/** Pi lists skills under their invocation token: "skill:<name>". */
+export const SKILL_COMMAND_PREFIX = 'skill:'
+
+/** Bare skill name, with the "skill:" invocation prefix removed if present. */
+export function skillDisplayName(name: string): string {
+  return name.startsWith(SKILL_COMMAND_PREFIX) ? name.slice(SKILL_COMMAND_PREFIX.length) : name
+}
+
+/**
+ * Name shown in command lists. Skills drop the redundant "skill:" prefix (the
+ * source badge already says it); GUI built-ins show their slash form.
+ */
+export function commandDisplayName(cmd: PiCommand): string {
+  if (cmd.source === 'skill') return skillDisplayName(cmd.name)
+  if (cmd.source === BUILTIN_SOURCE) return `/${cmd.name}`
+  return cmd.name
+}
+
 const GROUPS: Array<{ source: string; label: string }> = [
   { source: 'skill', label: 'Skills' },
   { source: 'prompt', label: 'Prompts' },
@@ -49,7 +67,7 @@ export function isSlashCommandToken(value: string): boolean {
 
 /** Token inserted into the composer when a skill/prompt/extension is chosen. */
 export function invocationToken(name: string, source: string): string {
-  if (source === 'skill') return `/skill:${name.replace(/^skill:/, '')} `
+  if (source === 'skill') return `/${SKILL_COMMAND_PREFIX}${skillDisplayName(name)} `
   return `/${name} `
 }
 

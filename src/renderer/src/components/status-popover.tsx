@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { findSessionPreview, getSessionTitle } from '../utils/session-title'
 import { useAppStore } from '../store'
 import { DEFAULT_AGENT_ENGINE_LABEL, agentEngineLabel } from '../../../shared/agent-engine-label'
+import { invocationToken } from '../../../shared/pi-command'
 import type { InstalledSkill } from '../../../shared/ipc-contracts'
 import { clsx } from 'clsx'
 import {
@@ -367,7 +368,7 @@ export function StatusPopover(): React.JSX.Element {
                 {skillCommands.slice(0, 6).map((cmd) => (
                   <div key={cmd.name} className="flex items-center gap-2 py-0.5">
                     <BookOpen size={10} className="text-warning shrink-0" />
-                    <span className="text-xs text-secondary truncate">/skill:{cmd.name}</span>
+                    <span className="text-xs text-secondary truncate">{invocationToken(cmd.name, cmd.source)}</span>
                   </div>
                 ))}
               </StatusSection>
