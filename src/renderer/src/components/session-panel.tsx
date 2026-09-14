@@ -3,6 +3,7 @@ import { getSessionTitle } from '../utils/session-title'
 import { FolderOpen, Plus, Clock, Search, ChevronRight, ChevronDown, FolderTree, Tag, X, MoreVertical, Archive, ArchiveRestore, Trash2, Sparkles, Workflow as WorkflowIcon } from 'lucide-react'
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation, Trans } from 'react-i18next'
 import { clsx } from 'clsx'
 import type { SessionListItem } from '../../../shared/ipc-contracts'
 import { pathsEqual } from '../../../shared/path-compare'
@@ -11,8 +12,10 @@ import { getSessionMenuPosition, type MenuPosition } from './session-menu-positi
 import { resolveRunSessionId } from '../utils/workflow-runs'
 import { SessionRuntimeIndicator } from './session-runtime-indicator'
 import { getSessionEngineLabel, hasMixedSessionEngines } from './sidebar-session-labels'
+import type { Translate } from '../../../shared/i18n'
 
 export function SessionPanel(): React.JSX.Element {
+  const { t, i18n } = useTranslation()
   const sessionList = useAppStore((state) => state.sessionList)
   const sessionState = useAppStore((state) => state.sessionState)
   const activeWorkspace = useAppStore((state) => state.activeWorkspace)
@@ -113,6 +116,12 @@ export function SessionPanel(): React.JSX.Element {
 
   const totalSessions = groupedSessions.reduce((total, [, sessions]) => total + sessions.length, 0)
   const totalProjects = groupedSessions.length
+  // Built outside JSX (each half fully translated, joined by a plain
+  // separator) so the lint's concatenation check sees one rendered value.
+  const totalsSummary = [
+    t('sessions.header.sessionCount', { count: totalSessions }),
+    t('sessions.header.projectCount', { count: totalProjects }),
+  ].join(' · ')
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -121,9 +130,9 @@ export function SessionPanel(): React.JSX.Element {
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <FolderOpen size={20} className="text-muted" />
-            <h1 className="text-lg font-semibold text-primary">Sessions</h1>
+            <h1 className="text-lg font-semibold text-primary">{t('sessions.title')}</h1>
             <span className="rounded-full bg-card px-2 py-0.5 text-xs text-dim">
-              {totalSessions} sessions · {totalProjects} projects
+              {totalsSummary}
             </span>
           </div>
           <div className="flex gap-2">
@@ -131,14 +140,14 @@ export function SessionPanel(): React.JSX.Element {
               onClick={refreshSessionList}
               className="rounded-md px-3 py-1.5 text-sm text-muted hover:text-primary transition-colors"
             >
-              Refresh
+              {t('status.refresh')}
             </button>
             <button
               onClick={createNewSession}
               className="flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-sm text-white hover:bg-accent-hover transition-colors"
             >
               <Plus size={14} />
-              New Session
+              {t('sessions.newSessionButton')}
             </button>
           </div>
         </div>
@@ -149,7 +158,7 @@ export function SessionPanel(): React.JSX.Element {
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-dim" />
             <input
               type="text"
-              placeholder="Search sessions or projects..."
+              placeholder={t('sessions.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full rounded-lg border border-border-strong bg-surface py-2 pl-9 pr-4 text-sm text-primary placeholder:text-faint focus:border-focus focus:outline-none"
@@ -160,8 +169,8 @@ export function SessionPanel(): React.JSX.Element {
             aria-pressed={sessionsScope === 'current'}
             title={
               sessionsScope === 'current'
-                ? 'Show sessions from every project'
-                : 'Only show sessions from the current project'
+                ? t('sessions.scopeToggle.showEveryProject')
+                : t('sessions.scopeToggle.showCurrentProjectOnly')
             }
             className={clsx(
               'rounded-md px-3 py-2 text-xs transition-colors',
@@ -170,11 +179,11 @@ export function SessionPanel(): React.JSX.Element {
                 : 'bg-card text-muted hover:text-secondary'
             )}
           >
-            {sessionsScope === 'all' ? 'All Sessions' : 'Current Only'}
+            {sessionsScope === 'all' ? t('sessions.scopeToggle.allSessions') : t('sessions.scopeToggle.currentOnly')}
           </button>
           <button
             onClick={toggleShowArchived}
-            title={showArchived ? 'Hide archived sessions' : 'Show archived sessions'}
+            title={showArchived ? t('sessions.archivedToggle.hideTitle') : t('sessions.archivedToggle.showTitle')}
             className={clsx(
               'flex items-center gap-1.5 rounded-md px-3 py-2 text-xs transition-colors',
               showArchived
@@ -183,7 +192,7 @@ export function SessionPanel(): React.JSX.Element {
             )}
           >
             <Archive size={12} />
-            {showArchived ? 'Hiding none' : `Archived (${archivedCount})`}
+            {showArchived ? t('sessions.archivedToggle.hidingNone') : t('sidebar.archived.heading', { count: archivedCount })}
           </button>
         </div>
 
@@ -191,7 +200,7 @@ export function SessionPanel(): React.JSX.Element {
         {activeWorkspace && (
           <div className="mb-4 flex items-center gap-2 rounded-lg bg-surface border border-border px-4 py-2">
             <FolderTree size={14} className="text-dim" />
-            <span className="text-xs text-muted">Current workspace:</span>
+            <span className="text-xs text-muted">{t('sessions.currentWorkspaceLabel')}</span>
             <span className="text-sm text-primary font-medium">{activeWorkspace.name}</span>
             <span className="text-xs text-dim truncate">{activeWorkspace.path}</span>
           </div>
@@ -204,19 +213,19 @@ export function SessionPanel(): React.JSX.Element {
             <FolderOpen size={32} className="mb-3 text-faint" />
             <p className="text-sm">
               {searchQuery
-                ? 'No sessions match your search'
+                ? t('sessions.empty.noMatch')
                 : sessionsScope === 'current' && activeWorkspace
-                  ? 'No sessions in this project yet'
+                  ? t('sessions.empty.noneInProject')
                   : sessionsScope === 'current'
-                    ? 'Open a project to see its sessions'
-                    : 'No sessions yet'}
+                    ? t('sessions.empty.openProjectToSee')
+                    : t('sessions.empty.noneYet')}
             </p>
             {!searchQuery && sessionsScope !== 'current' && (
               <button
                 onClick={createNewSession}
                 className="mt-3 text-sm text-accent-fg/80 hover:text-accent-fg"
               >
-                Create your first session
+                {t('sessions.empty.createFirst')}
               </button>
             )}
           </div>
@@ -258,11 +267,11 @@ export function SessionPanel(): React.JSX.Element {
                           </span>
                           {isCurrentProject && (
                             <span className="rounded bg-accent-bg px-1.5 py-0.5 text-[10px] text-accent-fg">
-                              current
+                              {t('sessions.currentProjectBadge')}
                             </span>
                           )}
                           <span className="text-xs text-faint">
-                            {sessions.length} session{sessions.length !== 1 ? 's' : ''}
+                            {t('sessions.header.sessionCount', { count: sessions.length })}
                           </span>
                         </div>
                         <div className="truncate text-[11px] text-faint">
@@ -270,7 +279,7 @@ export function SessionPanel(): React.JSX.Element {
                         </div>
                       </div>
                       <div className="shrink-0 text-[10px] text-faint">
-                        {formatRelativeTime(latestSession.lastModified)}
+                        {formatRelativeTime(latestSession.lastModified, t, i18n.language)}
                       </div>
                     </div>
                   ) : (
@@ -298,11 +307,11 @@ export function SessionPanel(): React.JSX.Element {
                           </span>
                           {isCurrentProject && (
                             <span className="rounded bg-accent-bg px-1.5 py-0.5 text-[10px] text-accent-fg">
-                              current
+                              {t('sessions.currentProjectBadge')}
                             </span>
                           )}
                           <span className="text-xs text-faint">
-                            {sessions.length} session{sessions.length !== 1 ? 's' : ''}
+                            {t('sessions.header.sessionCount', { count: sessions.length })}
                           </span>
                         </div>
                         <div className="truncate text-[11px] text-faint">
@@ -310,7 +319,7 @@ export function SessionPanel(): React.JSX.Element {
                         </div>
                       </div>
                       <div className="shrink-0 text-[10px] text-faint">
-                        {formatRelativeTime(latestSession.lastModified)}
+                        {formatRelativeTime(latestSession.lastModified, t, i18n.language)}
                       </div>
                     </button>
                   )}
@@ -338,7 +347,9 @@ export function SessionPanel(): React.JSX.Element {
   )
 }
 
-function formatRelativeTime(timestamp: number): string {
+// Kept in its compact "5m ago" form (not the shared verbose relative-time
+// helper) — this list packs many rows, where the shared format runs too wide.
+function formatRelativeTime(timestamp: number, t: Translate, language: string): string {
   const now = Date.now()
   const diff = now - timestamp
 
@@ -347,12 +358,12 @@ function formatRelativeTime(timestamp: number): string {
   const hours = Math.floor(minutes / 60)
   const days = Math.floor(hours / 24)
 
-  if (seconds < 60) return 'just now'
-  if (minutes < 60) return `${minutes}m ago`
-  if (hours < 24) return `${hours}h ago`
-  if (days < 7) return `${days}d ago`
+  if (seconds < 60) return t('sessions.time.justNow')
+  if (minutes < 60) return t('sessions.time.minutes', { count: minutes })
+  if (hours < 24) return t('sessions.time.hours', { count: hours })
+  if (days < 7) return t('sessions.time.days', { count: days })
 
-  return new Date(timestamp).toLocaleDateString()
+  return new Date(timestamp).toLocaleDateString(language)
 }
 
 // ─── Session Entry with Tags ─────────────────────────────────────────────────
@@ -368,6 +379,7 @@ function SessionEntry({
   showEngineTag: boolean
   onSelect: () => void
 }): React.JSX.Element {
+  const { t, i18n } = useTranslation()
   const sessionTags = useAppStore((state) => state.sessionTags)
   const autoTags = useAppStore((state) => state.autoTags)
   const addSessionTag = useAppStore((state) => state.addSessionTag)
@@ -530,8 +542,8 @@ function SessionEntry({
                       e.stopPropagation()
                       removeSessionTag(session.sessionId, tag)
                     }}
-                    title={`Remove tag ${tag}`}
-                    aria-label={`Remove tag ${tag}`}
+                    title={t('sessions.tags.removeTag', { tag })}
+                    aria-label={t('sessions.tags.removeTag', { tag })}
                     className="ml-0.5 hover:text-primary"
                   >
                     <X size={8} />
@@ -540,7 +552,7 @@ function SessionEntry({
               ))}
               {autoTag && (
                 <span
-                  title="Auto-tagged from chat context — add your own tag to replace it"
+                  title={t('sessions.tags.autoTagHint')}
                   className="inline-flex items-center gap-0.5 rounded border border-dashed border-border-strong px-1.5 py-0.5 text-[10px] text-dim"
                 >
                   <Sparkles size={8} />
@@ -550,8 +562,8 @@ function SessionEntry({
                       e.stopPropagation()
                       removeAutoTag(session.sessionId)
                     }}
-                    title={`Remove auto-tag ${autoTag}`}
-                    aria-label={`Remove auto-tag ${autoTag}`}
+                    title={t('sessions.tags.removeAutoTag', { tag: autoTag })}
+                    aria-label={t('sessions.tags.removeAutoTag', { tag: autoTag })}
                     className="ml-0.5 hover:text-secondary"
                   >
                     <X size={8} />
@@ -564,21 +576,21 @@ function SessionEntry({
         {/* Which agent CLI owns this chat. Sized like the timestamp beside it —
             the two engines are not interchangeable, but the list is scanned. */}
         {engineLabel && (
-          <span className="shrink-0 text-[10px] text-faint" title={`${engineLabel} session`}>
+          <span className="shrink-0 text-[10px] text-faint" title={t('sessions.engineSession', { engine: engineLabel })}>
             {engineLabel}
           </span>
         )}
         <div className="text-[10px] text-faint shrink-0">
-          {formatRelativeTime(session.lastModified)}
+          {formatRelativeTime(session.lastModified, t, i18n.language)}
         </div>
         {isArchived && (
           <span className="rounded bg-warning-bg px-1.5 py-0.5 text-[10px] text-warning">
-            archived
+            {t('sessions.archivedBadge')}
           </span>
         )}
         {isActive && (
           <span className="rounded bg-accent-bg px-1.5 py-0.5 text-[10px] text-accent-fg">
-            active
+            {t('sessions.activeBadge')}
           </span>
         )}
         {(() => {
@@ -595,9 +607,9 @@ function SessionEntry({
           ref={menuButtonRef}
           onClick={toggleMenu}
           className="rounded p-1 text-muted hover:bg-elevated/60 hover:text-primary"
-          aria-label="Session actions"
+          aria-label={t('sessions.sessionActions.ariaLabel')}
           aria-expanded={menuOpen}
-          title="Session actions (or right-click the row)"
+          title={t('sessions.sessionActions.title')}
         >
           <MoreVertical size={14} />
         </button>
@@ -615,13 +627,13 @@ function SessionEntry({
             }}
             className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-secondary hover:bg-surface-hover"
           >
-            <WorkflowIcon size={13} /> Workflow runs
+            <WorkflowIcon size={13} /> {t('sessions.workflowRunsMenuItem')}
           </button>
           <button
             onClick={handleArchive}
             className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-secondary hover:bg-surface-hover"
           >
-            {isArchived ? <><ArchiveRestore size={13} /> Unarchive</> : <><Archive size={13} /> Archive</>}
+            {isArchived ? <><ArchiveRestore size={13} /> {t('contextMenu.unarchive')}</> : <><Archive size={13} /> {t('contextMenu.archive')}</>}
           </button>
           <button
             onClick={() => {
@@ -630,7 +642,7 @@ function SessionEntry({
             }}
             className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-error hover:bg-error-bg"
           >
-            <Trash2 size={13} /> Delete...
+            <Trash2 size={13} /> {t('sessions.deleteEllipsis')}
           </button>
         </div>,
         document.body
@@ -641,19 +653,19 @@ function SessionEntry({
         <div className="mt-2 flex items-center gap-2 rounded border border-error-bg bg-error-bg px-2 py-1.5 text-[11px] text-error">
           <Trash2 size={12} className="shrink-0" />
           <span className="flex-1">
-            Delete this session? Will use <code className="text-error">trash</code> if available, otherwise permanent.
+            <Trans i18nKey="sessions.deleteConfirm.message" components={{ code: <code className="text-error" /> }} />
           </span>
           <button
             onClick={() => setConfirmingDelete(false)}
             className="rounded px-2 py-0.5 text-muted hover:text-primary"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             onClick={handleDelete}
             className="rounded bg-error px-2 py-0.5 text-white hover:bg-error-hover"
           >
-            Delete
+            {t('common.delete')}
           </button>
         </div>
       )}
@@ -671,7 +683,7 @@ function SessionEntry({
                   if (e.key === 'Enter') handleAddTag()
                   if (e.key === 'Escape') setShowTagInput(false)
                 }}
-                placeholder="Add tag..."
+                placeholder={t('sessions.tags.addPlaceholder')}
                 className="flex-1 rounded border border-border-strong bg-card px-2 py-0.5 text-[10px] text-secondary placeholder:text-faint focus:border-focus focus:outline-none"
                 autoFocus
               />
@@ -679,7 +691,7 @@ function SessionEntry({
                 onClick={handleAddTag}
                 className="rounded bg-accent px-1.5 py-0.5 text-[10px] text-white"
               >
-                Add
+                {t('sessions.tags.add')}
               </button>
             </div>
           ) : (
@@ -688,7 +700,7 @@ function SessionEntry({
               className="flex items-center gap-1 text-[10px] text-faint hover:text-muted"
             >
               <Tag size={10} />
-              Add tag
+              {t('sessions.tags.addTag')}
             </button>
           )}
         </div>

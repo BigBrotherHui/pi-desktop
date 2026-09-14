@@ -1,6 +1,8 @@
+import { useTranslation } from 'react-i18next'
 import { useAppStore, countPromptsWaitingElsewhere, formatPromptsWaiting } from '../store'
 import { summarizeBackgroundActivity, workspaceActivityIndicator } from './sidebar-activity'
 import { pathGroupKey, pathsEqual } from '../../../shared/path-compare'
+import { PI_DESKTOP_PRODUCT_NAME } from '../../../shared/product-name'
 import { clsx } from 'clsx'
 import {
   Home,
@@ -53,6 +55,7 @@ interface RecentSessionGroup {
 }
 
 export function Sidebar(): React.JSX.Element {
+  const { t } = useTranslation()
   const currentView = useAppStore((state) => state.currentView)
   const setCurrentView = useAppStore((state) => state.setCurrentView)
   const toggleSidebar = useAppStore((state) => state.toggleSidebar)
@@ -148,7 +151,7 @@ export function Sidebar(): React.JSX.Element {
         }
       }}
       onBlur={finishSessionRename}
-      placeholder="Session name"
+      placeholder={t('sidebar.sessionNamePlaceholder')}
       autoFocus
       className="min-w-0 flex-1 rounded border border-border-strong bg-card px-2 py-0.5 text-sm text-primary placeholder:text-faint focus:border-focus focus:outline-none"
     />
@@ -253,7 +256,7 @@ export function Sidebar(): React.JSX.Element {
   }
 
   const openProject = async (): Promise<void> => {
-    const path = await window.piDesktop.system.openDialog({ title: 'Open Project' })
+    const path = await window.piDesktop.system.openDialog({ title: t('dialogs.openProject.title') })
     if (path) await openFolderAsWorkspace(path)
   }
 
@@ -302,7 +305,7 @@ export function Sidebar(): React.JSX.Element {
     showMenu(e, [
       {
         id: 'current-session-rename',
-        label: 'Rename…',
+        label: t('contextMenu.rename'),
         icon: <Pencil size={14} />,
         action: () => startSessionRename('current'),
       },
@@ -347,9 +350,11 @@ export function Sidebar(): React.JSX.Element {
           onContextMenu={(e) => handleSessionRightClick(e, session)}
           // The full title leads, so a preview too long for the current width is
           // still readable on hover.
-          title={`${labels.title}\n\n${isActive
-            ? 'Click to open · double-click to rename · right-click for actions'
-            : 'Click to open · right-click for actions'}`}
+          title={
+            isActive
+              ? t('sidebar.sessionRow.tooltipActive', { title: labels.title })
+              : t('sidebar.sessionRow.tooltipInactive', { title: labels.title })
+          }
           className={clsx(
             'flex w-full items-center gap-2 rounded px-2 py-1.5 pr-7 text-left text-sm transition-colors',
             nested && 'pl-2',
@@ -380,8 +385,8 @@ export function Sidebar(): React.JSX.Element {
           type="button"
           onClick={() => openWorkflowRunsForSession(workflowSessionId)}
           className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-1 text-faint opacity-0 transition-opacity hover:bg-highlight hover:text-accent-fg focus-visible:opacity-100 group-hover:opacity-100"
-          title="Workflow runs for this session"
-          aria-label="Workflow runs for this session"
+          title={t('sidebar.workflowRunsForSession')}
+          aria-label={t('sidebar.workflowRunsForSession')}
         >
           <WorkflowIcon size={12} />
         </button>
@@ -462,18 +467,18 @@ export function Sidebar(): React.JSX.Element {
                 ? 'bg-card text-accent-fg'
                 : 'text-muted hover:bg-surface-hover hover:text-primary'
             )}
-            title="Home (Esc to launcher)"
-            aria-label="Home"
+            title={t('sidebar.header.homeTitle')}
+            aria-label={t('sidebar.header.homeAriaLabel')}
           >
             <Home size={16} />
           </button>
-          <span className="text-sm font-medium text-primary">Pi Desktop</span>
+          <span className="text-sm font-medium text-primary">{PI_DESKTOP_PRODUCT_NAME}</span>
         </div>
         <button
           onClick={toggleSidebar}
           className="rounded p-1 text-muted hover:bg-surface-hover hover:text-primary"
-          title="Close sidebar"
-          aria-label="Close sidebar"
+          title={t('sidebar.header.closeSidebar')}
+          aria-label={t('sidebar.header.closeSidebar')}
         >
           <PanelLeftClose size={16} />
         </button>
@@ -482,13 +487,13 @@ export function Sidebar(): React.JSX.Element {
       {/* Project + primary action */}
       <div className="border-b border-border pb-3">
         <div className="flex items-center justify-between px-3 pt-3">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-faint">Project</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-faint">{t('common.project')}</div>
           <button
             type="button"
             onClick={() => void openProject()}
             className="rounded p-1 text-muted transition-colors hover:bg-highlight hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-focus"
-            title="Open project folder (Ctrl/Cmd+O)"
-            aria-label="Open project folder"
+            title={t('sidebar.openProjectFolder.titleWithShortcut')}
+            aria-label={t('sidebar.openProjectFolder.ariaLabel')}
           >
             <FolderOpen size={14} />
           </button>
@@ -500,14 +505,20 @@ export function Sidebar(): React.JSX.Element {
             onClick={() => void startNewSession()}
             disabled={!activeWorkspace}
             className="group flex w-full items-center gap-2 rounded-lg bg-accent px-3 py-2.5 text-sm font-medium text-white shadow-sm shadow-accent/20 transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50"
-            title={activeWorkspace ? 'Start a new session in this project (Ctrl/Cmd+N)' : 'Open a project first'}
+            title={
+              activeWorkspace
+                ? t('sidebar.newSessionButton.titleWithShortcut')
+                : t('sidebar.newSessionButton.titleNoProject')
+            }
           >
             <Plus size={15} className="shrink-0 transition-transform group-hover:rotate-90" />
-            <span className="flex-1 text-left">New session</span>
-            <kbd className="rounded border border-white/20 bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-white/75">Ctrl N</kbd>
+            <span className="flex-1 text-left">{t('sidebar.newSessionButton.label')}</span>
+            <kbd className="rounded border border-white/20 bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-white/75">{t('sidebar.newSessionButton.shortcutKbd')}</kbd>
           </button>
           <div className="mt-1.5 px-1 text-[11px] text-faint">
-            {activeWorkspace ? `Starts in ${activeWorkspace.name}` : 'Open a project to begin'}
+            {activeWorkspace
+              ? t('sidebar.newSessionButton.startsIn', { project: activeWorkspace.name })
+              : t('sidebar.newSessionButton.openProjectToBegin')}
           </div>
         </div>
       </div>
@@ -515,36 +526,36 @@ export function Sidebar(): React.JSX.Element {
       {/* Navigation */}
       <nav className="space-y-3 border-b border-border px-2 py-3">
         <div>
-          <div className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-faint">Workspace</div>
+          <div className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-faint">{t('sidebar.nav.workspaceSection')}</div>
           <div className="space-y-0.5">
             <SidebarItem
               icon={<MessageSquare size={14} />}
-              label="Chat"
+              label={t('sidebar.nav.chat')}
               active={currentView === 'chat'}
               onClick={() => setCurrentView('chat')}
             />
             <SidebarItem
               icon={<FolderOpen size={14} />}
-              label="Sessions"
+              label={t('sidebar.nav.sessions')}
               active={currentView === 'sessions'}
               onClick={() => {
                 setSessionsScope('current')
                 setCurrentView('sessions')
               }}
-              title="Sessions in this project"
+              title={t('sidebar.nav.sessionsTitle')}
             />
             <SidebarItem
               icon={<Plus size={14} />}
-              label="New task"
+              label={t('missionControl.newTask')}
               active={false}
               onClick={() => setTaskLauncherOpen(true)}
-              title="Start a task in a new Pi session"
+              title={t('sidebar.nav.newTaskTitle')}
             />
           </div>
         </div>
         <div>
           <div className="mb-1 flex items-center gap-1 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-faint">
-            <span>Activity</span>
+            <span>{t('sidebar.nav.activitySection')}</span>
             {activeWorkspace && (
               <span className="min-w-0 truncate normal-case">· {activeWorkspace.name}</span>
             )}
@@ -552,17 +563,17 @@ export function Sidebar(): React.JSX.Element {
           <div className="space-y-0.5">
             <SidebarItem
               icon={<LayoutDashboard size={14} />}
-              label="Mission Control"
+              label={t('sidebar.nav.missionControl')}
               active={currentView === 'mission-control'}
               onClick={() => {
                 setWorkflowPanelOpen(false)
                 setCurrentView('mission-control')
               }}
-              title="All background sessions and workflows"
+              title={t('sidebar.nav.missionControlTitle')}
             />
             <SidebarItem
               icon={<WorkflowIcon size={14} />}
-              label="Workflows"
+              label={t('sidebar.nav.workflows')}
               // Only highlighted when THIS project's scope is open, so it never
               // fights the Tools' global "All Workflows" entry. With no project
               // open the entry falls back to the global list (same as the old
@@ -574,14 +585,22 @@ export function Sidebar(): React.JSX.Element {
                 workflowPanelWorkspaceId === activeWorkspace.id
               }
               onClick={() => openWorkflowRunsForWorkspace(activeWorkspace?.id ?? null)}
-              title={activeWorkspace ? `Workflow runs in ${activeWorkspace.name}` : 'All workflow runs (no project open)'}
+              title={
+                activeWorkspace
+                  ? t('sidebar.nav.workflowsTitleWithProject', { project: activeWorkspace.name })
+                  : t('sidebar.nav.workflowsTitleNoProject')
+              }
             />
             <SidebarItem
               icon={<Activity size={14} />}
-              label="Timeline"
+              label={t('sidebar.nav.timeline')}
               active={currentView === 'timeline'}
               onClick={() => setCurrentView('timeline')}
-              title={activeWorkspace ? `Timeline for ${activeWorkspace.name}` : 'Timeline'}
+              title={
+                activeWorkspace
+                  ? t('sidebar.nav.timelineTitleWithProject', { project: activeWorkspace.name })
+                  : t('sidebar.nav.timeline')
+              }
             />
           </div>
         </div>
@@ -591,12 +610,12 @@ export function Sidebar(): React.JSX.Element {
       {sessionState && (
         renamingWhere === 'current' ? (
           <div className="mx-3 mt-2 rounded-md bg-surface p-3">
-            <div className="text-xs font-medium text-muted uppercase tracking-wider">Current Session</div>
+            <div className="text-xs font-medium text-muted uppercase tracking-wider">{t('sidebar.currentSession.heading')}</div>
             <div className="mt-1.5 flex">{renderRenameInput()}</div>
             {sessionState.model && (
               <div className="mt-1 text-xs text-dim">{sessionState.model.name}</div>
             )}
-            <div className="mt-1 text-xs text-dim">{sessionState.messageCount} messages</div>
+            <div className="mt-1 text-xs text-dim">{t('sidebar.currentSession.messageCount', { count: sessionState.messageCount })}</div>
           </div>
         ) : (
           <div className="group relative mx-3 mt-2">
@@ -606,9 +625,9 @@ export function Sidebar(): React.JSX.Element {
               onDoubleClick={() => startSessionRename('current')}
               onContextMenu={handleCurrentSessionRightClick}
               className="w-full rounded-md bg-surface p-3 pr-9 text-left transition-colors hover:bg-surface-hover focus:outline-none focus:ring-1 focus:ring-border-strong"
-              title="Open current session in chat · double-click to rename"
+              title={t('sidebar.currentSession.openTitle')}
             >
-              <div className="text-xs font-medium text-muted uppercase tracking-wider">Current Session</div>
+              <div className="text-xs font-medium text-muted uppercase tracking-wider">{t('sidebar.currentSession.heading')}</div>
               <div className="mt-1.5 text-sm text-primary truncate">
                 {getSessionTitle(sessionState.sessionName, sessionState.sessionId, currentSessionPreview)}
               </div>
@@ -618,7 +637,7 @@ export function Sidebar(): React.JSX.Element {
                 </div>
               )}
               <div className="mt-1 text-xs text-dim">
-                {sessionState.messageCount} messages
+                {t('sidebar.currentSession.messageCount', { count: sessionState.messageCount })}
               </div>
             </button>
             {/* Sibling overlay — the panel above stays a single non-nested button. */}
@@ -626,8 +645,8 @@ export function Sidebar(): React.JSX.Element {
               type="button"
               onClick={() => openWorkflowRunsForSession(sessionState.sessionId)}
               className="absolute right-2 top-3 rounded p-1.5 text-faint opacity-0 transition-opacity hover:bg-highlight hover:text-accent-fg focus-visible:opacity-100 group-hover:opacity-100"
-              title="Workflow runs for this session"
-              aria-label="Workflow runs for this session"
+              title={t('sidebar.workflowRunsForSession')}
+              aria-label={t('sidebar.workflowRunsForSession')}
             >
               <WorkflowIcon size={13} />
             </button>
@@ -639,7 +658,9 @@ export function Sidebar(): React.JSX.Element {
       <div className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
         <div className="mb-1 flex items-center justify-between px-2">
           <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-faint">
-            {activeWorkspace ? `Recent in ${activeWorkspace.name}` : 'Recent sessions'}
+            {activeWorkspace
+              ? t('sidebar.recentSessions.headingWithProject', { project: activeWorkspace.name })
+              : t('sidebar.recentSessions.headingNoProject')}
           </div>
           <button
             type="button"
@@ -649,19 +670,19 @@ export function Sidebar(): React.JSX.Element {
             }}
             className="text-[11px] text-muted transition-colors hover:text-accent-fg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-focus"
           >
-            View all
+            {t('sidebar.recentSessions.viewAll')}
           </button>
         </div>
         {activeWorkspace ? (
           recentSessionsForWorkspace.length === 0 ? (
             <div className="mx-2 mt-2 rounded-lg border border-dashed border-border px-3 py-4 text-center text-xs text-faint">
-              No sessions in this project yet.
+              {t('sidebar.recentSessions.emptyInProject')}
               <button
                 type="button"
                 onClick={() => void startNewSession()}
                 className="mt-1 block w-full text-accent-fg transition-colors hover:text-accent"
               >
-                Start one now
+                {t('sidebar.recentSessions.startOneNow')}
               </button>
             </div>
           ) : (
@@ -671,7 +692,7 @@ export function Sidebar(): React.JSX.Element {
           )
         ) : recentGroups.length === 0 ? (
           <div className="mx-2 mt-2 rounded-lg border border-dashed border-border px-3 py-4 text-center text-xs text-faint">
-            Open a project to see its sessions.
+            {t('sidebar.recentSessions.emptyNoProject')}
           </div>
         ) : (
           recentGroups.map(renderRecentGroup)
@@ -684,14 +705,14 @@ export function Sidebar(): React.JSX.Element {
           <button
             onClick={() => setArchivedOpen((open) => !open)}
             className="flex w-full items-center gap-1.5 rounded px-2 py-1.5 text-xs font-medium uppercase tracking-wider text-dim hover:text-secondary transition-colors"
-            title={archivedOpen ? 'Collapse archived sessions' : 'Expand archived sessions'}
+            title={archivedOpen ? t('sidebar.archived.collapseTitle') : t('sidebar.archived.expandTitle')}
           >
             <ChevronDown
               size={12}
               className={clsx('shrink-0 transition-transform', !archivedOpen && '-rotate-90')}
             />
             <Archive size={12} className="shrink-0" />
-            <span>Archived ({archivedList.length})</span>
+            <span>{t('sidebar.archived.heading', { count: archivedList.length })}</span>
           </button>
           {archivedOpen && (
             <div className="max-h-48 overflow-y-auto pb-1">
@@ -703,33 +724,33 @@ export function Sidebar(): React.JSX.Element {
 
       {/* Secondary tools stay available without competing with project/session work. */}
       <div className="shrink-0 border-t border-border px-2 py-2">
-        <div className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-faint">Tools</div>
+        <div className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-faint">{t('sidebar.tools.sectionLabel')}</div>
         <div className="grid grid-cols-2 gap-0.5">
           <SidebarItem
             compact
             icon={<Package size={13} />}
-            label="Packages"
+            label={t('sidebar.tools.packages')}
             active={toolViewShowing('packages')}
             onClick={() => openToolView('packages')}
           />
           <SidebarItem
             compact
             icon={<StickyNote size={13} />}
-            label="Notes"
+            label={t('sidebar.tools.notes')}
             active={toolViewShowing('notes')}
             onClick={() => openToolView('notes')}
           />
           <SidebarItem
             compact
             icon={<Sparkles size={13} />}
-            label="Skills"
+            label={t('sidebar.tools.skills')}
             active={toolViewShowing('skills')}
             onClick={() => openToolView('skills')}
           />
           <SidebarItem
             compact
             icon={<Stethoscope size={13} />}
-            label="Diagnostics"
+            label={t('sidebar.tools.diagnostics')}
             active={toolViewShowing('diagnostics')}
             onClick={() => openToolView('diagnostics')}
           />
@@ -738,17 +759,17 @@ export function Sidebar(): React.JSX.Element {
           <SidebarItem
             compact
             icon={<WorkflowIcon size={13} />}
-            label="All Workflows"
+            label={t('sidebar.tools.allWorkflows')}
             // Highlighted only when the global scope is open (never alongside
             // the Activity entry, whose active state requires a workspace id).
             active={globalWorkflowOpen}
             onClick={() => openWorkflowRunsForWorkspace(null)}
-            title="Workflow runs from every project"
+            title={t('sidebar.tools.allWorkflowsTitle')}
           />
           <SidebarItem
             compact
             icon={<Settings size={13} />}
-            label="Settings"
+            label={t('common.settings')}
             active={toolViewShowing('settings')}
             onClick={() => openToolView('settings')}
           />
@@ -767,6 +788,7 @@ export function Sidebar(): React.JSX.Element {
 // ─── Workspace Switcher ──────────────────────────────────────────────────────
 
 function WorkspaceSwitcher({ onOpenProject }: { onOpenProject: () => void }): React.JSX.Element {
+  const { t } = useTranslation()
   const workspaces = useAppStore((state) => state.workspaces)
   const activeWorkspace = useAppStore((state) => state.activeWorkspace)
   const activateWorkspace = useAppStore((state) => state.activateWorkspace)
@@ -808,7 +830,7 @@ function WorkspaceSwitcher({ onOpenProject }: { onOpenProject: () => void }): Re
 
   const handleChangeFolder = async () => {
     if (!activeWorkspace) return
-    const path = await window.piDesktop.system.openDialog({ title: 'Select Workspace Folder' })
+    const path = await window.piDesktop.system.openDialog({ title: t('dialogs.selectWorkspaceFolder.title') })
     if (path) await changeWorkspaceFolder(activeWorkspace.id, path)
   }
 
@@ -818,14 +840,14 @@ function WorkspaceSwitcher({ onOpenProject }: { onOpenProject: () => void }): Re
     showContextMenu(e, [
       {
         id: 'rename',
-        label: 'Rename',
+        label: t('sidebar.workspaceMenu.rename'),
         icon: <Pencil size={14} />,
         disabled: !activeWorkspace,
         action: startRenaming,
       },
       {
         id: 'change-folder',
-        label: 'Change folder…',
+        label: t('sidebar.workspaceMenu.changeFolder'),
         icon: <FolderOpen size={14} />,
         disabled: !activeWorkspace,
         action: () => {
@@ -854,7 +876,7 @@ function WorkspaceSwitcher({ onOpenProject }: { onOpenProject: () => void }): Re
               }
             }}
             onBlur={handleRename}
-            placeholder="Workspace name"
+            placeholder={t('sidebar.workspaceSwitcher.namePlaceholder')}
             className="min-w-0 flex-1 rounded border border-border-strong bg-card px-2 py-1 text-sm text-primary placeholder:text-faint focus:border-focus focus:outline-none"
             autoFocus
           />
@@ -864,13 +886,13 @@ function WorkspaceSwitcher({ onOpenProject }: { onOpenProject: () => void }): Re
           onClick={() => setIsOpen(!isOpen)}
           onDoubleClick={startRenaming}
           onContextMenu={handleWorkspaceContextMenu}
-          title="Click to switch · double-click to rename · right-click for options"
+          title={t('sidebar.workspaceSwitcher.triggerTitle')}
           className="flex w-full items-center justify-between rounded-md px-3 py-2 text-sm text-primary hover:bg-surface-hover transition-colors"
         >
           <div className="flex min-w-0 items-center gap-2 text-left">
             <Layers size={14} className="shrink-0" style={{ color: activeWorkspace?.color ?? '#6b7280' }} />
             <div className="min-w-0">
-              <div className="truncate text-sm">{activeWorkspace?.name ?? 'No workspace'}</div>
+              <div className="truncate text-sm">{activeWorkspace?.name ?? t('sidebar.workspaceSwitcher.noWorkspace')}</div>
               {activeWorkspace && (
                 <div className="truncate text-[10px] text-faint">{activeWorkspace.path}</div>
               )}
@@ -890,7 +912,7 @@ function WorkspaceSwitcher({ onOpenProject }: { onOpenProject: () => void }): Re
             {promptsWaitingElsewhere > 0 && (
               <span
                 className="rounded bg-warning-bg px-1.5 py-0.5 text-[10px] text-warning"
-                title={`${formatPromptsWaiting(promptsWaitingElsewhere)} in other workspaces`}
+                title={t('sidebar.promptsWaitingInOtherWorkspaces', { count: promptsWaitingElsewhere })}
               >
                 {promptsWaitingElsewhere}
               </span>
@@ -960,8 +982,8 @@ function WorkspaceSwitcher({ onOpenProject }: { onOpenProject: () => void }): Re
                     removeWorkspace(ws.id)
                   }}
                   className="rounded p-1 text-faint opacity-0 group-hover:opacity-100 hover:text-error transition-all"
-                  title="Remove workspace"
-                  aria-label="Remove workspace"
+                  title={t('store.confirm.removeWorkspaceTitle')}
+                  aria-label={t('store.confirm.removeWorkspaceTitle')}
                 >
                   <Trash2 size={12} />
                 </button>
@@ -978,7 +1000,7 @@ function WorkspaceSwitcher({ onOpenProject }: { onOpenProject: () => void }): Re
             className="flex w-full items-center gap-2 border-t border-border px-3 py-2 text-xs text-muted transition-colors hover:bg-surface-hover hover:text-secondary"
           >
             <FolderOpen size={12} />
-            Open project…
+            {t('sidebar.workspaceSwitcher.openProjectEllipsis')}
           </button>
         </div>
       )}

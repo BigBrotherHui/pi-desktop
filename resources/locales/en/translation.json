@@ -183,11 +183,13 @@
     "hideSidebar": "Hide sidebar",
     "loading": "Loading…",
     "paste": "Paste",
+    "project": "Project",
     "remove": "Remove",
     "retry": "Retry",
     "save": "Save",
     "selectAll": "Select All",
     "send": "Send",
+    "settings": "Settings",
     "showSidebar": "Show sidebar",
     "submit": "Submit",
     "thinking": "Thinking"
@@ -234,6 +236,9 @@
       "exportTitle": "Export Permission Rules",
       "fileFilterName": "Permission Rules",
       "importTitle": "Import Permission Rules"
+    },
+    "selectWorkspaceFolder": {
+      "title": "Select Workspace Folder"
     },
     "theme": {
       "exportTitle": "Export Theme",
@@ -406,6 +411,47 @@
     "zoomIn": "Zoom In",
     "zoomOut": "Zoom Out"
   },
+  "missionControl": {
+    "controlUnavailable": "control unavailable",
+    "idle": "{{agent}} is idle",
+    "liveSessions": "Live sessions",
+    "needsAttention_one": "{{count}} needs attention",
+    "needsAttention_other": "{{count}} needs attention",
+    "newTask": "New task",
+    "noLiveRuntimes": "No live session runtimes yet. Start a task to put Pi to work in the background.",
+    "noWorkflowRuns": "No workflow runs yet.",
+    "open": "Open",
+    "openAllWorkflows": "Open all workflows",
+    "proceed": "Proceed",
+    "proceedWithWorkflow": "Proceed with this workflow",
+    "refreshWorkflowRuns": "Refresh workflow runs",
+    "resumeFailed": "Could not proceed with {{workflow}}: {{reason}}",
+    "resumeFailedGeneric": "Could not proceed with {{workflow}}. Open the run for details.",
+    "retryWithWorkflow": "Retry this workflow",
+    "review": "Review",
+    "runtimeState": {
+      "completed": "completed",
+      "failed": "failed",
+      "idle": "idle",
+      "needsApproval": "needs approval",
+      "stopped": "stopped",
+      "working": "working"
+    },
+    "startingSession": "Starting session",
+    "subtitle": "Background sessions and workflow runs, from every project.",
+    "title": "Mission Control",
+    "unknownProject": "Unknown project",
+    "workflowActivity": "Workflow activity",
+    "workflowStatus": {
+      "aborted": "aborted",
+      "completed": "completed",
+      "failed": "failed",
+      "paused": "paused",
+      "pending": "pending",
+      "running": "running",
+      "unknown": "unknown"
+    }
+  },
   "models": {
     "readFailure": {
       "invalidJson": "{{file}} is not valid JSON: {{detail}}",
@@ -464,6 +510,72 @@
       "target": "Target: {{path}}",
       "title": "Allow {{tool}}?"
     }
+  },
+  "sessions": {
+    "activeBadge": "active",
+    "archivedBadge": "archived",
+    "archivedToggle": {
+      "hideTitle": "Hide archived sessions",
+      "hidingNone": "Hiding none",
+      "showTitle": "Show archived sessions"
+    },
+    "currentProjectBadge": "current",
+    "currentWorkspaceLabel": "Current workspace:",
+    "deleteConfirm": {
+      "message": "Delete this session? Will use <code>trash</code> if available, otherwise permanent."
+    },
+    "deleteEllipsis": "Delete...",
+    "empty": {
+      "createFirst": "Create your first session",
+      "noMatch": "No sessions match your search",
+      "noneInProject": "No sessions in this project yet",
+      "noneYet": "No sessions yet",
+      "openProjectToSee": "Open a project to see its sessions"
+    },
+    "engineSession": "{{engine}} session",
+    "header": {
+      "projectCount_one": "{{count}} project",
+      "projectCount_other": "{{count}} projects",
+      "sessionCount_one": "{{count}} session",
+      "sessionCount_other": "{{count}} sessions"
+    },
+    "newSessionButton": "New Session",
+    "runtime": {
+      "completed": "{{agent}} finished",
+      "failed": "{{agent}} stopped with an error",
+      "needsApproval": "{{agent}} is waiting for approval",
+      "working": "{{agent}} is working"
+    },
+    "scopeToggle": {
+      "allSessions": "All Sessions",
+      "currentOnly": "Current Only",
+      "showCurrentProjectOnly": "Only show sessions from the current project",
+      "showEveryProject": "Show sessions from every project"
+    },
+    "searchPlaceholder": "Search sessions or projects...",
+    "sessionActions": {
+      "ariaLabel": "Session actions",
+      "title": "Session actions (or right-click the row)"
+    },
+    "tags": {
+      "add": "Add",
+      "addPlaceholder": "Add tag...",
+      "addTag": "Add tag",
+      "autoTagHint": "Auto-tagged from chat context — add your own tag to replace it",
+      "removeAutoTag": "Remove auto-tag {{tag}}",
+      "removeTag": "Remove tag {{tag}}"
+    },
+    "time": {
+      "days_one": "{{count}}d ago",
+      "days_other": "{{count}}d ago",
+      "hours_one": "{{count}}h ago",
+      "hours_other": "{{count}}h ago",
+      "justNow": "just now",
+      "minutes_one": "{{count}}m ago",
+      "minutes_other": "{{count}}m ago"
+    },
+    "title": "Sessions",
+    "workflowRunsMenuItem": "Workflow runs"
   },
   "settings": {
     "actions": {
@@ -614,6 +726,181 @@
       "label": "UI Font Size"
     }
   },
+  "sidebar": {
+    "archived": {
+      "collapseTitle": "Collapse archived sessions",
+      "expandTitle": "Expand archived sessions",
+      "heading_one": "Archived ({{count}})",
+      "heading_other": "Archived ({{count}})"
+    },
+    "currentSession": {
+      "heading": "Current Session",
+      "messageCount_one": "{{count}} messages",
+      "messageCount_other": "{{count}} messages",
+      "openTitle": "Open current session in chat · double-click to rename"
+    },
+    "header": {
+      "closeSidebar": "Close sidebar",
+      "homeAriaLabel": "Home",
+      "homeTitle": "Home (Esc to launcher)"
+    },
+    "nav": {
+      "activitySection": "Activity",
+      "chat": "Chat",
+      "missionControl": "Mission Control",
+      "missionControlTitle": "All background sessions and workflows",
+      "newTaskTitle": "Start a task in a new Pi session",
+      "sessions": "Sessions",
+      "sessionsTitle": "Sessions in this project",
+      "timeline": "Timeline",
+      "timelineTitleWithProject": "Timeline for {{project}}",
+      "workflows": "Workflows",
+      "workflowsTitleNoProject": "All workflow runs (no project open)",
+      "workflowsTitleWithProject": "Workflow runs in {{project}}",
+      "workspaceSection": "Workspace"
+    },
+    "newSessionButton": {
+      "label": "New session",
+      "openProjectToBegin": "Open a project to begin",
+      "shortcutKbd": "Ctrl N",
+      "startsIn": "Starts in {{project}}",
+      "titleNoProject": "Open a project first",
+      "titleWithShortcut": "Start a new session in this project (Ctrl/Cmd+N)"
+    },
+    "openProjectFolder": {
+      "ariaLabel": "Open project folder",
+      "titleWithShortcut": "Open project folder (Ctrl/Cmd+O)"
+    },
+    "promptsWaitingInOtherWorkspaces_one": "{{count}} Pi prompt waiting in other workspaces",
+    "promptsWaitingInOtherWorkspaces_other": "{{count}} Pi prompts waiting in other workspaces",
+    "recentSessions": {
+      "emptyInProject": "No sessions in this project yet.",
+      "emptyNoProject": "Open a project to see its sessions.",
+      "headingNoProject": "Recent sessions",
+      "headingWithProject": "Recent in {{project}}",
+      "startOneNow": "Start one now",
+      "viewAll": "View all"
+    },
+    "sessionNamePlaceholder": "Session name",
+    "sessionRow": {
+      "tooltipActive": "{{title}}\n\nClick to open · double-click to rename · right-click for actions",
+      "tooltipInactive": "{{title}}\n\nClick to open · right-click for actions"
+    },
+    "tools": {
+      "allWorkflows": "All Workflows",
+      "allWorkflowsTitle": "Workflow runs from every project",
+      "diagnostics": "Diagnostics",
+      "notes": "Notes",
+      "packages": "Packages",
+      "sectionLabel": "Tools",
+      "skills": "Skills"
+    },
+    "workflowRunsForSession": "Workflow runs for this session",
+    "workspaceMenu": {
+      "changeFolder": "Change folder…",
+      "rename": "Rename"
+    },
+    "workspaceSwitcher": {
+      "namePlaceholder": "Workspace name",
+      "noWorkspace": "No workspace",
+      "openProjectEllipsis": "Open project…",
+      "triggerTitle": "Click to switch · double-click to rename · right-click for options"
+    }
+  },
+  "status": {
+    "agentSection": {
+      "title": "{{agent}} Agent"
+    },
+    "compactButton": {
+      "compact": "Compact context",
+      "compacting": "Compacting…",
+      "title": "Summarize and compact the conversation to free up context"
+    },
+    "contextSection": {
+      "title": "Context Usage"
+    },
+    "errorCopied": "copied",
+    "errorCopy": "copy",
+    "extensionsSection": {
+      "title": "Extensions"
+    },
+    "header": {
+      "title": "System Status"
+    },
+    "mcpSection": {
+      "title": "MCP Servers"
+    },
+    "moreCount_one": "+{{count}} more",
+    "moreCount_other": "+{{count}} more",
+    "noExtensionsOrSkills": "No extensions or skills loaded",
+    "noMcpServers": "No MCP servers configured",
+    "pidLabel": "(PID: {{pid}})",
+    "processStatus": {
+      "error": "error",
+      "running": "running",
+      "starting": "starting",
+      "stopped": "stopped"
+    },
+    "promptTemplatesSection": {
+      "title": "Prompt Templates"
+    },
+    "refresh": "Refresh",
+    "row": {
+      "cost": "Cost",
+      "error": "Error",
+      "messages": "Messages",
+      "model": "Model",
+      "name": "Name",
+      "path": "Path",
+      "provider": "Provider",
+      "session": "Session",
+      "status": "Status",
+      "tokens": "Tokens",
+      "usage": "Usage",
+      "window": "Window"
+    },
+    "scope": {
+      "cli": "cli",
+      "global": "global",
+      "package": "package",
+      "project": "project"
+    },
+    "skillCommandsSection": {
+      "title": "Skill Commands"
+    },
+    "skillsSection": {
+      "title": "Skills"
+    },
+    "trigger": {
+      "title": "System status"
+    },
+    "workspaceSection": {
+      "title": "Workspace"
+    }
+  },
+  "statusBar": {
+    "compact": "compact",
+    "compactContextTitle": "Compact context — summarize the conversation to free up space",
+    "compacting": "compacting…",
+    "contextUsage": "Context: {{tokens}} / {{contextWindow}} tokens",
+    "followUpQueued_one": "{{count}} follow-up queued",
+    "followUpQueued_other": "{{count}} follow-up queued",
+    "gitBranch": "Git branch: {{branch}}",
+    "hideTerminal": "Hide terminal",
+    "openWorkflowRuns": "Open workflow runs",
+    "piError": "{{agent}} error",
+    "piRunning": "{{agent}} running (PID: {{pid}})",
+    "piStarting": "{{agent}} starting",
+    "piStopped": "{{agent}} stopped",
+    "showTerminal": "Show terminal",
+    "steerQueued_one": "{{count}} steer queued",
+    "steerQueued_other": "{{count}} steer queued",
+    "streaming": "streaming",
+    "waitingOnPromptElsewhere": "{{agent}} is waiting on a prompt in another workspace; switch to it to answer",
+    "workflowCount_one": "{{count}} workflow",
+    "workflowCount_other": "{{count}} workflows",
+    "workflowsFallback": "workflows"
+  },
   "store": {
     "confirm": {
       "changeAnywayLabel": "Change anyway",
@@ -692,6 +979,20 @@
     },
     "promptsWaiting_one": "{{count}} Pi prompt waiting",
     "promptsWaiting_other": "{{count}} Pi prompts waiting"
+  },
+  "taskLauncher": {
+    "closeAriaLabel": "Close task launcher",
+    "footerNote": "The task runs in a new session and continues in the background if you switch away. Existing matching PR/task worktrees are reused. Ctrl/Cmd+Enter starts it.",
+    "isolatedWorktree": {
+      "description": "Reuses a matching local PR/task worktree; otherwise creates one. The source project stays untouched.",
+      "label": "Use an isolated Git worktree"
+    },
+    "openProjectFirst": "Open a project first",
+    "starting": "Starting…",
+    "startTask": "Start task",
+    "subtitle": "Start a fresh Pi session and send the task immediately.",
+    "task": "Task",
+    "taskPlaceholder": "Fix the failing tests, explain the root cause, and prepare the changes for review…"
   },
   "thinking": {
     "effort": "Effort",

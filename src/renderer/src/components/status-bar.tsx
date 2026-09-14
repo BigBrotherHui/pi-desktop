@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore, countPromptsWaitingElsewhere, formatPromptsWaiting } from '../store'
 import { agentEngineLabel } from '../../../shared/agent-engine-label'
 import { clsx } from 'clsx'
@@ -16,6 +17,7 @@ import {
 } from 'lucide-react'
 
 export function StatusBar(): React.JSX.Element {
+  const { t } = useTranslation()
   const piStatus = useAppStore((state) => state.piStatus)
   const piPid = useAppStore((state) => state.piPid)
   // Name the engine that is actually running; the two are not interchangeable
@@ -89,13 +91,19 @@ export function StatusBar(): React.JSX.Element {
             )}
           />
           <span className="text-dim">
-            {piStatus === 'running' ? `${engineLabel} running (PID: ${piPid})` : `${engineLabel} ${piStatus}`}
+            {piStatus === 'running'
+              ? t('statusBar.piRunning', { agent: engineLabel, pid: piPid })
+              : piStatus === 'starting'
+                ? t('statusBar.piStarting', { agent: engineLabel })
+                : piStatus === 'error'
+                  ? t('statusBar.piError', { agent: engineLabel })
+                  : t('statusBar.piStopped', { agent: engineLabel })}
           </span>
         </div>
 
         {/* Git branch of the active workspace */}
         {gitBranch && (
-          <div className="flex items-center gap-1 text-dim" title={`Git branch: ${gitBranch}`}>
+          <div className="flex items-center gap-1 text-dim" title={t('statusBar.gitBranch', { branch: gitBranch })}>
             <GitBranch size={11} />
             <span>{gitBranch}</span>
           </div>
@@ -105,19 +113,19 @@ export function StatusBar(): React.JSX.Element {
         {isStreaming && (
           <div className="flex items-center gap-1 text-accent-fg">
             <Loader2 size={10} className="animate-spin" />
-            <span>streaming</span>
+            <span>{t('statusBar.streaming')}</span>
           </div>
         )}
 
         {/* Queue indicators */}
         {pendingSteering.length > 0 && (
           <span className="text-warning">
-            {pendingSteering.length} steer queued
+            {t('statusBar.steerQueued', { count: pendingSteering.length })}
           </span>
         )}
         {pendingFollowUp.length > 0 && (
           <span className="text-warning">
-            {pendingFollowUp.length} follow-up queued
+            {t('statusBar.followUpQueued', { count: pendingFollowUp.length })}
           </span>
         )}
 
@@ -125,7 +133,7 @@ export function StatusBar(): React.JSX.Element {
         {promptsWaitingElsewhere > 0 && (
           <span
             className="text-warning"
-            title={`${engineLabel} is waiting on a prompt in another workspace; switch to it to answer`}
+            title={t('statusBar.waitingOnPromptElsewhere', { agent: engineLabel })}
           >
             {formatPromptsWaiting(promptsWaitingElsewhere)}
           </span>
@@ -151,16 +159,26 @@ export function StatusBar(): React.JSX.Element {
             'flex items-center gap-1 transition-colors',
             workflowPanelOpen || activeWorkflowCount > 0 ? 'text-accent-fg' : 'text-dim hover:text-secondary'
           )}
-          title="Open workflow runs"
-          aria-label="Open workflow runs"
+          title={t('statusBar.openWorkflowRuns')}
+          aria-label={t('statusBar.openWorkflowRuns')}
         >
           <WorkflowIcon size={11} />
-          <span>{activeWorkflowCount > 0 ? `${activeWorkflowCount} workflow${activeWorkflowCount === 1 ? '' : 's'}` : 'workflows'}</span>
+          <span>
+            {activeWorkflowCount > 0
+              ? t('statusBar.workflowCount', { count: activeWorkflowCount })
+              : t('statusBar.workflowsFallback')}
+          </span>
         </button>
 
         {/* Token usage */}
         {sessionStats?.contextUsage && (
-          <div className="flex items-center gap-1 text-dim" title={`Context: ${sessionStats.contextUsage.tokens?.toLocaleString() ?? '?'} / ${sessionStats.contextUsage.contextWindow.toLocaleString()} tokens`}>
+          <div
+            className="flex items-center gap-1 text-dim"
+            title={t('statusBar.contextUsage', {
+              tokens: sessionStats.contextUsage.tokens?.toLocaleString() ?? '?',
+              contextWindow: sessionStats.contextUsage.contextWindow.toLocaleString(),
+            })}
+          >
             <Layers size={10} />
             <span>
               {Number.isFinite(sessionStats.contextUsage.percent)
@@ -176,14 +194,14 @@ export function StatusBar(): React.JSX.Element {
             onClick={() => compactContext()}
             disabled={isCompacting}
             className="flex items-center gap-1 text-dim hover:text-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            title="Compact context — summarize the conversation to free up space"
+            title={t('statusBar.compactContextTitle')}
           >
             {isCompacting ? (
               <Loader2 size={10} className="animate-spin" />
             ) : (
               <Minimize2 size={10} />
             )}
-            <span>{isCompacting ? 'compacting…' : 'compact'}</span>
+            <span>{isCompacting ? t('statusBar.compacting') : t('statusBar.compact')}</span>
           </button>
         )}
 
@@ -199,8 +217,8 @@ export function StatusBar(): React.JSX.Element {
         <button
           onClick={toggleSidebar}
           className="rounded p-0.5 text-dim hover:text-secondary transition-colors"
-          title={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
-          aria-label={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
+          title={sidebarOpen ? t('common.hideSidebar') : t('common.showSidebar')}
+          aria-label={sidebarOpen ? t('common.hideSidebar') : t('common.showSidebar')}
         >
           {sidebarOpen ? <PanelLeftClose size={12} /> : <PanelLeft size={12} />}
         </button>
@@ -212,8 +230,8 @@ export function StatusBar(): React.JSX.Element {
             'rounded p-0.5 transition-colors',
             terminalOpen ? 'text-accent-fg' : 'text-dim hover:text-secondary'
           )}
-          title={terminalOpen ? 'Hide terminal' : 'Show terminal'}
-          aria-label={terminalOpen ? 'Hide terminal' : 'Show terminal'}
+          title={terminalOpen ? t('statusBar.hideTerminal') : t('statusBar.showTerminal')}
+          aria-label={terminalOpen ? t('statusBar.hideTerminal') : t('statusBar.showTerminal')}
         >
           <Terminal size={12} />
         </button>
@@ -222,8 +240,8 @@ export function StatusBar(): React.JSX.Element {
         <button
           onClick={() => setCurrentView('settings')}
           className="rounded p-0.5 text-dim hover:text-secondary transition-colors"
-          title="Settings"
-          aria-label="Settings"
+          title={t('common.settings')}
+          aria-label={t('common.settings')}
         >
           <Settings size={12} />
         </button>
