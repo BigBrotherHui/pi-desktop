@@ -183,7 +183,7 @@ src/
             ├── code-editor-highlight.ts  # Theme-aware highlight style
             ├── status-bar.tsx     # Model selector, thinking, stats
             ├── status-popover.tsx # System status popup
-            ├── settings-panel.tsx # Theme, font, behavior, council settings (live-preview draft)
+            ├── settings-panel.tsx # Language, theme, font, behavior, council settings (live-preview draft)
             ├── custom-models-editor.tsx # Custom models/providers editor
             ├── permission-selector.tsx # Permission mode selector
             ├── permission-mode.ts # Permission mode helpers
@@ -193,7 +193,7 @@ src/
             ├── session-menu-position.ts # Session menu placement
             ├── timeline.tsx       # Agent activity timeline
             ├── review-rail.tsx    # Permissions, approvals, changed files (toggleable)
-            ├── package-browser.tsx # Package/skill browser, fetch-once + local filter
+            ├── package-browser.tsx # Package/skill browser, fetch-once + local filter, update check
             ├── skills-panel.tsx   # Skills browser
             ├── notes-panel.tsx    # Reusable prompts/notes
             ├── note-picker.tsx    # Insert a saved note
