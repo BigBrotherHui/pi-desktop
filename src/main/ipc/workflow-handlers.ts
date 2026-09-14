@@ -3,8 +3,7 @@ import { IPC_CHANNELS, type WorkflowControlResult } from '../../shared/ipc-contr
 import { isWorkflowActionAllowed } from '../../shared/workflow-control'
 import { getWorkflowRun, listWorkflowRuns, resolveWorkflowWorkspaces, setWorkflowPersistence } from '../workflow-monitor'
 import { assertTrustedSender, isString } from './validation'
-import { RpcTimeoutError } from '../pi-rpc-manager'
-import type { PiRpcManager } from '../pi-rpc-manager'
+import { RpcTimeoutError, type PiRpcManager } from '../pi-rpc-manager'
 import type { IpcContext } from './context'
 import { t } from '../../shared/i18n'
 

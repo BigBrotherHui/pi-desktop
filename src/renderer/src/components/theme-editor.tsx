@@ -14,6 +14,7 @@ import {
 import { resolveThemeVars } from '../../../shared/theme/resolve'
 import { applyThemeVars } from '../theme/engine'
 import { applyTheme, registerThemes, setThemePreviewActive } from '../utils/theme'
+import { themeDisplayName } from '../themes'
 import { forkTheme, withOverride, withSeed, withSyntax } from './theme-editor-helpers'
 
 export { forkTheme, withOverride, withSeed, withSyntax }
@@ -91,7 +92,7 @@ export function ThemeEditor({
   const setSettingsDraft = useAppStore((s) => s.setSettingsDraft)
 
   const [draft, setDraft] = useState<ThemeFile>(() =>
-    isUserTheme ? structuredClone(baseTheme) : forkTheme(baseTheme, t('themes.editor.copySuffix', { name: baseTheme.name })))
+    isUserTheme ? structuredClone(baseTheme) : forkTheme(baseTheme, t('themes.editor.copySuffix', { name: themeDisplayName(baseId, baseTheme.name) })))
   const previousKeys = useRef<string[]>([])
   const [effective, setEffective] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)

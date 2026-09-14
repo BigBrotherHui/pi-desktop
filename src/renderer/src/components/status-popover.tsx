@@ -308,7 +308,7 @@ export function StatusPopover(): React.JSX.Element {
                 ))}
                 {extensionCommands.length > 10 && (
                   <div className="text-[10px] text-faint mt-1">
-                    {t('status.moreCount', { count: extensionCommands.length - 10 })}
+                    {t('common.moreCount', { count: extensionCommands.length - 10 })}
                   </div>
                 )}
               </StatusSection>
@@ -333,7 +333,7 @@ export function StatusPopover(): React.JSX.Element {
                 ))}
                 {skills.length > 8 && (
                   <div className="text-[10px] text-faint mt-1">
-                    {t('status.moreCount', { count: skills.length - 8 })}
+                    {t('common.moreCount', { count: skills.length - 8 })}
                   </div>
                 )}
               </StatusSection>

@@ -115,7 +115,7 @@ export function ReviewRail(): React.JSX.Element | null {
         <section className="mt-6">
           <div className="mb-2 flex items-center justify-between">
             <div className="text-xs font-medium uppercase tracking-wide text-dim">
-              {t('review.changedFilesHeading')}
+              {t('common.changedFilesHeading')}
             </div>
             <span className="rounded-full bg-card px-2 py-0.5 text-[10px] text-muted">
               {changedFiles.length}
@@ -128,7 +128,7 @@ export function ReviewRail(): React.JSX.Element | null {
                 <span className="min-w-0 flex-1 truncate">{t('review.gitStatusUnavailable')}</span>
               </div>
             ) : changedFiles.length === 0 ? (
-              <div className="px-3 py-3 text-sm text-dim">{t('review.noWorkingTreeChanges')}</div>
+              <div className="px-3 py-3 text-sm text-dim">{t('common.noWorkingTreeChanges')}</div>
             ) : (
               <div className="max-h-44 overflow-y-auto py-1">
                 {changedFiles.slice(0, 8).map((file) => (
@@ -147,7 +147,7 @@ export function ReviewRail(): React.JSX.Element | null {
                 ))}
                 {changedFiles.length > 8 && (
                   <div className="px-3 py-1.5 text-xs text-dim">
-                    {t('review.moreFiles', { count: changedFiles.length - 8 })}
+                    {t('common.moreCount', { count: changedFiles.length - 8 })}
                   </div>
                 )}
               </div>

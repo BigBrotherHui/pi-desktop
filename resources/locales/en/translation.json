@@ -170,6 +170,7 @@
   "common": {
     "attachFile": "Attach file",
     "cancel": "Cancel",
+    "changedFilesHeading": "Changed Files",
     "close": "Close",
     "collapse": "Collapse",
     "confirm": "Confirm",
@@ -185,7 +186,10 @@
     "install": "Install",
     "installed": "Installed",
     "loading": "Loading…",
+    "moreCount_one": "+{{count}} more",
+    "moreCount_other": "+{{count}} more",
     "newSession": "New Session",
+    "noWorkingTreeChanges": "No working tree changes.",
     "paste": "Paste",
     "project": "Project",
     "refresh": "Refresh",
@@ -271,8 +275,10 @@
     "push": "Push",
     "pushButtonTitle": "Push the current branch after confirmation",
     "pushConfirm": {
+      "branchNameFallback": "current branch",
       "currentBranchFallback": "the current branch",
       "message": "Push {{branch}} to {{target}}?",
+      "remoteFallback": "remote",
       "title": "Push branch?"
     }
   },
@@ -601,9 +607,7 @@
     "changedFiles": {
       "moreOpenDiff_one": "+{{count}} more — open diff review",
       "moreOpenDiff_other": "+{{count}} more — open diff review",
-      "noChanges": "No working tree changes.",
-      "noWorkspace": "No workspace selected.",
-      "title": "Changed Files"
+      "noWorkspace": "No workspace selected."
     },
     "errorBanner": {
       "checkInstalled": "Check that {{agent}} is installed and its path is correct.",
@@ -859,12 +863,8 @@
     }
   },
   "review": {
-    "changedFilesHeading": "Changed Files",
     "gitStatusUnavailable": "Git status unavailable",
     "heading": "Review",
-    "moreFiles_one": "+{{count}} more",
-    "moreFiles_other": "+{{count}} more",
-    "noWorkingTreeChanges": "No working tree changes.",
     "openDiffButton": "Open diff review",
     "openDiffHint": "Inspect working tree changes.",
     "pendingApprovals": {
@@ -1082,7 +1082,6 @@
     "themeActions": {
       "browseGalleryButton": "Browse gallery",
       "description": "Import, export, or install a theme from a URL",
-      "installButton": "Install",
       "label": "Theme Actions"
     },
     "title": "Settings",
@@ -1240,8 +1239,6 @@
     "mcpSection": {
       "title": "MCP Servers"
     },
-    "moreCount_one": "+{{count}} more",
-    "moreCount_other": "+{{count}} more",
     "noExtensionsOrSkills": "No extensions or skills loaded",
     "noMcpServers": "No MCP servers configured",
     "pidLabel": "(PID: {{pid}})",
@@ -1449,7 +1446,7 @@
     "gallery": {
       "authorScreenshotLabel": "Author screenshot",
       "backAriaLabel": "Back to all themes",
-      "detailSubtitle": "Live preview from the theme's real colors",
+      "detailSubtitle": "Live preview from the theme’s real colors",
       "empty": "No themes are available yet.",
       "installingLabel": "Installing…",
       "loadError": "Could not load the gallery: {{error}}",

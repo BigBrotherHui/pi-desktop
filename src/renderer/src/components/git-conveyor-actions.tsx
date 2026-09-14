@@ -10,6 +10,9 @@ type ConveyorDialog =
   | { kind: 'commit'; message: string }
   | { kind: 'pr'; title: string; body: string; base: string }
 
+// A git identifier, not prose — stays literal (ruling on Task 25 fix item 2).
+const DEFAULT_GIT_REMOTE = 'origin'
+
 export function GitConveyorActions({ onChanged }: { onChanged?: () => void }): React.JSX.Element {
   const { t } = useTranslation()
   const requestConfirm = useAppStore((state) => state.requestConfirm)
@@ -133,8 +136,8 @@ export function GitConveyorActions({ onChanged }: { onChanged?: () => void }): R
       return
     }
     const target = status.upstreamBranch
-      ? `${status.pushRemote ?? 'remote'}/${status.upstreamBranch}`
-      : `${status.pushRemote ?? 'origin'}/${status.branch ?? 'current branch'}`
+      ? `${status.pushRemote ?? t('conveyor.pushConfirm.remoteFallback')}/${status.upstreamBranch}`
+      : `${status.pushRemote ?? DEFAULT_GIT_REMOTE}/${status.branch ?? t('conveyor.pushConfirm.branchNameFallback')}`
     const confirmed = await requestConfirm({
       title: t('conveyor.pushConfirm.title'),
       message: t('conveyor.pushConfirm.message', { branch: status.branch ?? t('conveyor.pushConfirm.currentBranchFallback'), target }),

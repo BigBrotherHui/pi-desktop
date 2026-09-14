@@ -61,7 +61,7 @@ export function TerminalPanel(): React.JSX.Element | null {
   const appliedThemeId = useAppliedThemeId()
 
   const [maximized, setMaximized] = useState(false)
-  const [shellLabel, setShellLabel] = useState<string>(t('terminal.title'))
+  const [shellLabel, setShellLabel] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const terminalRef = useRef<XTerm | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
@@ -167,7 +167,7 @@ export function TerminalPanel(): React.JSX.Element | null {
         <div className="flex items-center gap-2">
           <TerminalIcon size={14} className="text-dim" />
           <span className="text-xs text-muted">{t('terminal.title')}</span>
-          <span className="text-[10px] text-faint">{shellLabel}</span>
+          <span className="text-[10px] text-faint">{shellLabel ?? t('terminal.title')}</span>
         </div>
         <div className="flex items-center gap-1">
           <button

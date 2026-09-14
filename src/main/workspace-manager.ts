@@ -20,6 +20,8 @@ import { appLog } from './app-log'
 import { inspectSessionContent } from './session-metadata'
 import {
   createGitWorktree,
+  describeGitFailure,
+  GitCommandError,
   inspectGitRepository,
   listGitWorktrees,
   removeGitWorktree,
@@ -28,7 +30,7 @@ import {
   worktreeTargetPath,
 } from './git-worktree'
 import { extractGitHubPullRequestUrl, resolvePullRequestHeadBranch } from './git-conveyor'
-import { t } from '../shared/i18n'
+import { t, tEnglish } from '../shared/i18n'
 
 /**
  * Manages project workspaces and their independent Pi session runtimes.
@@ -848,7 +850,10 @@ export class WorkspaceManager {
       } catch (err) {
         // Keep dirty/missing worktrees on disk instead of forcing deletion.
         preservedWorktreePath = workspace.path
-        appLog.warn('workspaces', 'Preserved managed worktree while closing tab', err)
+        const detail = err instanceof GitCommandError
+          ? describeGitFailure(err.args, err.stdout, err.stderr, tEnglish)
+          : err
+        appLog.warn('workspaces', 'Preserved managed worktree while closing tab', detail)
       }
     }
 

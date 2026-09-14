@@ -10,7 +10,7 @@ const ACCENTED: Readonly<Record<string, string>> = {
 // Placeholders and <Trans> tags must survive so interpolation and rich text
 // still work. split() with a capture group keeps them at odd indexes.
 const PROTECTED_PARTS = /(\{\{[^}]*\}\}|<[^>]*>)/
-// Longer languages (German, Finnish) run about 30% longer than English.
+// Longer languages (German, Finnish) run about 35% longer than English.
 const EXPANSION_RATIO = 0.35
 const PADDING_CHAR = '~'
 

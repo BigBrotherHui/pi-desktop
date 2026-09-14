@@ -141,14 +141,14 @@ export function HomeInfoSummary({ compact }: { compact?: boolean }): React.JSX.E
         <section className="space-y-3">
           <div className="rounded-lg border border-border bg-surface/50">
             <div className="flex items-center justify-between px-4 py-2.5">
-              <SectionLabel className="mb-0">{t('home.changedFiles.title')}</SectionLabel>
+              <SectionLabel className="mb-0">{t('common.changedFilesHeading')}</SectionLabel>
               <span className="rounded-full bg-card px-2 py-0.5 text-[10px] text-muted">
                 {changedFiles.length}
               </span>
             </div>
             {changedFiles.length === 0 ? (
               <div className="px-4 pb-3 text-xs text-faint">
-                {activeWorkspace ? t('home.changedFiles.noChanges') : t('home.changedFiles.noWorkspace')}
+                {activeWorkspace ? t('common.noWorkingTreeChanges') : t('home.changedFiles.noWorkspace')}
               </div>
             ) : (
               <div className="max-h-40 overflow-y-auto border-t border-border/60 py-1">

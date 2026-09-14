@@ -861,7 +861,7 @@ export function SettingsPanel(): React.JSX.Element {
                   onClick={handleInstallFromUrl}
                   className="shrink-0 rounded-md border border-border-strong px-3 py-1.5 text-sm text-muted hover:bg-surface-hover transition-colors"
                 >
-                  {t('settings.themeActions.installButton')}
+                  {t('common.install')}
                 </button>
               </div>
               {themeActionError && <p className="text-xs text-error">{themeActionError}</p>}
