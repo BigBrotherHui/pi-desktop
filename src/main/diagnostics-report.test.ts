@@ -8,6 +8,7 @@ import {
   summarizeProviders,
 } from './diagnostics-report'
 import type { ModelsConfig } from '../shared/ipc-contracts'
+import { PSEUDO_LANGUAGE, SOURCE_LANGUAGE } from '../shared/i18n/languages'
 
 test('classifyProviderKey covers literal, env, shell, and missing keys', () => {
   const env = { OPENAI_KEY: 'sk-real', EMPTY_KEY: '' }
@@ -85,14 +86,14 @@ test('reportModelsReadFailure keeps safe detail', () => {
 
 test('reportModelsReadFailure does not depend on the interface language', async () => {
   const { i18n } = await import('../shared/i18n')
-  await i18n.changeLanguage('en-XA')
+  await i18n.changeLanguage(PSEUDO_LANGUAGE)
   try {
     assert.equal(
       reportModelsReadFailure('models.json', { kind: 'invalid-syntax', format: 'json', detail: 'apiKey: sk-live' }),
       'models.json is not valid JSON',
     )
   } finally {
-    await i18n.changeLanguage('en')
+    await i18n.changeLanguage(SOURCE_LANGUAGE)
   }
 })
 
