@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
   groupToolMessages,
+  toolKind,
   toolLabel,
   toolCallLabel,
   toolCallFile,
@@ -12,6 +13,8 @@ import {
   type ChatRenderItem,
 } from './message-grouping'
 import type { DisplayMessage } from './message-parsing'
+import { i18n, t } from '../../shared/i18n'
+import { PSEUDO_LANGUAGE, SOURCE_LANGUAGE } from '../../shared/i18n/languages'
 
 let idCounter = 0
 function assistant(over: Partial<DisplayMessage> = {}): DisplayMessage {
@@ -360,6 +363,34 @@ test('parseEdits accepts top-level old_string/new_string aliases', () => {
     new_string: 'bar',
   }))
   assert.deepEqual(blocks, [{ oldText: 'foo', newText: 'bar' }])
+})
+
+test('toolKind names the operation independent of language', () => {
+  assert.equal(toolKind('web_fetch'), 'fetch')
+  assert.equal(toolKind('bash'), 'run')
+  assert.equal(toolKind('edit_file'), 'edit')
+  assert.equal(toolKind('write_file'), 'write')
+  assert.equal(toolKind('grep'), 'search')
+  assert.equal(toolKind('list_dir'), 'list')
+  assert.equal(toolKind('read_file'), 'read')
+  assert.equal(toolKind('some_custom_tool'), null)
+})
+
+test('grouping and file lookups do not change with the interface language', async () => {
+  await i18n.changeLanguage(PSEUDO_LANGUAGE)
+  try {
+    const items = groupToolMessages([
+      toolTurn('bash', { command: 'ls' }),
+      result(),
+      toolTurn('bash', { command: 'pwd' }),
+      result(),
+    ])
+    assert.deepEqual(titles(items), [t('tools.run.summaryFirst', { count: 2 })])
+    assert.equal(toolCallFile('read_file', '{"path":"src/foo.ts"}'), 'src/foo.ts')
+    assert.equal(toolLabel('some_custom_tool'), 'some_custom_tool')
+  } finally {
+    await i18n.changeLanguage(SOURCE_LANGUAGE)
+  }
 })
 
 test('prepareChatMessages drops edit toolResult pills after folding', () => {

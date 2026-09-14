@@ -163,5 +163,76 @@
       "description": "Chat, panels, and sidebar — not the terminal or code editor",
       "label": "UI Font Size"
     }
+  },
+  "tools": {
+    "edit": {
+      "done": "Edited {{target}}",
+      "doneWithoutTarget": "Edited a file",
+      "label": "Edit file",
+      "summaryFirst_one": "Edited a file",
+      "summaryFirst_other": "Edited {{count}} files",
+      "summaryNext_one": "edited a file",
+      "summaryNext_other": "edited {{count}} files"
+    },
+    "fetch": {
+      "done": "Fetched {{target}}",
+      "doneWithoutTarget": "Fetched a URL",
+      "label": "Fetch URL",
+      "summaryFirst_one": "Fetched a URL",
+      "summaryFirst_other": "Fetched {{count}} URLs",
+      "summaryNext_one": "fetched a URL",
+      "summaryNext_other": "fetched {{count}} URLs"
+    },
+    "list": {
+      "done": "Listed {{target}}",
+      "doneWithoutTarget": "Listed a location",
+      "label": "List files",
+      "summaryFirst_one": "Listed a location",
+      "summaryFirst_other": "Listed {{count}} locations",
+      "summaryNext_one": "listed a location",
+      "summaryNext_other": "listed {{count}} locations"
+    },
+    "other": {
+      "summaryFirst_one": "Ran a tool",
+      "summaryFirst_other": "Ran {{count}} tools",
+      "summaryNext_one": "ran a tool",
+      "summaryNext_other": "ran {{count}} tools"
+    },
+    "read": {
+      "done": "Read {{target}}",
+      "doneWithoutTarget": "Read a file",
+      "label": "Read file",
+      "summaryFirst_one": "Read a file",
+      "summaryFirst_other": "Read {{count}} files",
+      "summaryNext_one": "read a file",
+      "summaryNext_other": "read {{count}} files"
+    },
+    "run": {
+      "doneWithoutTarget": "Ran a command",
+      "label": "Run command",
+      "summaryFirst_one": "Ran a command",
+      "summaryFirst_other": "Ran {{count}} commands",
+      "summaryNext_one": "ran a command",
+      "summaryNext_other": "ran {{count}} commands"
+    },
+    "search": {
+      "done": "Searched {{target}}",
+      "doneWithoutTarget": "Searched a query",
+      "label": "Search",
+      "summaryFirst_one": "Searched a query",
+      "summaryFirst_other": "Searched {{count}} queries",
+      "summaryNext_one": "searched a query",
+      "summaryNext_other": "searched {{count}} queries"
+    },
+    "summarySeparator": ", ",
+    "write": {
+      "done": "Created {{target}}",
+      "doneWithoutTarget": "Created a file",
+      "label": "Write file",
+      "summaryFirst_one": "Created a file",
+      "summaryFirst_other": "Created {{count}} files",
+      "summaryNext_one": "created a file",
+      "summaryNext_other": "created {{count}} files"
+    }
   }
 }

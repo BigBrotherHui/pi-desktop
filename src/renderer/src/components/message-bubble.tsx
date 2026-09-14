@@ -4,7 +4,7 @@ import { modelDisplayName } from '../../../shared/models-config'
 import { DEFAULT_SETTINGS } from '../../../shared/default-settings'
 import {
   toolCallLabel,
-  toolLabel,
+  toolKind,
   toolCallFile,
   parseEdits,
   editStats,
@@ -563,7 +563,7 @@ function ToolCallBadge({
   toolCall: NonNullable<DisplayMessage['toolCalls']>[number]
 }): React.JSX.Element {
   // Edit diffs open expanded so the change is visible without a second result pill.
-  const edits = toolLabel(toolCall.name) === 'Edit file' ? parseEdits(toolCall.arguments) : null
+  const edits = toolKind(toolCall.name) === 'edit' ? parseEdits(toolCall.arguments) : null
   const stats = edits ? editStats(edits) : null
   const editFile = edits ? toolCallFile(toolCall.name, toolCall.arguments) : null
   const editLang = editFile ? getCodeEditorLanguageName(editFile) : 'plain text'
@@ -704,9 +704,8 @@ function ToolResultMessage({ message }: { message: DisplayMessage }): React.JSX.
   // line-numbered, syntax-highlighted code. Everything else stays plain text —
   // notably writes/creates, whose result is a "wrote N bytes" success line (not
   // the file), plus CSV, command output, and fetches.
-  const label = message.toolName ? toolLabel(message.toolName) : null
   const codeLang =
-    label === 'Read file' && message.toolFile
+    message.toolName && toolKind(message.toolName) === 'read' && message.toolFile
       ? getCodeEditorLanguageName(message.toolFile)
       : 'plain text'
   const isCode = codeLang !== 'plain text'
