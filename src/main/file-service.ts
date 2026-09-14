@@ -3,6 +3,7 @@ import { readdir, stat, readFile, writeFile, realpath } from 'fs/promises'
 import { join, extname, basename, resolve, relative, isAbsolute, sep, dirname } from 'path'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
+import { homedir } from 'os'
 import { describeWriteError } from './fs-errors'
 import { appLog } from './app-log'
 import type { FileChangeEvent } from '../shared/ipc-contracts'
@@ -139,16 +140,28 @@ const WIN32_PROFILE_IGNORED = new Set([
 ])
 
 /**
- * True when a directory name should be skipped by the watcher, the tree view,
- * and file search. Platform-specific sets only apply on their own platform.
+ * True when a directory name is skipped in every workspace by the watcher,
+ * the tree view, and file search.
  */
-export function isIgnoredDirName(name: string, platform: NodeJS.Platform = process.platform): boolean {
-  if (IGNORED_DIRS.has(name) || HOME_TOOLING_IGNORED.has(name)) return true
+export function isIgnoredDirName(name: string): boolean {
+  return IGNORED_DIRS.has(name)
+}
+
+/**
+ * True when a directory directly under a home-directory workspace is skipped.
+ * Project folders can share these names (`.cargo`, `templates`), so the sets
+ * never apply to other workspaces or to nested paths. Platform-specific sets
+ * only apply on their own platform.
+ */
+export function isIgnoredHomeRootDirName(name: string, platform: NodeJS.Platform = process.platform): boolean {
+  if (HOME_TOOLING_IGNORED.has(name)) return true
   if (platform === 'darwin') return DARWIN_HOME_IGNORED.has(name)
   if (platform !== 'win32') return false
   const lower = name.toLowerCase()
   return WIN32_PROFILE_IGNORED.has(lower) || lower.startsWith('ntuser.')
 }
+
+const WORKSPACE_ROOT_DEPTH = 0
 
 /** Log each watch error path at most once to avoid console floods. */
 const watchErrorLogged = new Set<string>()
@@ -214,11 +227,19 @@ export function buildNewFileDiff(relativePath: string, content: string): string 
 export class FileService {
   private watcher: FSWatcher | null = null
   private workspacePath: string
+  private readonly isHomeWorkspace: boolean
   private debounceTimer: ReturnType<typeof setTimeout> | null = null
   private pendingChange: FileChangeEvent | null = null
 
-  constructor(workspacePath: string) {
+  constructor(workspacePath: string, homePath: string = homedir()) {
     this.workspacePath = workspacePath
+    this.isHomeWorkspace = resolve(workspacePath) === resolve(homePath)
+  }
+
+  /** True when an entry at `depth` below the workspace root must be skipped. */
+  private isIgnoredEntry(name: string, depth: number): boolean {
+    if (isIgnoredDirName(name)) return true
+    return this.isHomeWorkspace && depth === WORKSPACE_ROOT_DEPTH && isIgnoredHomeRootDirName(name)
   }
 
   /**
@@ -548,7 +569,7 @@ export class FileService {
   private isIgnoredPath(absolutePath: string): boolean {
     const rel = relative(this.workspacePath, absolutePath)
     if (!rel || rel.startsWith('..')) return false
-    return rel.split(/[\\/]/).some((segment) => isIgnoredDirName(segment))
+    return rel.split(/[\\/]/).some((segment, depth) => this.isIgnoredEntry(segment, depth))
   }
 
   /**
@@ -579,7 +600,7 @@ export class FileService {
 
           // Sort: directories first, then files, both alphabetical
           const sorted = items
-            .filter((item) => !isIgnoredDirName(item.name) && !item.name.startsWith('.git'))
+            .filter((item) => !this.isIgnoredEntry(item.name, depth) && !item.name.startsWith('.git'))
             .sort((a, b) => {
               if (a.isDirectory() && !b.isDirectory()) return -1
               if (!a.isDirectory() && b.isDirectory()) return 1
@@ -610,9 +631,10 @@ export class FileService {
   ): Promise<void> {
     try {
       const items = await readdir(dir, { withFileTypes: true })
+      const depth = relBase ? relBase.split('/').length : WORKSPACE_ROOT_DEPTH
 
       for (const item of items) {
-        if (isIgnoredDirName(item.name) || item.name.startsWith('.git')) continue
+        if (this.isIgnoredEntry(item.name, depth) || item.name.startsWith('.git')) continue
 
         const fullPath = join(dir, item.name)
         const relPath = relBase ? `${relBase}/${item.name}` : item.name

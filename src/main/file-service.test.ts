@@ -9,9 +9,10 @@ import {
   FileService,
   isBenignGitError,
   isIgnoredDirName,
+  isIgnoredHomeRootDirName,
   isPathInsideWorkspace,
 } from './file-service'
-import type { FileChangeEvent } from '../shared/ipc-contracts'
+import type { FileChangeEvent, FileTreeNode } from '../shared/ipc-contracts'
 import { i18n, tEnglish } from '../shared/i18n'
 import { PSEUDO_LANGUAGE, SOURCE_LANGUAGE } from '../shared/i18n/languages'
 
@@ -143,34 +144,87 @@ test('watcher does not descend into symlinked directories', testWatcherDoesNotFo
 
 // ─── Ignored directory names ──────────────────────────────────────────────
 
-test('isIgnoredDirName ignores build artifacts on every platform', () => {
+test('isIgnoredDirName ignores build artifacts but not project tooling folders', () => {
+  assert.equal(isIgnoredDirName('node_modules'), true)
+  assert.equal(isIgnoredDirName('src'), false)
+  assert.equal(isIgnoredDirName('.cargo'), false)
+  assert.equal(isIgnoredDirName('.yarn'), false)
+  assert.equal(isIgnoredDirName('templates'), false)
+})
+
+test('isIgnoredHomeRootDirName ignores home tooling stores on every platform', () => {
   for (const platform of ['linux', 'darwin', 'win32'] as const) {
-    assert.equal(isIgnoredDirName('node_modules', platform), true)
-    assert.equal(isIgnoredDirName('src', platform), false)
+    assert.equal(isIgnoredHomeRootDirName('.npm', platform), true)
+    assert.equal(isIgnoredHomeRootDirName('.cargo', platform), true)
+    assert.equal(isIgnoredHomeRootDirName('.codex', platform), true)
+    assert.equal(isIgnoredHomeRootDirName('.local', platform), true)
+    assert.equal(isIgnoredHomeRootDirName('Projects', platform), false)
   }
 })
 
-test('isIgnoredDirName ignores home-directory tooling stores on every platform', () => {
-  for (const platform of ['linux', 'darwin', 'win32'] as const) {
-    assert.equal(isIgnoredDirName('.npm', platform), true)
-    assert.equal(isIgnoredDirName('.cargo', platform), true)
-    assert.equal(isIgnoredDirName('.codex', platform), true)
-    assert.equal(isIgnoredDirName('.local', platform), true)
-  }
+test('isIgnoredHomeRootDirName ignores the macOS Library folder only on darwin', () => {
+  assert.equal(isIgnoredHomeRootDirName('Library', 'darwin'), true)
+  assert.equal(isIgnoredHomeRootDirName('Library', 'linux'), false)
+  assert.equal(isIgnoredHomeRootDirName('Library', 'win32'), false)
 })
 
-test('isIgnoredDirName ignores the macOS Library folder only on darwin', () => {
-  assert.equal(isIgnoredDirName('Library', 'darwin'), true)
-  assert.equal(isIgnoredDirName('Library', 'linux'), false)
-  assert.equal(isIgnoredDirName('Library', 'win32'), false)
+test('isIgnoredHomeRootDirName ignores Windows profile folders only on win32', () => {
+  assert.equal(isIgnoredHomeRootDirName('AppData', 'win32'), true)
+  assert.equal(isIgnoredHomeRootDirName('ntuser.dat', 'win32'), true)
+  assert.equal(isIgnoredHomeRootDirName('Templates', 'win32'), true)
+  assert.equal(isIgnoredHomeRootDirName('AppData', 'linux'), false)
+  assert.equal(isIgnoredHomeRootDirName('AppData', 'darwin'), false)
 })
 
-test('isIgnoredDirName ignores Windows profile folders only on win32', () => {
-  assert.equal(isIgnoredDirName('AppData', 'win32'), true)
-  assert.equal(isIgnoredDirName('ntuser.dat', 'win32'), true)
-  assert.equal(isIgnoredDirName('AppData', 'linux'), false)
-  assert.equal(isIgnoredDirName('AppData', 'darwin'), false)
+async function makeToolingWorkspace(): Promise<string> {
+  const dir = await mkdtemp(join(tmpdir(), 'pi-fs-tooling-'))
+  await mkdir(join(dir, '.cargo'), { recursive: true })
+  await writeFile(join(dir, '.cargo', 'config.toml'), '[build]')
+  await mkdir(join(dir, 'Projects', 'app', '.cargo'), { recursive: true })
+  await writeFile(join(dir, 'Projects', 'app', '.cargo', 'config.toml'), '[build]')
+  return dir
+}
+
+function childNames(node: FileTreeNode): string[] {
+  return (node.children ?? []).map((child) => child.name)
+}
+
+test('project workspaces keep tooling folders in the tree and in search', async () => {
+  const dir = await makeToolingWorkspace()
+  const service = new FileService(dir, join(dir, 'not-home'))
+  const tree = await service.getFileTree()
+  assert.ok(childNames(tree).includes('.cargo'))
+  const found = await service.searchFiles('config.toml')
+  assert.deepEqual(found.map((hit) => hit.relativePath).sort(), ['.cargo/config.toml', 'Projects/app/.cargo/config.toml'])
 })
+
+test('a home workspace hides tooling stores only at its root', async () => {
+  const dir = await makeToolingWorkspace()
+  const service = new FileService(dir, dir)
+  const tree = await service.getFileTree()
+  assert.equal(childNames(tree).includes('.cargo'), false)
+  const found = await service.searchFiles('config.toml')
+  assert.deepEqual(found.map((hit) => hit.relativePath), ['Projects/app/.cargo/config.toml'])
+})
+
+async function testHomeWatcherIgnoresRootToolingOnly(): Promise<void> {
+  const dir = await makeToolingWorkspace()
+  const service = new FileService(dir, dir)
+  const { promise, onChange } = waitForChange(3000)
+
+  service.startWatching(onChange)
+  await new Promise((r) => setTimeout(r, 300))
+  await writeFile(join(dir, '.cargo', 'ignored.toml'), 'x')
+  await new Promise((r) => setTimeout(r, 800))
+  await writeFile(join(dir, 'Projects', 'app', '.cargo', 'seen.toml'), 'x')
+
+  const events = await promise
+  service.stopWatching()
+
+  assert.deepEqual(events.map((event) => event.relativePath), ['Projects/app/.cargo/seen.toml'])
+}
+
+test('home watcher ignores root tooling stores but watches nested ones', testHomeWatcherIgnoresRootToolingOnly)
 
 // ─── Git error classification ─────────────────────────────────────────────
 
