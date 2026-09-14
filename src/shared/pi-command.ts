@@ -1,4 +1,8 @@
-import { t } from './i18n'
+// Aliased: groupLabel/groupCommands take their translator as a parameter
+// named `t` (shadowing this import inside the function body) so
+// `i18next-cli`'s static extractor — which looks for calls on an identifier
+// named `t` — still finds and keeps these keys.
+import { t as sharedT, type Translate } from './i18n'
 
 /** A command exposed by Pi via the RPC `get_commands` request. */
 export interface PiCommand {
@@ -41,7 +45,7 @@ const OTHER_GROUP_ID = 'other'
 export type CommandGroupId = (typeof GROUP_SOURCES)[number] | typeof OTHER_GROUP_ID
 
 /** The display label for one command group, in the interface language. */
-function groupLabel(id: CommandGroupId): string {
+function groupLabel(id: CommandGroupId, t: Translate): string {
   switch (id) {
     case 'skill':
       return t('commandGroups.skills')
@@ -97,7 +101,10 @@ export function invocationToken(name: string, source: string): string {
  * "Other" catch-all for any unexpected source so nothing is silently hidden.
  * `flat` matches the visual order — keyboard navigation indexes it.
  */
-export function groupCommands(results: PiCommand[]): {
+export function groupCommands(
+  results: PiCommand[],
+  t: Translate = sharedT
+): {
   grouped: CommandGroup[]
   flat: PiCommand[]
 } {
@@ -108,6 +115,6 @@ export function groupCommands(results: PiCommand[]): {
   ]
   const grouped = groups
     .filter((g) => g.items.length > 0)
-    .map((g) => ({ id: g.id, label: groupLabel(g.id), items: g.items }))
+    .map((g) => ({ id: g.id, label: groupLabel(g.id, t), items: g.items }))
   return { grouped, flat: grouped.flatMap((g) => g.items) }
 }

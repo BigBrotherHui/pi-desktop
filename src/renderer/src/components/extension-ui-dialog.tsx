@@ -1,5 +1,6 @@
 import { useAppStore } from '../store'
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X, AlertCircle, HelpCircle, EyeOff, Eye } from 'lucide-react'
 import { clsx } from 'clsx'
 import {
@@ -118,6 +119,7 @@ export function ExtensionUiDialog(): React.JSX.Element | null {
 // Stand-in for a temporarily hidden prompt. Bottom-centre keeps it clear of
 // the bottom-right notify toast.
 function HiddenPromptPill({ onShow }: { onShow: () => void }): React.JSX.Element {
+  const { t } = useTranslation()
   return (
     <div
       className="fixed bottom-10 left-1/2 -translate-x-1/2 animate-fade-in"
@@ -128,8 +130,8 @@ function HiddenPromptPill({ onShow }: { onShow: () => void }): React.JSX.Element
         className="flex items-center gap-2 rounded-full border border-border-strong bg-surface px-4 py-2 text-sm text-primary shadow-lg hover:bg-surface-hover transition-colors"
       >
         <Eye size={14} className="text-accent-fg" />
-        Pi is waiting for an answer
-        <span className="text-xs text-dim">Show ({DIALOG_TOGGLE_LABEL})</span>
+        {t('chat.extensionUi.waitingForAnswer')}
+        <span className="text-xs text-dim">{t('chat.extensionUi.showWithShortcut', { shortcut: DIALOG_TOGGLE_LABEL })}</span>
       </button>
     </div>
   )
@@ -144,6 +146,7 @@ function NotifyToast({
   request: { id: string; message?: string; notifyType?: string }
   onDismiss: () => void
 }): React.JSX.Element {
+  const { t } = useTranslation()
   useEffect(() => {
     const timer = setTimeout(onDismiss, NOTIFY_TOAST_TIMEOUT_MS)
     return () => clearTimeout(timer)
@@ -159,7 +162,7 @@ function NotifyToast({
     <div className="fixed bottom-10 right-4 animate-fade-in" style={{ zIndex: NOTIFY_TOAST_Z_INDEX }}>
       <div className="flex items-center gap-3 rounded-lg border border-border-strong bg-surface px-4 py-3 shadow-lg">
         {iconMap[request.notifyType ?? 'info'] ?? iconMap.info}
-        <span className="text-sm text-primary">{request.message ?? 'Notification'}</span>
+        <span className="text-sm text-primary">{request.message ?? t('chat.extensionUi.notificationFallback')}</span>
         <button onClick={onDismiss} className="ml-2 text-dim hover:text-secondary">
           <X size={14} />
         </button>
@@ -185,9 +188,10 @@ function SelectDialog({
   request: { id: string; title?: string; options?: string[]; timeout?: number }
   onSelect: (value: string) => void
 }): React.JSX.Element {
+  const { t } = useTranslation()
   return (
     <DialogOverlay onBackdropClick={onHide}>
-      <DialogBox prompt={request.title ?? 'Select'} onCancel={onCancel} onHide={onHide}>
+      <DialogBox prompt={request.title ?? t('chat.extensionUi.selectFallbackTitle')} onCancel={onCancel} onHide={onHide}>
         <div className="space-y-1">
           {(request.options ?? []).map((option) => (
             <button
@@ -218,22 +222,23 @@ function ConfirmDialog({
   onConfirm: () => void
   onDeny: () => void
 }): React.JSX.Element {
+  const { t } = useTranslation()
   return (
     <DialogOverlay onBackdropClick={onHide}>
-      <DialogBox prompt={request.title ?? 'Confirm'} onCancel={onCancel} onHide={onHide}>
+      <DialogBox prompt={request.title ?? t('common.confirm')} onCancel={onCancel} onHide={onHide}>
         {request.message && <PromptBody text={request.message} />}
         <div className="flex justify-end gap-2">
           <button
             onClick={onDeny}
             className="rounded-md border border-border-strong px-4 py-2 text-sm text-muted hover:bg-surface-hover transition-colors"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             onClick={onConfirm}
             className="rounded-md bg-accent px-4 py-2 text-sm text-white hover:bg-accent-hover transition-colors"
           >
-            Confirm
+            {t('common.confirm')}
           </button>
         </div>
       </DialogBox>
@@ -252,11 +257,12 @@ function InputDialog({
   request: { id: string; title?: string; placeholder?: string }
   onSubmit: (value: string) => void
 }): React.JSX.Element {
+  const { t } = useTranslation()
   const [value, setValue] = useState('')
 
   return (
     <DialogOverlay onBackdropClick={onHide}>
-      <DialogBox prompt={request.title ?? 'Input'} onCancel={onCancel} onHide={onHide}>
+      <DialogBox prompt={request.title ?? t('chat.extensionUi.inputFallbackTitle')} onCancel={onCancel} onHide={onHide}>
         <input
           type="text"
           placeholder={request.placeholder ?? ''}
@@ -273,13 +279,13 @@ function InputDialog({
             onClick={onCancel}
             className="rounded-md border border-border-strong px-4 py-2 text-sm text-muted hover:bg-surface-hover transition-colors"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             onClick={() => onSubmit(value)}
             className="rounded-md bg-accent px-4 py-2 text-sm text-white hover:bg-accent-hover transition-colors"
           >
-            Submit
+            {t('common.submit')}
           </button>
         </div>
       </DialogBox>
@@ -298,11 +304,12 @@ function EditorDialog({
   request: { id: string; title?: string; prefill?: string }
   onSubmit: (value: string) => void
 }): React.JSX.Element {
+  const { t } = useTranslation()
   const [value, setValue] = useState(request.prefill ?? '')
 
   return (
     <DialogOverlay onBackdropClick={onHide}>
-      <DialogBox prompt={request.title ?? 'Edit'} onCancel={onCancel} onHide={onHide} wide>
+      <DialogBox prompt={request.title ?? t('chat.extensionUi.editFallbackTitle')} onCancel={onCancel} onHide={onHide} wide>
         <textarea
           value={value}
           onChange={(e) => setValue(e.target.value)}
@@ -315,13 +322,13 @@ function EditorDialog({
             onClick={onCancel}
             className="rounded-md border border-border-strong px-4 py-2 text-sm text-muted hover:bg-surface-hover transition-colors"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             onClick={() => onSubmit(value)}
             className="rounded-md bg-accent px-4 py-2 text-sm text-white hover:bg-accent-hover transition-colors"
           >
-            Save
+            {t('common.save')}
           </button>
         </div>
       </DialogBox>
@@ -335,6 +342,7 @@ function EditorDialog({
 // Using a real in-app modal (instead of the native dialog) also avoids an
 // Electron quirk where window.confirm leaves the window without keyboard focus.
 export function AppConfirmDialog(): React.JSX.Element | null {
+  const { t } = useTranslation()
   const request = useAppStore((state) => state.confirmRequest)
   const resolveConfirm = useAppStore((state) => state.resolveConfirm)
 
@@ -354,7 +362,7 @@ export function AppConfirmDialog(): React.JSX.Element | null {
 
   return (
     <DialogOverlay onBackdropClick={() => resolveConfirm(false)}>
-      <DialogBox prompt={request.title ?? 'Confirm'} onCancel={() => resolveConfirm(false)}>
+      <DialogBox prompt={request.title ?? t('common.confirm')} onCancel={() => resolveConfirm(false)}>
         <PromptBody text={request.message} />
         <div className="flex justify-end gap-2">
           <button
@@ -362,7 +370,7 @@ export function AppConfirmDialog(): React.JSX.Element | null {
             autoFocus={request.danger}
             className="rounded-md border border-border-strong px-4 py-2 text-sm text-muted hover:bg-surface-hover transition-colors"
           >
-            {request.cancelLabel ?? 'Cancel'}
+            {request.cancelLabel ?? t('common.cancel')}
           </button>
           <button
             onClick={() => resolveConfirm(true)}
@@ -372,7 +380,7 @@ export function AppConfirmDialog(): React.JSX.Element | null {
               request.danger ? 'bg-error hover:bg-error-hover' : 'bg-accent hover:bg-accent-hover'
             )}
           >
-            {request.confirmLabel ?? 'Confirm'}
+            {request.confirmLabel ?? t('common.confirm')}
           </button>
         </div>
       </DialogBox>
@@ -422,6 +430,7 @@ function DialogBox({
   onHide?: () => void
   wide?: boolean
 }): React.JSX.Element {
+  const { t } = useTranslation()
   const { heading, body } = splitPromptText(prompt)
   return (
     <div
@@ -437,13 +446,13 @@ function DialogBox({
           {onHide && (
             <button
               onClick={onHide}
-              title={`Hide for now (${DIALOG_TOGGLE_LABEL})`}
+              title={t('chat.extensionUi.hideForNowWithShortcut', { shortcut: DIALOG_TOGGLE_LABEL })}
               className="text-dim hover:text-secondary"
             >
               <EyeOff size={14} />
             </button>
           )}
-          <button onClick={onCancel} title="Cancel" className="text-dim hover:text-secondary">
+          <button onClick={onCancel} title={t('common.cancel')} className="text-dim hover:text-secondary">
             <X size={14} />
           </button>
         </div>

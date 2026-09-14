@@ -1,5 +1,9 @@
 import type { DisplayMessage } from './store'
-import { t } from '../../shared/i18n'
+// Aliased: every helper below takes its translator as a parameter named `t`
+// (shadowing this import inside the function body) so `i18next-cli`'s
+// static extractor — which looks for calls on an identifier named `t` —
+// still finds and keeps these keys.
+import { t as sharedT, type Translate } from '../../shared/i18n'
 
 // A single chat item to render: either a lone message or a collapsed group of
 // consecutive tool-activity messages.
@@ -40,8 +44,10 @@ export function toolKind(name: string): ToolKind | null {
   return null
 }
 
-// Friendly label for a tool; custom/unknown tools keep their raw name.
-export function toolLabel(name: string): string {
+// Friendly label for a tool; custom/unknown tools keep their raw name. Accepts
+// the caller's own `t` (from `useTranslation()`) so a memoized result recomputes
+// on a language change; defaults to the shared translator for non-component use.
+export function toolLabel(name: string, t: Translate = sharedT): string {
   const kind = toolKind(name)
   return kind ? t(`tools.${kind}.label`) : name
 }
@@ -127,7 +133,7 @@ function toolTarget(kind: ToolKind | null, argumentsJson: string): string | null
  * value-less "<Verb> a <noun>" when the argument can't be read, and to the raw
  * name for unknown tools.
  */
-export function toolCallLabel(name: string, argumentsJson: string): string {
+export function toolCallLabel(name: string, argumentsJson: string, t: Translate = sharedT): string {
   const kind = toolKind(name)
   if (!kind) return name
   const arg = hasTarget(kind) ? extractArg(kind, argumentsJson) : null
@@ -141,7 +147,7 @@ export function toolCallLabel(name: string, argumentsJson: string): string {
 // or re-fetching one URL reads "Read a file" / "Fetched a URL", not "2".
 // Target-less calls (commands, unresolved args) each count on their own.
 // Unknown tools bucket together under 'other'.
-function groupTitle(run: DisplayMessage[]): string {
+function groupTitle(run: DisplayMessage[], t: Translate): string {
   const order: SummaryKind[] = []
   const targets = new Map<SummaryKind, Set<string>>()
   let uniqueSeq = 0 // gives each target-less call its own bucket entry
@@ -174,7 +180,7 @@ function groupTitle(run: DisplayMessage[]): string {
  * Prose turns (assistant text, user, system) always render on their own and act
  * as run boundaries.
  */
-export function groupToolMessages(messages: DisplayMessage[]): ChatRenderItem[] {
+export function groupToolMessages(messages: DisplayMessage[], t: Translate = sharedT): ChatRenderItem[] {
   const items: ChatRenderItem[] = []
   let run: DisplayMessage[] = []
 
@@ -185,7 +191,7 @@ export function groupToolMessages(messages: DisplayMessage[]): ChatRenderItem[] 
       items.push({
         kind: 'toolGroup',
         id: `group-${run[0].id}`,
-        title: groupTitle(run),
+        title: groupTitle(run, t),
         messages: run,
       })
     } else {
@@ -205,6 +211,20 @@ export function groupToolMessages(messages: DisplayMessage[]): ChatRenderItem[] 
   flush()
 
   return items
+}
+
+/** A tool call's run state, as shown next to its badge (e.g. message-bubble.tsx, streaming-bubble.tsx). */
+export type ToolCallStatus = 'running' | 'error' | 'done'
+
+const TOOL_CALL_STATUS_KEYS = {
+  running: 'chat.toolCall.status.running',
+  error: 'chat.toolCall.status.error',
+  done: 'chat.toolCall.status.done',
+} as const satisfies Record<ToolCallStatus, string>
+
+/** Label for a tool call's run state. Accepts the caller's own `t` so it re-renders on a language change. */
+export function toolCallStatusLabel(status: ToolCallStatus | null, t: Translate = sharedT): string {
+  return status ? t(TOOL_CALL_STATUS_KEYS[status]) : ''
 }
 
 /** The file/location a read/write/edit/list tool call operates on, or null. */

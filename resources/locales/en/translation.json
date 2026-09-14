@@ -25,6 +25,121 @@
       "downloadButton": "Download"
     }
   },
+  "chat": {
+    "attach": {
+      "allFilesFilter": "All Files",
+      "attachFailed": "Could not attach file",
+      "buttonLabel": "Attach file",
+      "dialogTitle": "Attach file",
+      "imagesFilter": "Images",
+      "onlyImagesPasted": "Only images can be pasted into the composer",
+      "pasteFailed": "Could not paste image",
+      "readImageFailed": "Could not read image data",
+      "unknownMimeType": "unknown",
+      "unsupportedImageType": "Unsupported image type ({{mimeType}}). Use PNG, JPEG, GIF, or WebP."
+    },
+    "closeFileTree": "Close file tree",
+    "commandPopup": {
+      "selectHint": "↑↓ navigate · Enter/Tab select · Esc close"
+    },
+    "composer": {
+      "placeholderIdle": "Ask {{agent}} anything — / for commands",
+      "placeholderNotRunning": "{{agent}} agent is not running...",
+      "placeholderSteering": "Type to steer the agent...",
+      "shiftEnterNewline": "Shift+Enter newline",
+      "streaming": "Streaming…"
+    },
+    "council": {
+      "planWithCouncil": "Plan with Council",
+      "startEngineFirst": "Start Pi/OMP before planning with Council"
+    },
+    "emptyState": {
+      "chooseProject": "Choose a project — {{agent}} starts when you send.",
+      "pickProject": "Pick a project and describe what you want done.",
+      "startFailed": "Failed to start {{agent}}. Check settings.",
+      "starting": "Starting {{agent}} agent…",
+      "title": "What should {{agent}} work on?",
+      "waitingOnEngine": "{{agent}} is up — waiting for the engine to finish loading. Local models can take a while…"
+    },
+    "extensionUi": {
+      "editFallbackTitle": "Edit",
+      "hideForNowWithShortcut": "Hide for now ({{shortcut}})",
+      "inputFallbackTitle": "Input",
+      "notificationFallback": "Notification",
+      "selectFallbackTitle": "Select",
+      "showWithShortcut": "Show ({{shortcut}})",
+      "waitingForAnswer": "Pi is waiting for an answer"
+    },
+    "insertNote": {
+      "ariaLabel": "Insert note",
+      "titleWithShortcut": "Insert note (Ctrl+Shift+P)"
+    },
+    "loadingSession": "Loading session…",
+    "mentionPopup": {
+      "insertHint": "↑↓ navigate · Enter/Tab insert path · Esc close"
+    },
+    "message": {
+      "branchedFrom": "Branched from: \"{{excerpt}}\"",
+      "branchFromHere": "Branch from here",
+      "editAndResend": "Edit & resend"
+    },
+    "projectPicker": {
+      "noProject": "No project",
+      "noProjectHomeDirectory": "No project — home directory",
+      "openFolder": "Open folder…",
+      "yourHomeDirectory": "Your home directory"
+    },
+    "reattached": {
+      "responseWillAppear": "The response appears here the moment it finishes.",
+      "stillWorking": "{{agent}} is still working in this session."
+    },
+    "scrollToBottom": "Scroll to bottom",
+    "search": {
+      "closeWithShortcut": "Close (Esc)",
+      "nextMatch": "Next match (Enter)",
+      "placeholder": "Find in page",
+      "previousMatch": "Previous match (Shift+Enter)"
+    },
+    "searchWorkspace": {
+      "ariaLabel": "Search workspace",
+      "titleWithShortcut": "Search workspace (Ctrl+Shift+F)"
+    },
+    "sendButton": {
+      "ariaLabel": "Send message",
+      "titleWithShortcut": "Send (Enter)"
+    },
+    "startingAgent": "Starting agent…",
+    "stopButton": {
+      "ariaLabel": "Stop generating",
+      "titleWithShortcut": "Stop (Esc)"
+    },
+    "subagentProgress": {
+      "done_one": "{{count}} subagent done",
+      "done_other": "{{count}} subagents done",
+      "running_one": "{{count}} subagent running",
+      "running_other": "{{count}} subagents running"
+    },
+    "svgBlock": {
+      "renderedSvgAlt": "Rendered SVG",
+      "renderSvg": "Render SVG",
+      "viewSource": "View source"
+    },
+    "toolbar": {
+      "diffViewer": "Diff viewer",
+      "fileTree": "File tree",
+      "reviewPanel": "Review panel",
+      "terminal": "Terminal",
+      "workflowRuns": "Workflow runs"
+    },
+    "toolCall": {
+      "status": {
+        "done": "done",
+        "error": "error",
+        "running": "running"
+      }
+    },
+    "waitingForResponse": "Waiting for response..."
+  },
   "commandGroups": {
     "commands": "Commands",
     "extensions": "Extensions",
@@ -57,15 +172,30 @@
   },
   "common": {
     "cancel": "Cancel",
+    "collapse": "Collapse",
+    "confirm": "Confirm",
     "copied": "Copied",
     "copy": "Copy",
     "cut": "Cut",
     "delete": "Delete",
     "dismiss": "Dismiss",
+    "export": "Export",
+    "hideSidebar": "Hide sidebar",
+    "loading": "Loading…",
     "paste": "Paste",
     "remove": "Remove",
+    "retry": "Retry",
+    "save": "Save",
     "selectAll": "Select All",
-    "showSidebar": "Show sidebar"
+    "send": "Send",
+    "showSidebar": "Show sidebar",
+    "submit": "Submit",
+    "thinking": "Thinking"
+  },
+  "composer": {
+    "permissionMenu": {
+      "title": "Permissions"
+    }
   },
   "contextMenu": {
     "addMessageToNotes": "Add Message to Notes",
@@ -94,6 +224,9 @@
     "workflowRuns": "Workflow Runs"
   },
   "dialogs": {
+    "openFolder": {
+      "title": "Open Folder"
+    },
     "openProject": {
       "title": "Open Project"
     },
@@ -279,6 +412,25 @@
       "invalidYaml": "{{file}} is not valid YAML: {{detail}}",
       "missingProviders": "{{file}} is not a valid models config (missing \"providers\")",
       "unreadable": "Could not read {{file}}: {{detail}}"
+    },
+    "selector": {
+      "current": "Current",
+      "loadFailed": "Could not load models",
+      "noModelsMatch": "No models match",
+      "searchPlaceholder": "Search models…",
+      "selectModel": "Select model",
+      "selectModelWithShortcut": "Select model (Ctrl+P to cycle when {{agent}} is running)",
+      "startToListModels": "Start Pi to list and change models."
+    }
+  },
+  "notes": {
+    "picker": {
+      "createNote": "Create a note",
+      "navigationHint": "↑↓ navigate · Enter insert · Esc close",
+      "noMatchingNotes": "No matching notes",
+      "noSavedNotes": "No saved notes yet.",
+      "notComposeBox": "This picker inserts notes you've saved — it's not a compose box.",
+      "searchPlaceholder": "Search saved notes to insert..."
     }
   },
   "notifications": {
@@ -286,6 +438,24 @@
     "failed": "Pi stopped with an error.",
     "needs-approval": "Pi is waiting for your approval.",
     "withSession": "{{body}} Click to open the finished session."
+  },
+  "permissionMode": {
+    "ask-commands": {
+      "description": "Pi will ask before running shell commands.",
+      "label": "Ask before commands"
+    },
+    "ask-edits": {
+      "description": "Pi will ask before file edits and shell commands that can change files.",
+      "label": "Ask before edits"
+    },
+    "plan-readonly": {
+      "description": "Only read/search/list tools are enabled. File edits and shell commands are blocked.",
+      "label": "Plan / Read-only"
+    },
+    "trusted": {
+      "description": "All Pi tools are enabled for workflows you trust.",
+      "label": "Trusted"
+    }
   },
   "permissions": {
     "prompt": {
@@ -522,6 +692,11 @@
     },
     "promptsWaiting_one": "{{count}} Pi prompt waiting",
     "promptsWaiting_other": "{{count}} Pi prompts waiting"
+  },
+  "thinking": {
+    "effort": "Effort",
+    "effortWithLevel": "Thinking effort: {{level}}",
+    "modelAwareDepth": "Model-aware thinking depth"
   },
   "timeline": {
     "agentFinished": "Agent finished",

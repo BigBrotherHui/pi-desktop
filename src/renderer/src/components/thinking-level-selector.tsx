@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Check, ChevronUp, Zap } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useAppStore } from '../store'
@@ -9,6 +10,7 @@ interface ThinkingLevelSelectorProps {
 
 /** Compact model-aware effort picker for the composer action rail. */
 export function ThinkingLevelSelector({ className }: ThinkingLevelSelectorProps): React.JSX.Element {
+  const { t } = useTranslation()
   const sessionState = useAppStore((state) => state.sessionState)
   const setThinkingLevel = useAppStore((state) => state.setThinkingLevel)
   const piStatus = useAppStore((state) => state.piStatus)
@@ -44,8 +46,8 @@ export function ThinkingLevelSelector({ className }: ThinkingLevelSelectorProps)
           'flex h-6 items-center gap-1 rounded-md px-2 text-[11px] transition-colors active:scale-[0.98]',
           isOpen ? 'bg-surface-hover text-primary' : 'text-dim hover:bg-surface-hover hover:text-secondary',
         )}
-        title={`Thinking effort: ${currentLevel}`}
-        aria-label={`Thinking effort: ${currentLevel}`}
+        title={t('thinking.effortWithLevel', { level: currentLevel })}
+        aria-label={t('thinking.effortWithLevel', { level: currentLevel })}
         aria-expanded={isOpen}
       >
         <Zap size={11} className="shrink-0 text-accent-fg" />
@@ -56,8 +58,8 @@ export function ThinkingLevelSelector({ className }: ThinkingLevelSelectorProps)
       {isOpen && (
         <div className="absolute bottom-full right-0 z-50 mb-2 w-40 overflow-hidden rounded-xl border border-border-strong bg-surface py-1 shadow-xl shadow-black/30 animate-fade-in">
           <div className="border-b border-border px-3 py-2">
-            <div className="text-[10px] font-medium uppercase tracking-wide text-faint">Effort</div>
-            <div className="mt-0.5 text-xs text-dim">Model-aware thinking depth</div>
+            <div className="text-[10px] font-medium uppercase tracking-wide text-faint">{t('thinking.effort')}</div>
+            <div className="mt-0.5 text-xs text-dim">{t('thinking.modelAwareDepth')}</div>
           </div>
           {levels.map((level) => (
             <button

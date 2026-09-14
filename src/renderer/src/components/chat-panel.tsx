@@ -1,5 +1,6 @@
 import { useAppStore } from '../store'
 import { agentEngineLabel } from '../../../shared/agent-engine-label'
+import { PI_DESKTOP_PRODUCT_NAME } from '../../../shared/product-name'
 import { ChatInput } from './chat-input'
 import { ChatProjectPicker } from './chat-project-picker'
 import { CouncilPanels } from './council-panels'
@@ -25,6 +26,7 @@ import { DiffViewer } from './diff-viewer'
 import { TerminalPanel } from './terminal'
 import { useChatScroll, useGlobalWorkflowOpen } from '../hooks'
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
 import piLogo from '../assets/pi-logo.svg'
 import {
@@ -44,6 +46,7 @@ import {
 const DEFAULT_COMPOSER_PAD_PX = 144
 
 export function ChatPanel(): React.JSX.Element {
+  const { t } = useTranslation()
   const messages = useAppStore((state) => state.messages)
   const sessionLoading = useAppStore((state) => state.sessionLoading)
   const isStreaming = useAppStore((state) => state.isStreaming)
@@ -133,7 +136,10 @@ export function ChatPanel(): React.JSX.Element {
   // Fold consecutive tool-call/result runs into collapsed groups. Memoized so
   // the grouping only recomputes when the message list changes, and so lone
   // MessageBubbles keep their stable refs (no markdown re-parse on re-render).
-  const renderItems = useMemo(() => groupToolMessages(prepareChatMessages(messages)), [messages])
+  const renderItems = useMemo(
+    () => groupToolMessages(prepareChatMessages(messages), t),
+    [messages, t]
+  )
 
   const handleRetry = useCallback(async (messageId: string) => {
     // Read from the store so this callback stays referentially stable, keeping
@@ -180,31 +186,31 @@ export function ChatPanel(): React.JSX.Element {
                 icon={sidebarOpen ? <PanelLeftClose size={14} /> : <PanelLeft size={14} />}
                 active={false}
                 onClick={() => useAppStore.getState().toggleSidebar()}
-                title={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
+                title={sidebarOpen ? t('common.hideSidebar') : t('common.showSidebar')}
               />
               <ToolbarButton
                 icon={<ShieldCheck size={14} />}
                 active={reviewOpen}
                 onClick={() => useAppStore.getState().toggleReview()}
-                title="Review panel"
+                title={t('chat.toolbar.reviewPanel')}
               />
               <ToolbarButton
                 icon={<FolderTree size={14} />}
                 active={sidePanel === 'files'}
                 onClick={() => void setSidePanel(sidePanel === 'files' ? null : 'files')}
-                title="File tree"
+                title={t('chat.toolbar.fileTree')}
               />
               <ToolbarButton
                 icon={<GitCompare size={14} />}
                 active={sidePanel === 'diff'}
                 onClick={() => void setSidePanel(sidePanel === 'diff' ? null : 'diff')}
-                title="Diff viewer"
+                title={t('chat.toolbar.diffViewer')}
               />
               <ToolbarButton
                 icon={<Terminal size={14} />}
                 active={terminalOpen}
                 onClick={() => useAppStore.getState().toggleTerminal()}
-                title="Terminal"
+                title={t('chat.toolbar.terminal')}
               />
               <ToolbarButton
                 icon={<WorkflowIcon size={14} />}
@@ -220,7 +226,7 @@ export function ChatPanel(): React.JSX.Element {
                   else if (state.sessionState?.sessionId) state.openWorkflowRunsForSession(state.sessionState.sessionId)
                   else state.setWorkflowPanelOpen(true)
                 }}
-                title="Workflow runs"
+                title={t('chat.toolbar.workflowRuns')}
               />
             </div>
           </div>
@@ -244,20 +250,22 @@ export function ChatPanel(): React.JSX.Element {
                     <div className="mb-8 text-center">
                       <img
                         src={piLogo}
-                        alt="Pi Desktop"
+                        alt={PI_DESKTOP_PRODUCT_NAME}
                         className="mx-auto mb-4 block h-14 w-14"
                       />
-                      <h2 className="text-2xl font-semibold text-primary">What should {engineLabel} work on?</h2>
+                      <h2 className="text-2xl font-semibold text-primary">
+                        {t('chat.emptyState.title', { agent: engineLabel })}
+                      </h2>
                       <p className="mt-1 text-sm text-dim">
                         {piStatus === 'running'
-                          ? 'Pick a project and describe what you want done.'
+                          ? t('chat.emptyState.pickProject')
                           : piStatus === 'starting'
                             ? piStartupPhase === 'waiting-on-engine'
-                              ? `${engineLabel} is up — waiting for the engine to finish loading. Local models can take a while…`
-                              : `Starting ${engineLabel} agent…`
+                              ? t('chat.emptyState.waitingOnEngine', { agent: engineLabel })
+                              : t('chat.emptyState.starting', { agent: engineLabel })
                             : piStatus === 'error'
-                              ? `Failed to start ${engineLabel}. Check settings.`
-                              : `Choose a project — ${engineLabel} starts when you send.`}
+                              ? t('chat.emptyState.startFailed', { agent: engineLabel })
+                              : t('chat.emptyState.chooseProject', { agent: engineLabel })}
                       </p>
                     </div>
                     <div className="w-full max-w-3xl">
@@ -293,7 +301,7 @@ export function ChatPanel(): React.JSX.Element {
                     {sessionLoading && messages.length === 0 ? (
                       <div className="flex h-full flex-col items-center justify-center gap-2 text-sm text-dim">
                         <div className="h-5 w-5 animate-spin rounded-full border-2 border-border-strong border-t-accent" />
-                        {piStatus === 'running' ? 'Loading session…' : 'Starting agent…'}
+                        {piStatus === 'running' ? t('chat.loadingSession') : t('chat.startingAgent')}
                       </div>
                     ) : (
                       <NowContext.Provider value={now}>
@@ -334,8 +342,8 @@ export function ChatPanel(): React.JSX.Element {
                       onClick={scrollToBottom}
                       className="absolute left-1/2 z-20 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full border border-border-strong bg-card/90 text-secondary shadow-lg shadow-black/30 backdrop-blur transition-colors hover:bg-elevated hover:text-primary"
                       style={{ bottom: composerPadPx + 12 }}
-                      title="Scroll to bottom"
-                      aria-label="Scroll to bottom"
+                      title={t('chat.scrollToBottom')}
+                      aria-label={t('chat.scrollToBottom')}
                     >
                       <ChevronDown size={16} />
                     </button>
@@ -352,9 +360,11 @@ export function ChatPanel(): React.JSX.Element {
                       <div className="pointer-events-auto mx-auto mb-2 w-full max-w-5xl px-4">
                         <div className="flex items-center gap-2.5 rounded-md bg-accent px-4 py-2.5 text-sm text-white shadow-lg shadow-black/30">
                           <Loader2 size={16} className="shrink-0 animate-spin" />
-                          <span className="shrink-0 font-medium">{engineLabel} is still working in this session.</span>
+                          <span className="shrink-0 font-medium">
+                            {t('chat.reattached.stillWorking', { agent: engineLabel })}
+                          </span>
                           <span className="min-w-0 flex-1 truncate text-white/80">
-                            The response appears here the moment it finishes.
+                            {t('chat.reattached.responseWillAppear')}
                           </span>
                         </div>
                       </div>
@@ -434,7 +444,7 @@ export function ChatPanel(): React.JSX.Element {
               <button
                 onClick={() => setSidePanel(null)}
                 className="absolute top-1 right-1 z-10 rounded p-1 text-faint hover:text-muted"
-                title="Close file tree"
+                title={t('chat.closeFileTree')}
               >
                 <X size={12} />
               </button>
