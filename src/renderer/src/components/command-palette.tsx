@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Check, File, Layers, MessageSquare, Search } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useAppStore } from '../store'
@@ -37,6 +38,7 @@ type PaletteEntry = PiCommand | SwitcherItem
  * guarded actions (streaming/dirty-editor confirms), so a decline is safe.
  */
 export function CommandPalette(): React.JSX.Element | null {
+  const { t } = useTranslation()
   const open = useAppStore((s) => s.commandPaletteOpen)
   const setCommandPalette = useAppStore((s) => s.setCommandPalette)
   const insertPrompt = useAppStore((s) => s.insertPrompt)
@@ -56,7 +58,7 @@ export function CommandPalette(): React.JSX.Element | null {
   const switcherQuery = commandsOnly ? '' : query.trim()
 
   const commandResults = useMemo(() => filterCommands(allCommands, query), [allCommands, query])
-  const { grouped, flat: commandFlat } = useMemo(() => groupCommands(commandResults), [commandResults])
+  const { grouped, flat: commandFlat } = useMemo(() => groupCommands(commandResults, t), [commandResults, t])
 
   const workspaceItems = useMemo<SwitcherItem[]>(
     () =>
@@ -176,14 +178,14 @@ export function CommandPalette(): React.JSX.Element | null {
     }
   }
 
-  const sections: Array<{ label: string; items: SwitcherItem[]; startIndex: number }> = []
+  const sections: Array<{ id: string; label: string; items: SwitcherItem[]; startIndex: number }> = []
   let offset = commandFlat.length
-  for (const [label, items] of [
-    ['Workspaces', workspaceItems],
-    ['Sessions', sessionItems],
-    ['Files', fileItems],
+  for (const [id, label, items] of [
+    ['workspaces', t('palette.sections.workspaces'), workspaceItems],
+    ['sessions', t('palette.sections.sessions'), sessionItems],
+    ['files', t('palette.sections.files'), fileItems],
   ] as const) {
-    if (items.length > 0) sections.push({ label, items, startIndex: offset })
+    if (items.length > 0) sections.push({ id, label, items, startIndex: offset })
     offset += items.length
   }
 
@@ -204,13 +206,13 @@ export function CommandPalette(): React.JSX.Element | null {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Search commands, workspaces, sessions, files..."
+            placeholder={t('palette.searchPlaceholder')}
             className="flex-1 bg-transparent text-sm text-primary placeholder:text-faint outline-none"
           />
         </div>
         <div className="max-h-72 overflow-y-auto py-1">
           {entries.length === 0 ? (
-            <div className="px-3 py-6 text-center text-sm text-faint">No matches</div>
+            <div className="px-3 py-6 text-center text-sm text-faint">{t('palette.noMatches')}</div>
           ) : (
             <>
               {commandFlat.length > 0 && (
@@ -223,7 +225,7 @@ export function CommandPalette(): React.JSX.Element | null {
                 />
               )}
               {sections.map((section) => (
-                <div key={section.label}>
+                <div key={section.id}>
                   <div className="px-3 py-1 text-[10px] uppercase tracking-wide text-faint">
                     {section.label}
                   </div>
@@ -246,7 +248,7 @@ export function CommandPalette(): React.JSX.Element | null {
           )}
         </div>
         <div className="border-t border-border px-3 py-1.5 text-[10px] text-faint">
-          ↑↓ navigate · Enter/Tab run · / commands only · Esc close
+          {t('palette.navigationHint')}
         </div>
       </div>
     </div>

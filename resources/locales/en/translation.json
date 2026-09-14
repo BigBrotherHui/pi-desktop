@@ -387,6 +387,44 @@
       "sourceFolderMissing": "Source folder does not exist: {{path}}"
     }
   },
+  "home": {
+    "actions": {
+      "newSession": {
+        "inWorkspace": "In {{project}}",
+        "pickFolderFirst": "Pick a folder first",
+        "title": "New Session"
+      },
+      "newTask": {
+        "description": "Start work in a fresh Pi session",
+        "title": "New Task"
+      },
+      "openFolder": {
+        "description": "Browse for a project to open as a workspace",
+        "title": "Open Folder"
+      }
+    },
+    "changedFiles": {
+      "moreOpenDiff_one": "+{{count}} more — open diff review",
+      "moreOpenDiff_other": "+{{count}} more — open diff review",
+      "noChanges": "No working tree changes.",
+      "noWorkspace": "No workspace selected.",
+      "title": "Changed Files"
+    },
+    "errorBanner": {
+      "checkInstalled": "Check that {{agent}} is installed and its path is correct.",
+      "couldntStart": "Couldn't start {{agent}}"
+    },
+    "recentSessions": {
+      "empty": "No sessions yet.",
+      "title": "Recent Sessions"
+    },
+    "recentWorkspaces": {
+      "empty": "No workspaces yet.",
+      "last": "last",
+      "title": "Recent Workspaces"
+    },
+    "subtitle": "Open a workspace or pick up where you left off."
+  },
   "language": {
     "nativeName": "English"
   },
@@ -470,6 +508,30 @@
     }
   },
   "notes": {
+    "backButton": "Back",
+    "backTitle": "Back to notes",
+    "deleteNoteTitle": "Delete note",
+    "editNoteTitle": "Edit note",
+    "empty": {
+      "noMatch": "No notes match your search.",
+      "noneYet": "No notes yet. Create one to reuse prompts."
+    },
+    "form": {
+      "bodyLabel": "Prompt / Command",
+      "bodyPlaceholder": "The reusable prompt or command text...",
+      "editHeading": "Edit Note",
+      "saveFailed": "Failed to save note",
+      "saving": "Saving...",
+      "scopeLabel": "Scope",
+      "tagsLabel": "Tags",
+      "tagsPlaceholder": "space or comma separated",
+      "thisWorkspaceFallback": "This workspace",
+      "titleLabel": "Title",
+      "titlePlaceholder": "e.g. Refactor with tests"
+    },
+    "insertButton": "Insert",
+    "insertIntoChatTitle": "Insert into chat input",
+    "newNoteButton": "New Note",
     "picker": {
       "createNote": "Create a note",
       "navigationHint": "↑↓ navigate · Enter insert · Esc close",
@@ -477,13 +539,31 @@
       "noSavedNotes": "No saved notes yet.",
       "notComposeBox": "This picker inserts notes you've saved — it's not a compose box.",
       "searchPlaceholder": "Search saved notes to insert..."
-    }
+    },
+    "scope": {
+      "global": "Global",
+      "other": "Other workspace",
+      "workspaceFallback": "Workspace"
+    },
+    "searchPlaceholder": "Search title, body, or tag...",
+    "title": "Notes",
+    "viewNoteTitle": "View note"
   },
   "notifications": {
     "completed": "Pi finished working.",
     "failed": "Pi stopped with an error.",
     "needs-approval": "Pi is waiting for your approval.",
     "withSession": "{{body}} Click to open the finished session."
+  },
+  "palette": {
+    "navigationHint": "↑↓ navigate · Enter/Tab run · / commands only · Esc close",
+    "noMatches": "No matches",
+    "searchPlaceholder": "Search commands, workspaces, sessions, files...",
+    "sections": {
+      "files": "Files",
+      "sessions": "Sessions",
+      "workspaces": "Workspaces"
+    }
   },
   "permissionMode": {
     "ask-commands": {

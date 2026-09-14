@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
 import { Plus, Search, Pencil, Trash2, CornerDownLeft, Tag, ArrowLeft, StickyNote } from 'lucide-react'
 import { useAppStore } from '../store'
@@ -18,6 +19,7 @@ function parseTags(raw: string): string[] {
 }
 
 export function NotesPanel(): React.JSX.Element {
+  const { t } = useTranslation()
   const notes = useAppStore((state) => state.notes)
   const activeWorkspace = useAppStore((state) => state.activeWorkspace)
   const saveNote = useAppStore((state) => state.saveNote)
@@ -46,10 +48,10 @@ export function NotesPanel(): React.JSX.Element {
 
   const scopeLabel = (scope: string): string =>
     scope === GLOBAL_SCOPE
-      ? 'Global'
+      ? t('notes.scope.global')
       : scope === activeWorkspace?.id
-        ? (activeWorkspace?.name ?? 'Workspace')
-        : 'Other workspace'
+        ? (activeWorkspace?.name ?? t('notes.scope.workspaceFallback'))
+        : t('notes.scope.other')
 
   // Only global notes and notes for the active workspace are relevant here.
   const visible = useMemo(() => {
@@ -106,14 +108,14 @@ export function NotesPanel(): React.JSX.Element {
       <div className="flex h-12 items-center justify-between border-b border-border px-4">
         <div className="flex items-center gap-2">
           <StickyNote size={16} className="text-muted" />
-          <h1 className="text-sm font-medium text-primary">Notes</h1>
+          <h1 className="text-sm font-medium text-primary">{t('notes.title')}</h1>
         </div>
         <button
           onClick={() => setEditing('new')}
           className="flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs text-white hover:bg-accent-hover transition-colors"
         >
           <Plus size={13} />
-          New Note
+          {t('notes.newNoteButton')}
         </button>
       </div>
 
@@ -125,7 +127,7 @@ export function NotesPanel(): React.JSX.Element {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search title, body, or tag..."
+            placeholder={t('notes.searchPlaceholder')}
             className="flex-1 bg-transparent text-sm text-primary placeholder:text-faint outline-none"
           />
         </div>
@@ -135,7 +137,7 @@ export function NotesPanel(): React.JSX.Element {
       <div className="flex-1 space-y-2 overflow-y-auto px-4 pb-6">
         {visible.length === 0 ? (
           <div className="mt-8 text-center text-sm text-faint">
-            {query.trim() ? 'No notes match your search.' : 'No notes yet. Create one to reuse prompts.'}
+            {query.trim() ? t('notes.empty.noMatch') : t('notes.empty.noneYet')}
           </div>
         ) : (
           visible.map((note) => (
@@ -146,7 +148,7 @@ export function NotesPanel(): React.JSX.Element {
               <button
                 onClick={() => setViewing(note)}
                 className="block w-full text-left"
-                title="View note"
+                title={t('notes.viewNoteTitle')}
               >
                 <div className="flex items-center gap-2">
                   <span className="truncate text-sm font-medium text-primary">{note.title}</span>
@@ -178,24 +180,24 @@ export function NotesPanel(): React.JSX.Element {
                 <button
                   onClick={() => insertPrompt(note.body)}
                   className="flex items-center gap-1 rounded bg-card px-2 py-1 text-xs text-secondary hover:bg-elevated transition-colors"
-                  title="Insert into chat input"
+                  title={t('notes.insertIntoChatTitle')}
                 >
                   <CornerDownLeft size={11} />
-                  Insert
+                  {t('notes.insertButton')}
                 </button>
                 <button
                   onClick={() => setEditing(note)}
                   className="rounded p-1 text-dim hover:text-secondary transition-colors"
-                  title="Edit note"
-                  aria-label="Edit note"
+                  title={t('notes.editNoteTitle')}
+                  aria-label={t('notes.editNoteTitle')}
                 >
                   <Pencil size={13} />
                 </button>
                 <button
                   onClick={() => deleteNote(note.id)}
                   className="rounded p-1 text-dim hover:text-error transition-colors"
-                  title="Delete note"
-                  aria-label="Delete note"
+                  title={t('notes.deleteNoteTitle')}
+                  aria-label={t('notes.deleteNoteTitle')}
                 >
                   <Trash2 size={13} />
                 </button>
@@ -225,6 +227,7 @@ function NoteReadView({
   onEdit: () => void
   onDelete: () => void
 }): React.JSX.Element {
+  const { t } = useTranslation()
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
@@ -233,10 +236,10 @@ function NoteReadView({
           <button
             onClick={onBack}
             className="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted hover:bg-surface-hover hover:text-primary transition-colors"
-            title="Back to notes"
+            title={t('notes.backTitle')}
           >
             <ArrowLeft size={13} />
-            Back
+            {t('notes.backButton')}
           </button>
           <h1 className="truncate text-sm font-medium text-primary">{note.title}</h1>
           <span className="shrink-0 rounded bg-card px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted">
@@ -247,24 +250,24 @@ function NoteReadView({
           <button
             onClick={onInsert}
             className="flex items-center gap-1 rounded bg-card px-2 py-1 text-xs text-secondary hover:bg-elevated transition-colors"
-            title="Insert into chat input"
+            title={t('notes.insertIntoChatTitle')}
           >
             <CornerDownLeft size={11} />
-            Insert
+            {t('notes.insertButton')}
           </button>
           <button
             onClick={onEdit}
             className="rounded p-1 text-dim hover:text-secondary transition-colors"
-            title="Edit note"
-            aria-label="Edit note"
+            title={t('notes.editNoteTitle')}
+            aria-label={t('notes.editNoteTitle')}
           >
             <Pencil size={13} />
           </button>
           <button
             onClick={onDelete}
             className="rounded p-1 text-dim hover:text-error transition-colors"
-            title="Delete note"
-            aria-label="Delete note"
+            title={t('notes.deleteNoteTitle')}
+            aria-label={t('notes.deleteNoteTitle')}
           >
             <Trash2 size={13} />
           </button>
@@ -310,6 +313,7 @@ function NoteForm({
   onSubmit: (input: NoteInput) => Promise<void>
   onCancel: () => void
 }): React.JSX.Element {
+  const { t } = useTranslation()
   const [title, setTitle] = useState(note?.title ?? '')
   const [body, setBody] = useState(note?.body ?? initialBody)
   const [tagsRaw, setTagsRaw] = useState(note?.tags.join(' ') ?? '')
@@ -326,7 +330,7 @@ function NoteForm({
     try {
       await onSubmit({ title: title.trim(), body: body.trim(), tags: parseTags(tagsRaw), scope })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save note')
+      setError(err instanceof Error ? err.message : t('notes.form.saveFailed'))
       setSaving(false)
     }
   }
@@ -334,53 +338,53 @@ function NoteForm({
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-border px-4 py-3">
-        <h1 className="text-sm font-medium text-primary">{note ? 'Edit Note' : 'New Note'}</h1>
+        <h1 className="text-sm font-medium text-primary">{note ? t('notes.form.editHeading') : t('notes.newNoteButton')}</h1>
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
         <div>
-          <label className="mb-1 block text-xs font-medium text-muted">Title</label>
+          <label className="mb-1 block text-xs font-medium text-muted">{t('notes.form.titleLabel')}</label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. Refactor with tests"
+            placeholder={t('notes.form.titlePlaceholder')}
             className="w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-sm text-primary placeholder:text-faint focus:border-focus focus:outline-none"
             autoFocus
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-muted">Prompt / Command</label>
+          <label className="mb-1 block text-xs font-medium text-muted">{t('notes.form.bodyLabel')}</label>
           <textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            placeholder="The reusable prompt or command text..."
+            placeholder={t('notes.form.bodyPlaceholder')}
             rows={8}
             className="w-full resize-y rounded-md border border-border-strong bg-surface px-3 py-2 font-mono text-sm text-primary placeholder:text-faint focus:border-focus focus:outline-none"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-muted">Tags</label>
+          <label className="mb-1 block text-xs font-medium text-muted">{t('notes.form.tagsLabel')}</label>
           <input
             type="text"
             value={tagsRaw}
             onChange={(e) => setTagsRaw(e.target.value)}
-            placeholder="space or comma separated"
+            placeholder={t('notes.form.tagsPlaceholder')}
             className="w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-sm text-primary placeholder:text-faint focus:border-focus focus:outline-none"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-muted">Scope</label>
+          <label className="mb-1 block text-xs font-medium text-muted">{t('notes.form.scopeLabel')}</label>
           <div className="flex gap-2">
-            <ScopeButton active={scope === GLOBAL_SCOPE} onClick={() => setScope(GLOBAL_SCOPE)} label="Global" />
+            <ScopeButton active={scope === GLOBAL_SCOPE} onClick={() => setScope(GLOBAL_SCOPE)} label={t('notes.scope.global')} />
             {workspaceId && (
               <ScopeButton
                 active={scope === workspaceId}
                 onClick={() => setScope(workspaceId)}
-                label={workspaceName ?? 'This workspace'}
+                label={workspaceName ?? t('notes.form.thisWorkspaceFallback')}
               />
             )}
           </div>
@@ -395,13 +399,13 @@ function NoteForm({
           disabled={!canSave}
           className="rounded-md bg-accent px-4 py-1.5 text-sm text-white hover:bg-accent-hover disabled:opacity-50 transition-colors"
         >
-          {saving ? 'Saving...' : 'Save'}
+          {saving ? t('notes.form.saving') : t('common.save')}
         </button>
         <button
           onClick={onCancel}
           className="rounded-md px-4 py-1.5 text-sm text-muted hover:text-primary transition-colors"
         >
-          Cancel
+          {t('common.cancel')}
         </button>
       </div>
     </div>

@@ -11,16 +11,13 @@ const locales = readdirSync(LOCALES_DIR, { withFileTypes: true })
 // Component files that still hold hard-coded text. Each translation commit
 // removes its files; the interface-translation work is done when this is empty.
 const NOT_YET_TRANSLATED = [
-  'src/renderer/src/components/command-palette.tsx',
   'src/renderer/src/components/council-panels.tsx',
   'src/renderer/src/components/custom-models-editor.tsx',
   'src/renderer/src/components/diagnostics-panel.tsx',
   'src/renderer/src/components/diff-viewer.tsx',
   'src/renderer/src/components/file-tree.tsx',
   'src/renderer/src/components/git-conveyor-actions.tsx',
-  'src/renderer/src/components/home-screen.tsx',
   'src/renderer/src/components/image-viewer.tsx',
-  'src/renderer/src/components/notes-panel.tsx',
   'src/renderer/src/components/package-browser.tsx',
   'src/renderer/src/components/permission-rules-editor.tsx',
   'src/renderer/src/components/review-rail.tsx',
