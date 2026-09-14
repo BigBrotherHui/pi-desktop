@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { findSessionPreview, getSessionTitle } from '../utils/session-title'
+import { processStatusLabel } from '../utils/process-status-label'
 import { useAppStore } from '../store'
 import { DEFAULT_AGENT_ENGINE_LABEL, agentEngineLabel } from '../../../shared/agent-engine-label'
 import { invocationToken } from '../../../shared/pi-command'
@@ -39,13 +40,6 @@ interface McpServer {
   source: 'global' | 'project'
   status: 'configured' | 'unknown'
 }
-
-const PROCESS_STATUS_KEYS = {
-  running: 'status.processStatus.running',
-  starting: 'status.processStatus.starting',
-  error: 'status.processStatus.error',
-  stopped: 'status.processStatus.stopped',
-} as const satisfies Record<'running' | 'starting' | 'error' | 'stopped', string>
 
 const SCOPE_KEYS = {
   global: 'status.scope.global',
@@ -172,7 +166,7 @@ export function StatusPopover(): React.JSX.Element {
                 value={
                   <span className="flex items-center gap-1.5">
                     <span className={clsx('h-1.5 w-1.5 rounded-full', statusColor)} />
-                    {t(PROCESS_STATUS_KEYS[piStatus])}
+                    {processStatusLabel(piStatus, t)}
                     {piPid && <span className="text-faint">{t('status.pidLabel', { pid: piPid })}</span>}
                   </span>
                 }

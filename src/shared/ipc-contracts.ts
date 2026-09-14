@@ -1401,6 +1401,16 @@ export interface DiagnosticsProviderInfo {
   envVar?: string
 }
 
+/** Where a resolved Pi path came from, for logging and error messaging. */
+export type PiResolutionSource =
+  | 'override'
+  | 'npm-prefix'
+  | 'path'
+  | 'version-manager'
+  | 'common-location'
+  | 'omp'
+  | 'fallback'
+
 /** Everything the Diagnostics view shows, assembled in one main-side pass. */
 export interface DiagnosticsReport {
   generatedAt: number
@@ -1414,7 +1424,7 @@ export interface DiagnosticsReport {
   piBinary: {
     found: boolean
     script: string
-    source: string
+    source: PiResolutionSource
     useNode: boolean
     nodeBinary: string
     nodeFound: boolean

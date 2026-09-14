@@ -9,11 +9,18 @@ import {
   Stethoscope,
   XCircle,
 } from 'lucide-react'
-import type { AppLogEntry, DiagnosticsReport, ProviderKeyState } from '../../../shared/ipc-contracts'
+import type {
+  AppLogEntry,
+  DiagnosticsReport,
+  PermissionMode,
+  PiResolutionSource,
+  ProviderKeyState,
+} from '../../../shared/ipc-contracts'
 import { useAppStore } from '../store'
 import { DEFAULT_AGENT_ENGINE_LABEL, agentEngineLabel } from '../../../shared/agent-engine-label'
 import { formatRelativeTime } from '../utils/format-relative-time'
 import { formatIpcError } from '../utils/ipc-error'
+import { processStatusLabel } from '../utils/process-status-label'
 import { CopyButton } from './copy-button'
 
 type RowTone = 'ok' | 'warn' | 'fail' | 'plain'
@@ -36,6 +43,26 @@ const KEY_STATE_LABEL_KEYS = {
   shell: 'diagnostics.keyState.shell',
   none: 'diagnostics.keyState.none',
 } as const satisfies Record<ProviderKeyState, string>
+
+/** The resolution source that names the agent in its label. */
+const ENGINE_INSTALL_SOURCE = 'omp'
+
+// The copied report keeps the raw values; only the panel shows these labels.
+const RESOLUTION_SOURCE_LABEL_KEYS = {
+  override: 'diagnostics.resolutionSource.override',
+  'npm-prefix': 'diagnostics.resolutionSource.npmPrefix',
+  path: 'diagnostics.resolutionSource.path',
+  'version-manager': 'diagnostics.resolutionSource.versionManager',
+  'common-location': 'diagnostics.resolutionSource.commonLocation',
+  fallback: 'diagnostics.resolutionSource.fallback',
+} as const satisfies Record<Exclude<PiResolutionSource, typeof ENGINE_INSTALL_SOURCE>, string>
+
+const PERMISSION_MODE_LABEL_KEYS = {
+  'plan-readonly': 'permissionMode.plan-readonly.label',
+  'ask-edits': 'permissionMode.ask-edits.label',
+  'ask-commands': 'permissionMode.ask-commands.label',
+  trusted: 'permissionMode.trusted.label',
+} as const satisfies Record<PermissionMode, string>
 
 const KEY_STATE_TONE: Record<ProviderKeyState, RowTone> = {
   literal: 'ok',
@@ -144,7 +171,14 @@ export function DiagnosticsPanel(): React.JSX.Element {
                 tone={report.piVersion ? 'plain' : 'warn'}
               />
               <DiagRow label={t('diagnostics.fields.script')} value={report.piBinary.script} mono />
-              <DiagRow label={t('diagnostics.fields.resolutionSource')} value={report.piBinary.source} />
+              <DiagRow
+                label={t('diagnostics.fields.resolutionSource')}
+                value={
+                  report.piBinary.source === ENGINE_INSTALL_SOURCE
+                    ? t('diagnostics.resolutionSource.engineInstall', { agent: agentEngineLabel(ENGINE_INSTALL_SOURCE) })
+                    : t(RESOLUTION_SOURCE_LABEL_KEYS[report.piBinary.source])
+                }
+              />
               {report.piBinary.useNode && (
                 <DiagRow
                   label={t('diagnostics.fields.nodeBinary')}
@@ -173,7 +207,7 @@ export function DiagnosticsPanel(): React.JSX.Element {
                     </span>
                     {!ws.pathExists && <span className="shrink-0 text-error">{t('diagnostics.workspacePathMissing')}</span>}
                     {ws.trusted && <span className="shrink-0 text-success">{t('diagnostics.workspaceTrustedBadge')}</span>}
-                    <span className="shrink-0 text-muted">{ws.piStatus}</span>
+                    <span className="shrink-0 text-muted">{processStatusLabel(ws.piStatus, t)}</span>
                   </div>
                 ))
               )}
@@ -214,7 +248,10 @@ export function DiagnosticsPanel(): React.JSX.Element {
             </DiagSection>
 
             <DiagSection title={t('diagnostics.sections.permissions')}>
-              <DiagRow label={t('diagnostics.fields.mode')} value={report.permissions.mode} />
+              <DiagRow
+                label={t('diagnostics.fields.mode')}
+                value={t(PERMISSION_MODE_LABEL_KEYS[report.permissions.mode])}
+              />
               <DiagRow
                 label={t('diagnostics.fields.globalRules')}
                 value={

@@ -166,6 +166,12 @@
       "description": "Launch a task in a new Pi session"
     }
   },
+  "commandSources": {
+    "builtin": "builtin",
+    "extension": "extension",
+    "prompt": "prompt",
+    "skill": "skill"
+  },
   "common": {
     "attachFile": "Attach file",
     "cancel": "Cancel",
@@ -380,6 +386,15 @@
     "providerModelCount_one": "{{count}} model",
     "providerModelCount_other": "{{count}} models",
     "refreshAriaLabel": "Refresh diagnostics",
+    "resolutionSource": {
+      "commonLocation": "Common install location",
+      "engineInstall": "{{agent}} install location",
+      "fallback": "Fallback (not found)",
+      "npmPrefix": "npm global prefix",
+      "override": "Configured path",
+      "path": "PATH",
+      "versionManager": "Version manager"
+    },
     "sections": {
       "application": "Application",
       "binaryTitle": "{{agent}} Binary",
@@ -1211,6 +1226,8 @@
       "messagesLabel": "Messages",
       "peakHourLabel": "Peak hour",
       "sessionsLabel": "Sessions",
+      "streakDays_one": "{{count}}d",
+      "streakDays_other": "{{count}}d",
       "totalTokensLabel": "Total tokens"
     },
     "ranges": {

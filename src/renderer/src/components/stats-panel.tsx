@@ -342,8 +342,14 @@ export function StatsPanel(): React.JSX.Element | null {
             <StatCard label={t('stats.overview.messagesLabel')} value={stats.messages.toLocaleString(i18n.language)} />
             <StatCard label={t('stats.overview.totalTokensLabel')} value={formatCompact(stats.totalTokens)} />
             <StatCard label={t('stats.overview.activeDaysLabel')} value={stats.activeDays.toLocaleString(i18n.language)} />
-            <StatCard label={t('stats.overview.currentStreakLabel')} value={`${stats.currentStreak}d`} />
-            <StatCard label={t('stats.overview.longestStreakLabel')} value={`${stats.longestStreak}d`} />
+            <StatCard
+              label={t('stats.overview.currentStreakLabel')}
+              value={t('stats.overview.streakDays', { count: stats.currentStreak })}
+            />
+            <StatCard
+              label={t('stats.overview.longestStreakLabel')}
+              value={t('stats.overview.streakDays', { count: stats.longestStreak })}
+            />
             <StatCard label={t('stats.overview.peakHourLabel')} value={stats.peakHour === null ? '—' : formatHour(stats.peakHour, i18n.language)} />
             <StatCard label={t('stats.overview.favoriteModelLabel')} value={favoriteModel} />
           </div>

@@ -60,6 +60,25 @@ function groupLabel(id: CommandGroupId, t: Translate): string {
   }
 }
 
+/**
+ * The badge text for a command's source, in the interface language. A source
+ * this app does not know is shown exactly as Pi sent it.
+ */
+export function commandSourceLabel(source: string, t: Translate): string {
+  switch (source) {
+    case 'skill':
+      return t('commandSources.skill')
+    case 'prompt':
+      return t('commandSources.prompt')
+    case BUILTIN_SOURCE:
+      return t('commandSources.builtin')
+    case 'extension':
+      return t('commandSources.extension')
+    default:
+      return source
+  }
+}
+
 export interface CommandGroup {
   /** Stable group id (the command source, or the catch-all id), for React keys. */
   id: CommandGroupId

@@ -1,6 +1,7 @@
 import { basename, join, posix as posixPath } from 'path'
 import { buildNpmPrefixCommand, escapeCmdSpawn } from './cmd-escape'
 import { i18n, type Translate } from '../shared/i18n'
+import type { PiResolutionSource } from '../shared/ipc-contracts'
 
 /**
  * Locating the Pi CLI is the single most failure-prone step at startup, and the
@@ -43,16 +44,6 @@ const JS_EXTENSION = '.js'
 const SHELL_SCRIPT_PATTERN = /\.(cmd|bat|ps1)$/i
 const VERSION_NUMBER_PATTERN = /\d+/g
 const OMP_BINARY_PATTERN = /(?:^|[\\/])omp(?:\.(?:cmd|exe|bat|ps1))?$/i
-
-/** Where a resolved path came from, for logging and error messaging. */
-export type PiResolutionSource =
-  | 'override'
-  | 'npm-prefix'
-  | 'path'
-  | 'version-manager'
-  | 'common-location'
-  | 'omp'
-  | 'fallback'
 
 export interface CaptureOptions {
   shell: boolean
