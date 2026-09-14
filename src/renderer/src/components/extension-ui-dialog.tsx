@@ -20,6 +20,8 @@ export const NOTIFY_TOAST_Z_INDEX = 60
 // How long a notification stays up before it dismisses itself.
 const NOTIFY_TOAST_TIMEOUT_MS = 5000
 
+const KEY_LISTENER_OPTIONS: AddEventListenerOptions = { capture: true }
+
 export function ExtensionUiDialog(): React.JSX.Element | null {
   const request = useAppStore((state) => state.extensionUiRequest)
   const notify = useAppStore((state) => state.extensionNotify)
@@ -47,8 +49,10 @@ export function ExtensionUiDialog(): React.JSX.Element | null {
         setHiddenRequestId(request.id)
       }
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    // Capture phase: the chat's own Escape handler (abort the turn) runs
+    // later in the bubble phase and skips a press this handler consumed.
+    window.addEventListener('keydown', onKey, KEY_LISTENER_OPTIONS)
+    return () => window.removeEventListener('keydown', onKey, KEY_LISTENER_OPTIONS)
   }, [request, hiddenRequestId])
 
   // The toast lives in its own store slot so it can coexist with a blocking
@@ -60,11 +64,12 @@ export function ExtensionUiDialog(): React.JSX.Element | null {
     <NotifyToast key={notify.id} request={notify} onDismiss={dismissExtensionNotify} />
   ) : null
 
-  // Dialog slot: the store routes only select/confirm/input/editor here.
+  // Dialog slot: the store routes only select/confirm/input/editor here. A
+  // hidden prompt stays mounted (only its overlay is display:none) so text the
+  // user already typed into an input or editor survives the hide.
   const dialog = ((): React.JSX.Element | null => {
     if (!request) return null
-    if (hidden) return <HiddenPromptPill onShow={show} />
-    const frame = { onCancel: dismissExtensionUi, onHide: hide }
+    const frame = { onCancel: dismissExtensionUi, onHide: hide, hidden }
     switch (request.method) {
       case 'select':
         return (
@@ -110,6 +115,7 @@ export function ExtensionUiDialog(): React.JSX.Element | null {
     <>
       {toast}
       {dialog}
+      {hidden && <HiddenPromptPill onShow={show} />}
     </>
   )
 }
@@ -177,6 +183,7 @@ function NotifyToast({
 interface DialogFrameProps {
   onCancel: () => void
   onHide: () => void
+  hidden: boolean
 }
 
 function SelectDialog({
@@ -184,13 +191,14 @@ function SelectDialog({
   onSelect,
   onCancel,
   onHide,
+  hidden,
 }: DialogFrameProps & {
   request: { id: string; title?: string; options?: string[]; timeout?: number }
   onSelect: (value: string) => void
 }): React.JSX.Element {
   const { t } = useTranslation()
   return (
-    <DialogOverlay onBackdropClick={onHide}>
+    <DialogOverlay hidden={hidden} onBackdropClick={onHide}>
       <DialogBox prompt={request.title ?? t('chat.extensionUi.selectFallbackTitle')} onCancel={onCancel} onHide={onHide}>
         <div className="space-y-1">
           {(request.options ?? []).map((option) => (
@@ -217,6 +225,7 @@ function ConfirmDialog({
   onDeny,
   onCancel,
   onHide,
+  hidden,
 }: DialogFrameProps & {
   request: { id: string; title?: string; message?: string }
   onConfirm: () => void
@@ -224,7 +233,7 @@ function ConfirmDialog({
 }): React.JSX.Element {
   const { t } = useTranslation()
   return (
-    <DialogOverlay onBackdropClick={onHide}>
+    <DialogOverlay hidden={hidden} onBackdropClick={onHide}>
       <DialogBox prompt={request.title ?? t('common.confirm')} onCancel={onCancel} onHide={onHide}>
         {request.message && <PromptBody text={request.message} />}
         <div className="flex justify-end gap-2">
@@ -253,6 +262,7 @@ function InputDialog({
   onSubmit,
   onCancel,
   onHide,
+  hidden,
 }: DialogFrameProps & {
   request: { id: string; title?: string; placeholder?: string }
   onSubmit: (value: string) => void
@@ -261,7 +271,7 @@ function InputDialog({
   const [value, setValue] = useState('')
 
   return (
-    <DialogOverlay onBackdropClick={onHide}>
+    <DialogOverlay hidden={hidden} onBackdropClick={onHide}>
       <DialogBox prompt={request.title ?? t('chat.extensionUi.inputFallbackTitle')} onCancel={onCancel} onHide={onHide}>
         <input
           type="text"
@@ -300,6 +310,7 @@ function EditorDialog({
   onSubmit,
   onCancel,
   onHide,
+  hidden,
 }: DialogFrameProps & {
   request: { id: string; title?: string; prefill?: string }
   onSubmit: (value: string) => void
@@ -308,7 +319,7 @@ function EditorDialog({
   const [value, setValue] = useState(request.prefill ?? '')
 
   return (
-    <DialogOverlay onBackdropClick={onHide}>
+    <DialogOverlay hidden={hidden} onBackdropClick={onHide}>
       <DialogBox prompt={request.title ?? t('chat.extensionUi.editFallbackTitle')} onCancel={onCancel} onHide={onHide} wide>
         <textarea
           value={value}
@@ -361,7 +372,7 @@ export function AppConfirmDialog(): React.JSX.Element | null {
   if (!request) return null
 
   return (
-    <DialogOverlay onBackdropClick={() => resolveConfirm(false)}>
+    <DialogOverlay hidden={false} onBackdropClick={() => resolveConfirm(false)}>
       <DialogBox prompt={request.title ?? t('common.confirm')} onCancel={() => resolveConfirm(false)}>
         <PromptBody text={request.message} />
         <div className="flex justify-end gap-2">
@@ -397,14 +408,19 @@ function PromptBody({ text }: { text: string }): React.JSX.Element {
 
 function DialogOverlay({
   children,
+  hidden,
   onBackdropClick,
 }: {
   children: React.ReactNode
+  hidden: boolean
   onBackdropClick: () => void
 }): React.JSX.Element {
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in"
+      className={clsx(
+        'fixed inset-0 items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in',
+        hidden ? 'hidden' : 'flex'
+      )}
       style={{ zIndex: DIALOG_OVERLAY_Z_INDEX }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onBackdropClick()

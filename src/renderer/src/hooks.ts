@@ -378,6 +378,14 @@ export function useChatScroll(active: boolean): {
 }
 
 /**
+ * Escape aborts the running turn unless another surface (an extension prompt
+ * hiding itself, for example) already consumed the key press.
+ */
+export function isAbortShortcut(event: { key: string; defaultPrevented: boolean }, isStreaming: boolean): boolean {
+  return event.key === 'Escape' && isStreaming && !event.defaultPrevented
+}
+
+/**
  * Keyboard shortcut handler for the chat input.
  */
 export function useChatKeyboard(
@@ -389,8 +397,7 @@ export function useChatKeyboard(
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Escape: abort streaming
-      if (e.key === 'Escape' && isStreaming) {
+      if (isAbortShortcut(e, isStreaming)) {
         e.preventDefault()
         onAbort()
         return
