@@ -4,6 +4,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
 import { useAppStore } from '../store'
+import { useAppliedThemeId } from '../hooks'
 import { DEFAULT_SETTINGS } from '../../../shared/default-settings'
 import { clsx } from 'clsx'
 import {
@@ -55,7 +56,7 @@ export function TerminalPanel(): React.JSX.Element | null {
   const terminalOpen = useAppStore((state) => state.terminalOpen)
   const toggleTerminal = useAppStore((state) => state.toggleTerminal)
   const activeWorkspace = useAppStore((state) => state.activeWorkspace)
-  const theme = useAppStore((state) => state.settings?.theme)
+  const appliedThemeId = useAppliedThemeId()
 
   const [maximized, setMaximized] = useState(false)
   const [shellLabel, setShellLabel] = useState<string>('Terminal')
@@ -149,7 +150,7 @@ export function TerminalPanel(): React.JSX.Element | null {
     if (terminalRef.current) {
       terminalRef.current.options.theme = buildTerminalTheme()
     }
-  }, [theme])
+  }, [appliedThemeId])
 
   if (!terminalOpen) return null
 

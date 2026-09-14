@@ -4,6 +4,7 @@ import { syntaxHighlighting } from '@codemirror/language'
 import { getCodeEditorLanguageExtensions } from './code-editor-language'
 import { themedHighlightStyle } from './code-editor-highlight'
 import { useAppStore } from '../store'
+import { useAppliedThemeId } from '../hooks'
 import { isLightTheme } from '../utils/theme'
 import { DEFAULT_SETTINGS } from '../../../shared/default-settings'
 
@@ -23,8 +24,7 @@ export function CodeEditor({
   const containerRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const onChangeRef = useRef(onChange)
-  const theme = useAppStore((state) => state.settings?.theme)
-  const lightTheme = isLightTheme(theme)
+  const lightTheme = isLightTheme(useAppliedThemeId())
   const fontSize = useAppStore((state) => state.settingsDraft.codeEditorFontSize ?? state.settings?.codeEditorFontSize)
 
   useEffect(() => {

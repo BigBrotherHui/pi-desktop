@@ -1095,6 +1095,11 @@ export interface AppSettings {
   piEngine: AgentEngine
   defaultArgs: string[]
   theme: string // 'system' or a theme id (built-in or user theme)
+  // Themes 'system' switches between when the OS prefers light or dark. Each
+  // must be a theme of the matching kind; otherwise the built-in default for
+  // that slot is used.
+  systemLightTheme: string
+  systemDarkTheme: string
   defaultModel: string | null
   defaultProvider: string | null
   defaultCwd: string | null

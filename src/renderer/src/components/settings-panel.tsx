@@ -19,7 +19,17 @@ import { DEFAULT_SETTINGS } from '../../../shared/default-settings'
 import { PermissionSelector } from './permission-selector'
 import { PermissionRulesEditor } from './permission-rules-editor'
 import { validateRuleList, shouldPersistScope } from './permission-rules-editor-helpers'
-import { applyTheme, getRegisteredThemes, registerThemes, setUserThemes } from '../utils/theme'
+import {
+  SYSTEM_THEME_ID,
+  applyTheme,
+  applyThemeSettings,
+  getRegisteredThemes,
+  registerThemes,
+  resolveSystemThemeSlot,
+  resolveThemeId,
+  setUserThemes,
+  type ThemeKind,
+} from '../utils/theme'
 import { BUILTIN_THEME_IDS } from '../themes'
 import { CustomModelsEditor } from './custom-models-editor'
 import { ThemeEditor } from './theme-editor'
@@ -76,6 +86,12 @@ export function SettingsPanel(): React.JSX.Element {
   const [detectedAgentInstalls, setDetectedAgentInstalls] = useState<AgentInstallation[]>([])
   const [scanningAgentInstalls, setScanningAgentInstalls] = useState(false)
   const [theme, setTheme] = useState(draft0.theme ?? settings?.theme ?? DEFAULT_SETTINGS.theme)
+  const [systemLightTheme, setSystemLightTheme] = useState(
+    draft0.systemLightTheme ?? settings?.systemLightTheme ?? DEFAULT_SETTINGS.systemLightTheme,
+  )
+  const [systemDarkTheme, setSystemDarkTheme] = useState(
+    draft0.systemDarkTheme ?? settings?.systemDarkTheme ?? DEFAULT_SETTINGS.systemDarkTheme,
+  )
   const [themeActionError, setThemeActionError] = useState<string | null>(null)
   const [themeEditorState, setThemeEditorState] = useState<{
     baseTheme: ThemeFile
@@ -264,6 +280,8 @@ export function SettingsPanel(): React.JSX.Element {
     const normalizedPiPath = nextPiPath.trim().toLowerCase()
     setCustomAgentPathMode(Boolean(nextPiPath.trim()) && normalizedPiPath !== 'pi' && normalizedPiPath !== 'omp')
     setTheme(draft.theme ?? settings.theme)
+    setSystemLightTheme(draft.systemLightTheme ?? settings.systemLightTheme)
+    setSystemDarkTheme(draft.systemDarkTheme ?? settings.systemDarkTheme)
     setFontSize(draft.fontSize ?? settings.fontSize)
     setTerminalFontSize(draft.terminalFontSize ?? settings.terminalFontSize)
     setCodeEditorFontSize(draft.codeEditorFontSize ?? settings.codeEditorFontSize)
@@ -325,16 +343,19 @@ export function SettingsPanel(): React.JSX.Element {
           : '__custom__'
   const showCustomAgentPath = customAgentPathMode || agentSelection === 'omp'
 
-  const resolveEffectiveThemeId = (themeId: string): string => {
-    if (themeId !== 'system') return themeId
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  const isBuiltinTheme = (themeId: string): boolean => (BUILTIN_THEME_IDS as string[]).includes(themeId)
+  const isEditableUserTheme = theme !== SYSTEM_THEME_ID && !isBuiltinTheme(theme)
+
+  const handleSystemThemesChange = (patch: Partial<Pick<AppSettings, 'systemLightTheme' | 'systemDarkTheme'>>): void => {
+    const next = { systemLightTheme, systemDarkTheme, ...patch }
+    setSystemLightTheme(next.systemLightTheme)
+    setSystemDarkTheme(next.systemDarkTheme)
+    applyThemeSettings({ theme, ...next })
+    setSettingsDraft(patch)
   }
 
-  const isBuiltinTheme = (themeId: string): boolean => (BUILTIN_THEME_IDS as string[]).includes(themeId)
-  const isEditableUserTheme = theme !== 'system' && !isBuiltinTheme(theme)
-
   const openCreateThemeEditor = () => {
-    const effectiveId = resolveEffectiveThemeId(theme)
+    const effectiveId = resolveThemeId(theme)
     const registered = getRegisteredThemes()
     const baseTheme =
       registered.find((t) => t.id === effectiveId)?.file ??
@@ -380,7 +401,7 @@ export function SettingsPanel(): React.JSX.Element {
   }
 
   const handleExportTheme = async () => {
-    const effectiveThemeId = resolveEffectiveThemeId(theme)
+    const effectiveThemeId = resolveThemeId(theme)
     const currentThemeFile = getRegisteredThemes().find((t) => t.id === effectiveThemeId)?.file
     if (!currentThemeFile) {
       setThemeActionError('Could not find the current theme to export')
@@ -513,6 +534,8 @@ export function SettingsPanel(): React.JSX.Element {
       piExecutablePath: piPath,
       piEngine,
       theme,
+      systemLightTheme,
+      systemDarkTheme,
       fontSize,
       terminalFontSize,
       codeEditorFontSize,
@@ -529,7 +552,7 @@ export function SettingsPanel(): React.JSX.Element {
     const result = await window.piDesktop.settings.save(updated)
 
     // Apply theme and font size immediately
-    applyTheme(result.theme)
+    applyThemeSettings(result)
     document.documentElement.style.fontSize = `${result.fontSize}px`
 
     // Reload settings in store
@@ -571,6 +594,8 @@ export function SettingsPanel(): React.JSX.Element {
       piExecutablePath: DEFAULT_SETTINGS.piExecutablePath,
       piEngine: DEFAULT_SETTINGS.piEngine,
       theme: DEFAULT_SETTINGS.theme,
+      systemLightTheme: DEFAULT_SETTINGS.systemLightTheme,
+      systemDarkTheme: DEFAULT_SETTINGS.systemDarkTheme,
       fontSize: DEFAULT_SETTINGS.fontSize,
       terminalFontSize: DEFAULT_SETTINGS.terminalFontSize,
       codeEditorFontSize: DEFAULT_SETTINGS.codeEditorFontSize,
@@ -588,6 +613,8 @@ export function SettingsPanel(): React.JSX.Element {
     setPiEngine(defaults.piEngine!)
     setCustomAgentPathMode(false)
     setTheme(defaults.theme!)
+    setSystemLightTheme(defaults.systemLightTheme!)
+    setSystemDarkTheme(defaults.systemDarkTheme!)
     setFontSize(defaults.fontSize!)
     setTerminalFontSize(defaults.terminalFontSize!)
     setCodeEditorFontSize(defaults.codeEditorFontSize!)
@@ -607,7 +634,7 @@ export function SettingsPanel(): React.JSX.Element {
     void loadRulesScope('workspace')
 
     const result = await window.piDesktop.settings.save(defaults)
-    applyTheme(result.theme)
+    applyThemeSettings(result)
     document.documentElement.style.fontSize = `${result.fontSize}px`
     await loadSettings()
     clearSettingsDraft()
@@ -703,30 +730,37 @@ export function SettingsPanel(): React.JSX.Element {
         {/* Appearance */}
         <SettingsSection title="Appearance">
           <SettingsRow label="Theme" description="Application color scheme">
-            <div className="relative">
-              <select
-                value={theme}
-                onChange={(e) => {
-                  const newTheme = e.target.value
-                  setTheme(newTheme)
-                  applyTheme(newTheme)
-                  setSettingsDraft({ theme: newTheme })
-                }}
-                className="w-full appearance-none rounded-md border border-border-strong bg-surface py-1.5 pl-3 pr-9 text-sm text-primary hover:border-border-strong-hover focus:border-focus focus:outline-none"
-              >
-                <option value="system">System</option>
-                {getRegisteredThemes().map((registeredTheme) => (
-                  <option key={registeredTheme.id} value={registeredTheme.id}>
-                    {registeredTheme.file.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                size={14}
-                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-dim"
-              />
-            </div>
+            <SelectField
+              value={theme}
+              onChange={(newTheme) => {
+                setTheme(newTheme)
+                applyThemeSettings({ theme: newTheme, systemLightTheme, systemDarkTheme })
+                setSettingsDraft({ theme: newTheme })
+              }}
+            >
+              <option value={SYSTEM_THEME_ID}>System</option>
+              <ThemeOptions />
+            </SelectField>
           </SettingsRow>
+
+          {theme === SYSTEM_THEME_ID && (
+            <>
+              <SettingsRow label="Light Theme" description="Used when the system is in light mode">
+                <SystemThemeSelect
+                  kind="light"
+                  value={systemLightTheme}
+                  onChange={(themeId) => handleSystemThemesChange({ systemLightTheme: themeId })}
+                />
+              </SettingsRow>
+              <SettingsRow label="Dark Theme" description="Used when the system is in dark mode">
+                <SystemThemeSelect
+                  kind="dark"
+                  value={systemDarkTheme}
+                  onChange={(themeId) => handleSystemThemesChange({ systemDarkTheme: themeId })}
+                />
+              </SettingsRow>
+            </>
+          )}
 
           <SettingsRow label="Custom Theme" description="Fork the current theme or edit one you created">
             <div className="flex gap-2">
@@ -768,7 +802,7 @@ export function SettingsPanel(): React.JSX.Element {
                 >
                   Browse gallery
                 </button>
-                {!isBuiltinTheme(theme) && (
+                {isEditableUserTheme && (
                   <button
                     onClick={handleDeleteTheme}
                     className="rounded-md border border-border-strong px-3 py-1.5 text-sm text-muted hover:bg-surface-hover transition-colors"
@@ -1005,24 +1039,15 @@ export function SettingsPanel(): React.JSX.Element {
                 label="Consensus mode"
                 description="How council members reach agreement"
               >
-                <div className="relative">
-                  <select
-                    value={settings.council.consensusMode}
-                    onChange={(e) =>
-                      void saveCouncil({
-                        consensusMode: e.target.value as CouncilConfig['consensusMode'],
-                      })
-                    }
-                    className="w-full appearance-none rounded-md border border-border-strong bg-surface py-1.5 pl-3 pr-9 text-sm text-primary hover:border-border-strong-hover focus:border-focus focus:outline-none"
-                  >
-                    <option value="arbiter">Arbiter merge (fast)</option>
-                    <option value="debate">One debate round (slower, ~2x cost)</option>
-                  </select>
-                  <ChevronDown
-                    size={14}
-                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-dim"
-                  />
-                </div>
+                <SelectField
+                  value={settings.council.consensusMode}
+                  onChange={(consensusMode) =>
+                    void saveCouncil({ consensusMode: consensusMode as CouncilConfig['consensusMode'] })
+                  }
+                >
+                  <option value="arbiter">Arbiter merge (fast)</option>
+                  <option value="debate">One debate round (slower, ~2x cost)</option>
+                </SelectField>
               </SettingsRow>
 
               <SettingsRow
@@ -1181,6 +1206,65 @@ function SettingsRow({
       </div>
       <div className="w-64">{children}</div>
     </div>
+  )
+}
+
+function SelectField({
+  value,
+  onChange,
+  children,
+}: {
+  value: string
+  onChange: (value: string) => void
+  children: React.ReactNode
+}): React.JSX.Element {
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full appearance-none rounded-md border border-border-strong bg-surface py-1.5 pl-3 pr-9 text-sm text-primary hover:border-border-strong-hover focus:border-focus focus:outline-none"
+      >
+        {children}
+      </select>
+      <ChevronDown
+        size={14}
+        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-dim"
+      />
+    </div>
+  )
+}
+
+// One <option> per registered theme, optionally only those of one kind.
+function ThemeOptions({ kind }: { kind?: ThemeKind }): React.JSX.Element {
+  return (
+    <>
+      {getRegisteredThemes()
+        .filter((registeredTheme) => !kind || registeredTheme.file.kind === kind)
+        .map((registeredTheme) => (
+          <option key={registeredTheme.id} value={registeredTheme.id}>
+            {registeredTheme.file.name}
+          </option>
+        ))}
+    </>
+  )
+}
+
+// Picks the theme 'system' uses for one OS mode. Shows the theme that
+// actually applies, so a deleted or kind-flipped choice reads as its fallback.
+function SystemThemeSelect({
+  kind,
+  value,
+  onChange,
+}: {
+  kind: ThemeKind
+  value: string
+  onChange: (themeId: string) => void
+}): React.JSX.Element {
+  return (
+    <SelectField value={resolveSystemThemeSlot(kind, value)} onChange={onChange}>
+      <ThemeOptions kind={kind} />
+    </SelectField>
   )
 }
 

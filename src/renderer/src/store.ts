@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { applyTheme, setUserThemes, watchSystemTheme } from './utils/theme'
+import { applyThemeSettings, setUserThemes, watchSystemTheme } from './utils/theme'
 import { buildPlanningPrompt } from './utils/planning-prompt'
 import { parseAgentMessage, type DisplayAttachment, type DisplayMessage } from './message-parsing'
 import type { PiCommand } from '../../shared/pi-command'
@@ -1894,7 +1894,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
       }
       setUserThemes(themes)
 
-      applyTheme(settings.theme)
+      applyThemeSettings(settings)
       // Re-apply on OS light/dark changes while the app is open, but only
       // when the effective (draft or saved) theme is 'system'.
       watchSystemTheme(() => {

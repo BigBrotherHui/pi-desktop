@@ -1,5 +1,6 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useCallback, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useCallback, useState, useSyncExternalStore } from 'react'
 import { useAppStore } from './store'
+import { getAppliedThemeId, subscribeAppliedTheme } from './utils/theme'
 import { DEFAULT_SETTINGS } from '../../shared/default-settings'
 import { BUILTIN_SOURCE, type PiCommand } from '../../shared/pi-command'
 import type { WorkspaceActivationIntent } from '../../shared/ipc-contracts'
@@ -551,4 +552,13 @@ export function useNotePickerShortcut(): void {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
+}
+
+/**
+ * The concrete id of the theme on screen ('system' already resolved). Changes
+ * on every applied theme switch, including an OS light/dark change under the
+ * System theme, which the saved `theme` setting does not reflect.
+ */
+export function useAppliedThemeId(): string | null {
+  return useSyncExternalStore(subscribeAppliedTheme, getAppliedThemeId)
 }
