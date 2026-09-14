@@ -406,8 +406,11 @@ app.whenReady().then(async () => {
     })
   }
 
-  // Set macOS dock icon (no-op on other platforms)
-  if (process.platform === 'darwin' && app.dock) {
+  // Set the macOS dock icon in development only. A packaged app already gets its
+  // dock icon from the bundled .icns (correct macOS geometry with padding). The
+  // raw icon.png is full-bleed, so calling setIcon in a packaged build overrode
+  // the .icns with a wrongly sized icon once the app started (issue #66).
+  if (process.platform === 'darwin' && app.dock && !app.isPackaged) {
     app.dock.setIcon(nativeImage.createFromPath(getAppIconPath()))
   }
 
