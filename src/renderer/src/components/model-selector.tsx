@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../store'
 import { DEFAULT_AGENT_ENGINE_LABEL, agentEngineLabel } from '../../../shared/agent-engine-label'
 import type { ModelInfo } from '../../../shared/ipc-contracts'
@@ -16,6 +17,7 @@ interface ModelSelectorProps {
  * Opens upward; loads models when Pi is running.
  */
 export function ModelSelector({ className, compact = false }: ModelSelectorProps): React.JSX.Element {
+  const { t } = useTranslation()
   const sessionState = useAppStore((state) => state.sessionState)
   const setModel = useAppStore((state) => state.setModel)
   const piStatus = useAppStore((state) => state.piStatus)
@@ -26,7 +28,10 @@ export function ModelSelector({ className, compact = false }: ModelSelectorProps
   const [models, setModels] = useState<ModelInfo[]>([])
   const [loading, setLoading] = useState(false)
   const [query, setQuery] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  // A flag, not the translated message itself: loadModels must stay
+  // reference-stable across a language change (it is called from an effect
+  // keyed on isOpen/piStatus, not on the interface language).
+  const [loadError, setLoadError] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
@@ -37,17 +42,17 @@ export function ModelSelector({ className, compact = false }: ModelSelectorProps
       ? settings.defaultProvider
         ? `${settings.defaultProvider}/${settings.defaultModel}`
         : settings.defaultModel
-      : 'Select model')
+      : t('models.selector.selectModel'))
 
   const close = (): void => {
     setIsOpen(false)
     setQuery('')
-    setError(null)
+    setLoadError(false)
   }
 
   const loadModels = async (): Promise<void> => {
     setLoading(true)
-    setError(null)
+    setLoadError(false)
     try {
       const response = (await window.piDesktop.model.listAvailable()) as {
         success?: boolean
@@ -60,7 +65,7 @@ export function ModelSelector({ className, compact = false }: ModelSelectorProps
       }
     } catch {
       setModels([])
-      setError('Could not load models')
+      setLoadError(true)
     } finally {
       setLoading(false)
     }
@@ -125,8 +130,8 @@ export function ModelSelector({ className, compact = false }: ModelSelectorProps
           isOpen ? 'bg-surface-hover text-primary' : 'text-dim hover:bg-surface-hover hover:text-secondary',
           compact && 'max-w-36',
         )}
-        title={`Select model (Ctrl+P to cycle when ${engineLabel} is running)`}
-        aria-label="Select model"
+        title={t('models.selector.selectModelWithShortcut', { agent: engineLabel })}
+        aria-label={t('models.selector.selectModel')}
         aria-expanded={isOpen}
       >
         <Cpu size={10} className="shrink-0" />
@@ -141,7 +146,7 @@ export function ModelSelector({ className, compact = false }: ModelSelectorProps
         <div className="absolute bottom-full right-0 z-50 mb-1 w-72 rounded-lg border border-border-strong bg-surface py-1 shadow-xl shadow-black/40 animate-fade-in">
           {currentModel && (
             <div className="border-b border-border px-3 py-2">
-              <div className="text-xs text-muted">Current</div>
+              <div className="text-xs text-muted">{t('models.selector.current')}</div>
               <div className="text-sm font-medium text-primary">{currentModel.name}</div>
               <div className="mt-0.5 text-xs text-dim">
                 {currentModel.provider} · {currentModel.id}
@@ -151,7 +156,7 @@ export function ModelSelector({ className, compact = false }: ModelSelectorProps
 
           {piStatus !== 'running' && (
             <div className="border-b border-border px-3 py-2 text-xs text-dim">
-              Start Pi to list and change models.
+              {t('models.selector.startToListModels')}
             </div>
           )}
 
@@ -164,7 +169,7 @@ export function ModelSelector({ className, compact = false }: ModelSelectorProps
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search models…"
+                  placeholder={t('models.selector.searchPlaceholder')}
                   className="min-w-0 flex-1 bg-transparent text-sm text-primary outline-none placeholder:text-faint"
                 />
               </div>
@@ -172,12 +177,14 @@ export function ModelSelector({ className, compact = false }: ModelSelectorProps
                 {loading && (
                   <div className="flex items-center gap-2 px-3 py-2 text-xs text-dim">
                     <Loader2 size={12} className="animate-spin" />
-                    Loading…
+                    {t('common.loading')}
                   </div>
                 )}
-                {error && <div className="px-3 py-2 text-xs text-error">{error}</div>}
-                {!loading && !error && filteredModels.length === 0 && (
-                  <div className="px-3 py-2 text-xs text-dim">No models match</div>
+                {loadError && (
+                  <div className="px-3 py-2 text-xs text-error">{t('models.selector.loadFailed')}</div>
+                )}
+                {!loading && !loadError && filteredModels.length === 0 && (
+                  <div className="px-3 py-2 text-xs text-dim">{t('models.selector.noModelsMatch')}</div>
                 )}
                 {filteredModels.map((model) => {
                   const selected =

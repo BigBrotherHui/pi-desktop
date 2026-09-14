@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
-  OMP_MISSING_BUN_MESSAGE,
   explainOmpFailure,
   fetchRegistryVersion,
   findPackageUpdates,
@@ -13,6 +12,7 @@ import {
   type RegistryQuery,
 } from './package-updates'
 import type { OmpNpmPlugin } from './omp-plugin-list'
+import { t } from '../shared/i18n'
 
 const HTTP_NOT_FOUND = 404
 
@@ -126,6 +126,6 @@ test('ompUpdateInstallSpec keeps the store entry prefix', () => {
 
 test('explainOmpFailure replaces the missing-bun error and keeps others', () => {
   const missingBun = '✘ Failed to install npm:pi-ask-user@latest: Error: Executable not found in $PATH: "bun"'
-  assert.equal(explainOmpFailure(missingBun), OMP_MISSING_BUN_MESSAGE)
+  assert.equal(explainOmpFailure(missingBun), t('errors.packages.missingBun'))
   assert.equal(explainOmpFailure('Plugin "x" is not installed'), 'Plugin "x" is not installed')
 })

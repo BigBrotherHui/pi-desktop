@@ -12,6 +12,8 @@ import {
   isPathInsideWorkspace,
 } from './file-service'
 import type { FileChangeEvent } from '../shared/ipc-contracts'
+import { i18n, tEnglish } from '../shared/i18n'
+import { PSEUDO_LANGUAGE, SOURCE_LANGUAGE } from '../shared/i18n/languages'
 
 // ─── Path-boundary guard ──────────────────────────────────────────────────
 
@@ -194,6 +196,18 @@ test('describeGitError prefers the first stderr line over the message', () => {
     'git status failed: fatal: bad object HEAD',
   )
   assert.equal(describeGitError('diff', { message: 'timed out' }), 'git diff failed: timed out')
+})
+
+test('describeGitError renders English for the log and marked text for the UI', async () => {
+  const err = { stderr: 'fatal: bad object HEAD\n' }
+  await i18n.changeLanguage(PSEUDO_LANGUAGE)
+  try {
+    assert.equal(describeGitError('status', err, tEnglish), 'git status failed: fatal: bad object HEAD')
+    // Only the app's own words are marked; the command and Git's text are not.
+    assert.match(describeGitError('status', err), /^\[git status ƒáîļéð: fatal: bad object HEAD ~+\]$/)
+  } finally {
+    await i18n.changeLanguage(SOURCE_LANGUAGE)
+  }
 })
 
 test('getGitStatus returns empty for a non-repo directory', async () => {

@@ -1,6 +1,7 @@
 import { readFile, stat } from 'fs/promises'
 import { basename, extname } from 'path'
 import type { AttachmentReadResult } from '../shared/ipc-contracts'
+import { t } from '../shared/i18n'
 
 // Lowercase file extension -> MIME type for images we decode to base64 (for the
 // preview pane's image viewer, and as Pi inline-image blocks). Note: the chat
@@ -34,7 +35,7 @@ export function imageMimeTypeForPath(filePath: string): string | null {
 export async function readAttachment(filePath: string): Promise<AttachmentReadResult> {
   const fileStat = await stat(filePath)
   if (fileStat.size > MAX_ATTACHMENT_BYTES) {
-    throw new Error(`Attachment is too large (max ${MAX_ATTACHMENT_BYTES / (1024 * 1024)} MB)`)
+    throw new Error(t('errors.attachments.tooLarge', { limit: MAX_ATTACHMENT_BYTES / (1024 * 1024) }))
   }
   const name = basename(filePath)
   const mimeType = imageMimeTypeForPath(filePath)

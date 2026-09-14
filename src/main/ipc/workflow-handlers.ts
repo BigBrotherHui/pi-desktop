@@ -3,8 +3,9 @@ import { IPC_CHANNELS, type WorkflowControlResult } from '../../shared/ipc-contr
 import { isWorkflowActionAllowed } from '../../shared/workflow-control'
 import { getWorkflowRun, listWorkflowRuns, resolveWorkflowWorkspaces, setWorkflowPersistence } from '../workflow-monitor'
 import { assertTrustedSender, isString } from './validation'
-import type { PiRpcManager } from '../pi-rpc-manager'
+import { RpcTimeoutError, type PiRpcManager } from '../pi-rpc-manager'
 import type { IpcContext } from './context'
+import { t } from '../../shared/i18n'
 
 /**
  * The one resolved workspace projection shared by list, getRun and control:
@@ -33,10 +34,6 @@ async function hasWorkflowsExtension(pi: PiRpcManager): Promise<boolean> {
   )
 }
 
-function isTimeoutError(error: unknown): boolean {
-  return error instanceof Error && /timed out/i.test(error.message)
-}
-
 export function registerWorkflowHandlers(ctx: IpcContext): void {
   ipcMain.handle(IPC_CHANNELS.WORKFLOW_LIST, async (event: IpcMainInvokeEvent) => {
     assertTrustedSender(event)
@@ -50,9 +47,9 @@ export function registerWorkflowHandlers(ctx: IpcContext): void {
     assertTrustedSender(event)
     if (!isString(workspaceId) || !isString(runId)) throw new Error('workspaceId and runId must be strings')
     const workspace = await findWorkspace(ctx, workspaceId)
-    if (!workspace) throw new Error('Workspace not found')
+    if (!workspace) throw new Error(t('errors.workspace.notFoundPlain'))
     const run = await getWorkflowRun(workspace, runId)
-    if (!run) throw new Error('Workflow run not found')
+    if (!run) throw new Error(t('errors.workflow.runNotFound'))
     return run
   })
 
@@ -98,7 +95,7 @@ export function registerWorkflowHandlers(ctx: IpcContext): void {
         await pi.sendCommand({ type: 'prompt', message: `/workflows ${action} ${runId}` })
         return { action, runId, ok: true, dispatched: true }
       } catch (error) {
-        return fail(isTimeoutError(error) ? 'timeout' : 'dispatch-failed')
+        return fail(error instanceof RpcTimeoutError ? 'timeout' : 'dispatch-failed')
       }
     }
   )

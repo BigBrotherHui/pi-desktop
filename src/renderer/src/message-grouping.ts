@@ -1,19 +1,9 @@
 import type { DisplayMessage } from './store'
-
-// Map common Pi tool names to a friendly, user-facing label; falls back to the
-// raw name so custom/unknown tools still show something. Keyword matching
-// mirrors toolIcon() so the label and icon stay in sync.
-export function toolLabel(name: string): string {
-  const n = name.toLowerCase()
-  if (n.includes('bash') || n.includes('shell') || n.includes('exec') || n.includes('terminal')) return 'Run command'
-  if (n.includes('search') || n.includes('grep') || n.includes('find')) return 'Search'
-  if (n.includes('web') || n.includes('fetch') || n.includes('http') || n.includes('url')) return 'Fetch URL'
-  if (n.includes('edit') || n.includes('replace') || n.includes('patch')) return 'Edit file'
-  if (n.includes('write') || n.includes('create')) return 'Write file'
-  if (n.includes('list') || n.startsWith('ls') || n.includes('tree') || n.includes('dir')) return 'List files'
-  if (n.includes('read') || n.includes('view') || n.includes('cat') || n.includes('file')) return 'Read file'
-  return name
-}
+// Aliased: every helper below takes its translator as a parameter named `t`
+// (shadowing this import inside the function body) so `i18next-cli`'s
+// static extractor — which looks for calls on an identifier named `t` —
+// still finds and keeps these keys.
+import { t as sharedT, type Translate } from '../../shared/i18n'
 
 // A single chat item to render: either a lone message or a collapsed group of
 // consecutive tool-activity messages.
@@ -34,34 +24,62 @@ function isToolActivity(m: DisplayMessage): boolean {
   return false
 }
 
-// Past-tense verb + object noun for each canonical tool label, used to phrase
-// both single-operation labels ("Fetched <url>") and group titles ("Fetched 3
-// URLs"). `argKeys` are the argument fields a single-op label pulls its shown
-// value from (empty = show no value, e.g. commands).
-interface ToolVerb {
-  verb: string // past tense, capitalized
-  noun: string // singular object noun
-  nounPlural: string
-  argKeys: string[]
+/** What a tool call does, independent of the display language. */
+export type ToolKind = 'fetch' | 'read' | 'run' | 'edit' | 'write' | 'search' | 'list'
+type TargetToolKind = Exclude<ToolKind, 'run'>
+// Unknown tools bucket together in group titles.
+type SummaryKind = ToolKind | 'other'
+
+// Keyword matching is shared by toolLabel() and toolCallIconFor() so the label
+// and icon stay in sync.
+export function toolKind(name: string): ToolKind | null {
+  const n = name.toLowerCase()
+  if (n.includes('bash') || n.includes('shell') || n.includes('exec') || n.includes('terminal')) return 'run'
+  if (n.includes('search') || n.includes('grep') || n.includes('find')) return 'search'
+  if (n.includes('web') || n.includes('fetch') || n.includes('http') || n.includes('url')) return 'fetch'
+  if (n.includes('edit') || n.includes('replace') || n.includes('patch')) return 'edit'
+  if (n.includes('write') || n.includes('create')) return 'write'
+  if (n.includes('list') || n.startsWith('ls') || n.includes('tree') || n.includes('dir')) return 'list'
+  if (n.includes('read') || n.includes('view') || n.includes('cat') || n.includes('file')) return 'read'
+  return null
 }
 
-const TOOL_VERBS: Record<string, ToolVerb> = {
-  'Fetch URL': { verb: 'Fetched', noun: 'URL', nounPlural: 'URLs', argKeys: ['url', 'uri', 'href', 'link'] },
-  'Read file': { verb: 'Read', noun: 'file', nounPlural: 'files', argKeys: ['path', 'file', 'filename', 'file_path', 'filepath'] },
-  'Run command': { verb: 'Ran', noun: 'command', nounPlural: 'commands', argKeys: [] },
-  'Edit file': { verb: 'Edited', noun: 'file', nounPlural: 'files', argKeys: ['path', 'file', 'filename', 'file_path', 'filepath'] },
-  'Write file': { verb: 'Created', noun: 'file', nounPlural: 'files', argKeys: ['path', 'file', 'filename', 'file_path', 'filepath'] },
-  Search: { verb: 'Searched', noun: 'query', nounPlural: 'queries', argKeys: ['query', 'pattern', 'text', 'search', 'q', 'regex'] },
-  'List files': { verb: 'Listed', noun: 'location', nounPlural: 'locations', argKeys: ['path', 'dir', 'directory', 'location', 'folder'] },
+// Friendly label for a tool; custom/unknown tools keep their raw name. Accepts
+// the caller's own `t` (from `useTranslation()`) so a memoized result recomputes
+// on a language change; defaults to the shared translator for non-component use.
+export function toolLabel(name: string, t: Translate = sharedT): string {
+  const kind = toolKind(name)
+  return kind ? t(`tools.${kind}.label`) : name
 }
 
-// Fallback for custom/unknown tools so mixed or unknown runs still read sensibly.
-const GENERIC_VERB: ToolVerb = { verb: 'Ran', noun: 'tool', nounPlural: 'tools', argKeys: [] }
+const PATH_ARG_KEYS = ['path', 'file', 'filename', 'file_path', 'filepath']
+
+// Argument fields a single-op label pulls its shown value from. Commands
+// ('run') show no value.
+const TOOL_ARG_KEYS: Record<TargetToolKind, readonly string[]> = {
+  fetch: ['url', 'uri', 'href', 'link'],
+  read: PATH_ARG_KEYS,
+  edit: PATH_ARG_KEYS,
+  write: PATH_ARG_KEYS,
+  search: ['query', 'pattern', 'text', 'search', 'q', 'regex'],
+  list: ['path', 'dir', 'directory', 'location', 'folder'],
+}
+
+const TOOL_DONE_KEYS = {
+  fetch: 'tools.fetch.done',
+  read: 'tools.read.done',
+  edit: 'tools.edit.done',
+  write: 'tools.write.done',
+  search: 'tools.search.done',
+  list: 'tools.list.done',
+} as const satisfies Record<TargetToolKind, string>
+
+const PATH_KINDS: ReadonlySet<ToolKind> = new Set<ToolKind>(['read', 'edit', 'write', 'list'])
 
 const MAX_ARG_LEN = 60
 
-function lowerFirst(s: string): string {
-  return s.charAt(0).toLowerCase() + s.slice(1)
+function hasTarget(kind: ToolKind): kind is TargetToolKind {
+  return kind !== 'run'
 }
 
 function shorten(s: string): string {
@@ -69,8 +87,7 @@ function shorten(s: string): string {
 }
 
 // Pull the value a single-op label should show from the tool call's arguments.
-function extractArg(v: ToolVerb, argumentsJson: string): string | null {
-  if (v.argKeys.length === 0) return null
+function extractArg(kind: TargetToolKind, argumentsJson: string): string | null {
   let parsed: unknown
   try {
     parsed = JSON.parse(argumentsJson)
@@ -79,7 +96,7 @@ function extractArg(v: ToolVerb, argumentsJson: string): string | null {
   }
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null
   const obj = parsed as Record<string, unknown>
-  for (const key of v.argKeys) {
+  for (const key of TOOL_ARG_KEYS[kind]) {
     const val = obj[key]
     if (typeof val === 'string' && val.trim()) return val.trim()
   }
@@ -87,10 +104,8 @@ function extractArg(v: ToolVerb, argumentsJson: string): string | null {
 }
 
 // Path-like args show just the basename; URLs/queries show in full (shortened).
-function displayArg(label: string, raw: string): string {
-  const pathLike =
-    label === 'Read file' || label === 'Edit file' || label === 'Write file' || label === 'List files'
-  if (pathLike) {
+function displayArg(kind: TargetToolKind, raw: string): string {
+  if (PATH_KINDS.has(kind)) {
     const base = raw.replace(/[\\/]+$/, '').split(/[\\/]/).pop()
     return shorten(base || raw)
   }
@@ -101,15 +116,14 @@ function displayArg(label: string, raw: string): string {
 // title — the same file read twice, or the same URL fetched twice, is one
 // target. Path args normalize separators + case (so `C:\a\b.ts` and `c:/a/b.ts`
 // match) and compare on the full path, so a same-named file in two dirs stays
-// two targets; other args compare trimmed. A target-less call (a command, or a
-// tool whose arg can't be read) has no shared identity: it returns null and the
-// caller counts it on its own.
-function toolTarget(label: string, v: ToolVerb, argumentsJson: string): string | null {
-  const arg = extractArg(v, argumentsJson)
+// two targets; other args compare trimmed. A target-less call (a command, an
+// unknown tool, or a tool whose arg can't be read) has no shared identity: it
+// returns null and the caller counts it on its own.
+function toolTarget(kind: ToolKind | null, argumentsJson: string): string | null {
+  if (!kind || !hasTarget(kind)) return null
+  const arg = extractArg(kind, argumentsJson)
   if (arg === null) return null
-  const pathLike =
-    label === 'Read file' || label === 'Edit file' || label === 'Write file' || label === 'List files'
-  if (pathLike) return arg.replace(/[\\/]+/g, '/').replace(/\/+$/, '').toLowerCase()
+  if (PATH_KINDS.has(kind)) return arg.replace(/[\\/]+/g, '/').replace(/\/+$/, '').toLowerCase()
   return arg.trim()
 }
 
@@ -117,49 +131,46 @@ function toolTarget(label: string, v: ToolVerb, argumentsJson: string): string |
  * Label for a single tool-call badge: past-tense verb plus the operated-on value,
  * e.g. "Fetched https://…", "Read config.ts", "Ran a command". Falls back to a
  * value-less "<Verb> a <noun>" when the argument can't be read, and to the raw
- * label for unknown tools.
+ * name for unknown tools.
  */
-export function toolCallLabel(name: string, argumentsJson: string): string {
-  const label = toolLabel(name)
-  const v = TOOL_VERBS[label]
-  if (!v) return label
-  const arg = extractArg(v, argumentsJson)
-  return arg ? `${v.verb} ${displayArg(label, arg)}` : `${v.verb} a ${v.noun}`
+export function toolCallLabel(name: string, argumentsJson: string, t: Translate = sharedT): string {
+  const kind = toolKind(name)
+  if (!kind) return name
+  const arg = hasTarget(kind) ? extractArg(kind, argumentsJson) : null
+  if (arg === null || !hasTarget(kind)) return t(`tools.${kind}.doneWithoutTarget`)
+  return t(TOOL_DONE_KEYS[kind], { target: displayArg(kind, arg) })
 }
 
 // Combine the per-tool verbs across a run into one title, e.g.
-// "Fetched 4 URLs, read 2 files, edited a file". Counts are bucketed by canonical
-// label in first-appearance order and count *distinct* targets, so re-reading one
-// file or re-fetching one URL reads "Read a file" / "Fetched a URL", not "2".
-// Target-less calls (commands, unresolved args) each count on their own. The
-// leading verb is capitalized, the rest lower-cased; unknown tools bucket
-// together under the generic verb.
-function groupTitle(run: DisplayMessage[]): string {
-  const order: string[] = []
-  const targets = new Map<string, Set<string>>()
+// "Fetched 4 URLs, read 2 files, edited a file". Counts are bucketed by kind in
+// first-appearance order and count *distinct* targets, so re-reading one file
+// or re-fetching one URL reads "Read a file" / "Fetched a URL", not "2".
+// Target-less calls (commands, unresolved args) each count on their own.
+// Unknown tools bucket together under 'other'.
+function groupTitle(run: DisplayMessage[], t: Translate): string {
+  const order: SummaryKind[] = []
+  const targets = new Map<SummaryKind, Set<string>>()
   let uniqueSeq = 0 // gives each target-less call its own bucket entry
   for (const m of run) {
     for (const tc of m.toolCalls ?? []) {
-      const label = toolLabel(tc.name)
-      const key = TOOL_VERBS[label] ? label : '__generic__'
-      if (!targets.has(key)) {
-        order.push(key)
-        targets.set(key, new Set())
+      const kind = toolKind(tc.name)
+      const bucket: SummaryKind = kind ?? 'other'
+      if (!targets.has(bucket)) {
+        order.push(bucket)
+        targets.set(bucket, new Set())
       }
-      const target = toolTarget(label, TOOL_VERBS[label] ?? GENERIC_VERB, tc.arguments)
-      targets.get(key)!.add(target ?? `\0${uniqueSeq++}`)
+      targets.get(bucket)!.add(toolTarget(kind, tc.arguments) ?? `\0${uniqueSeq++}`)
     }
   }
 
   return order
-    .map((key, i) => {
-      const v = key === '__generic__' ? GENERIC_VERB : TOOL_VERBS[key]
-      const n = targets.get(key)!.size
-      const verb = i === 0 ? v.verb : lowerFirst(v.verb)
-      const quantity = n === 1 ? `a ${v.noun}` : `${n} ${v.nounPlural}`
-      return `${verb} ${quantity}`
+    .map((bucket, i) => {
+      const count = targets.get(bucket)!.size
+      return i === 0
+        ? t(`tools.${bucket}.summaryFirst`, { count })
+        : t(`tools.${bucket}.summaryNext`, { count })
     })
-    .join(', ')
+    .join(t('tools.summarySeparator'))
 }
 
 /**
@@ -169,7 +180,7 @@ function groupTitle(run: DisplayMessage[]): string {
  * Prose turns (assistant text, user, system) always render on their own and act
  * as run boundaries.
  */
-export function groupToolMessages(messages: DisplayMessage[]): ChatRenderItem[] {
+export function groupToolMessages(messages: DisplayMessage[], t: Translate = sharedT): ChatRenderItem[] {
   const items: ChatRenderItem[] = []
   let run: DisplayMessage[] = []
 
@@ -180,7 +191,7 @@ export function groupToolMessages(messages: DisplayMessage[]): ChatRenderItem[] 
       items.push({
         kind: 'toolGroup',
         id: `group-${run[0].id}`,
-        title: groupTitle(run),
+        title: groupTitle(run, t),
         messages: run,
       })
     } else {
@@ -202,15 +213,31 @@ export function groupToolMessages(messages: DisplayMessage[]): ChatRenderItem[] 
   return items
 }
 
-// Tool labels whose call operates on a file/location we can resolve from args.
-const FILE_LABELS = new Set(['Read file', 'Write file', 'Edit file', 'List files'])
+/** A tool call's run state, as shown next to its badge (e.g. message-bubble.tsx, streaming-bubble.tsx). */
+export type ToolCallStatus = 'running' | 'error' | 'done'
+
+const TOOL_CALL_STATUS_KEYS = {
+  running: 'chat.toolCall.status.running',
+  error: 'chat.toolCall.status.error',
+  done: 'chat.toolCall.status.done',
+} as const satisfies Record<ToolCallStatus, string>
+
+/** Label for a tool call's run state. Accepts the caller's own `t` so it re-renders on a language change. */
+export function toolCallStatusLabel(status: ToolCallStatus | null, t: Translate = sharedT): string {
+  return status ? t(TOOL_CALL_STATUS_KEYS[status]) : ''
+}
 
 /** The file/location a read/write/edit/list tool call operates on, or null. */
 export function toolCallFile(name: string, argumentsJson: string): string | null {
-  const label = toolLabel(name)
-  if (!FILE_LABELS.has(label)) return null
-  const v = TOOL_VERBS[label]
-  return v ? extractArg(v, argumentsJson) : null
+  const kind = toolKind(name)
+  if (!kind || !PATH_KINDS.has(kind) || !hasTarget(kind)) return null
+  return extractArg(kind, argumentsJson)
+}
+
+/** Edit/write results fold onto the call badge instead of a separate row. */
+function resultFoldsIntoBadge(name: string): boolean {
+  const kind = toolKind(name)
+  return kind === 'edit' || kind === 'write'
 }
 
 // One replacement in an edit tool call: old text swapped for new.
@@ -336,8 +363,7 @@ export function prepareChatMessages(messages: DisplayMessage[]): DisplayMessage[
       const next = toolCalls.map((tc) => {
         const r = results.get(tc.id)
         if (!r) return tc
-        const label = toolLabel(tc.name)
-        const foldIntoBadge = label === 'Edit file' || label === 'Write file'
+        const foldIntoBadge = resultFoldsIntoBadge(tc.name)
         changed = true
         return {
           ...tc,
@@ -371,8 +397,7 @@ export function prepareChatMessages(messages: DisplayMessage[]): DisplayMessage[
       const paired = calls.get(m.toolCallId)
       // Edit/write: result lives on the call badge. Read/bash keep a result row.
       if (paired) {
-        const label = toolLabel(paired.name)
-        if (label === 'Edit file' || label === 'Write file') continue
+        if (resultFoldsIntoBadge(paired.name)) continue
         out.push({ ...m, toolName: paired.name, toolFile: paired.file ?? undefined })
       } else {
         out.push(m)

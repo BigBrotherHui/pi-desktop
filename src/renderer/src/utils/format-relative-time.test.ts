@@ -1,6 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { formatRelativeTime } from './format-relative-time'
+import { i18n } from '../../../shared/i18n'
+import { SOURCE_LANGUAGE } from '../../../shared/i18n/languages'
 
 const SECOND = 1000
 const MINUTE = 60 * SECOND
@@ -35,10 +37,26 @@ test('yesterday, then days — never a unit coarser than days', () => {
 })
 
 test('falls back to an absolute date beyond ~30 days', () => {
-  // "Mon D YYYY" — not "N days ago". Asserting the shape keeps this
+  // "Mon D, YYYY" — not "N days ago". Asserting the shape keeps this
   // timezone-independent (the date parts render in local time).
-  const dateShape = /^[A-Z][a-z]{2} \d{1,2} \d{4}$/
+  const dateShape = /^[A-Z][a-z]{2} \d{1,2}, \d{4}$/
   assert.match(ago(30 * DAY), dateShape)
   assert.match(ago(200 * DAY), dateShape)
   assert.doesNotMatch(ago(29 * DAY), dateShape)
+})
+
+const GERMAN = 'de'
+const NAMESPACE = 'translation'
+
+test('uses the interface language', async () => {
+  i18n.addResourceBundle(GERMAN, NAMESPACE, { time: { justNow: 'gerade eben' } })
+  await i18n.changeLanguage(GERMAN)
+  try {
+    assert.equal(ago(0), 'gerade eben')
+    assert.equal(ago(25 * HOUR), 'gestern')
+    assert.equal(ago(3 * DAY), 'vor 3 Tagen')
+  } finally {
+    await i18n.changeLanguage(SOURCE_LANGUAGE)
+    i18n.removeResourceBundle(GERMAN, NAMESPACE)
+  }
 })

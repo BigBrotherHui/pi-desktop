@@ -2,6 +2,7 @@ import { execFile } from 'child_process'
 import { promisify } from 'util'
 import type { AgentEngineKind } from '../../shared/ipc-contracts'
 import { buildPiInvocation, getPiCli, getPiCliForEngine } from '../pi-rpc-manager'
+import { t } from '../../shared/i18n'
 
 const execFileAsync = promisify(execFile)
 
@@ -46,7 +47,7 @@ export async function runPiCli(
     const output = [e.stdout, e.stderr, e.message].filter(Boolean).join('\n').trim()
     return {
       success: false,
-      output: output || 'Command failed',
+      output: output || t('errors.pi.commandFailedFallback'),
     }
   }
 }

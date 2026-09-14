@@ -27,12 +27,10 @@ Thumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 
-# Environment
+# Environment — every .env variant; only the example file is shared.
 .env
-.env.local
-.env.*.local
-.env.development
-.env.production
+.env.*
+!.env.example
 
 # Signing & secrets — code-signing material and credentials, never commit.
 # Release binaries are currently unsigned (see AGENTS.md Distribution), but
@@ -43,8 +41,15 @@ $RECYCLE.BIN/
 *.pfx
 *.mobileprovision
 *.provisionprofile
+*.p8
+*.cer
+*.crt
+*.keystore
+*.jks
 secrets/
 .npmrc.local
+# electron-builder reads release tokens (GH_TOKEN, CSC_KEY_PASSWORD) from this file.
+electron-builder.env
 
 # Logs
 *.log
@@ -61,6 +66,12 @@ coverage/
 
 # TypeScript
 *.tsbuildinfo
+
+# Lint cache
+.eslintcache
+
+# npm pack output
+*.tgz
 
 # Electron / packaging artifacts
 *.dmg

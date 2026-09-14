@@ -1,8 +1,14 @@
 import { ShieldCheck, ChevronDown, Check } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
 import type { PermissionMode } from '../../../shared/ipc-contracts'
-import { DEFAULT_PERMISSION_MODE, PERMISSION_MODE_OPTIONS } from './permission-mode'
+import {
+  DEFAULT_PERMISSION_MODE,
+  PERMISSION_MODE_OPTIONS,
+  PERMISSION_MODE_LABEL_KEYS,
+  PERMISSION_MODE_DESCRIPTION_KEYS,
+} from './permission-mode'
 
 interface PermissionSelectorProps {
   value: PermissionMode | null | undefined
@@ -15,6 +21,7 @@ export function PermissionSelector({
   onChange,
   compact = false,
 }: PermissionSelectorProps): React.JSX.Element {
+  const { t } = useTranslation()
   const [isOpen, setIsOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -55,10 +62,10 @@ export function PermissionSelector({
         <span className="flex min-w-0 items-center gap-2">
           <ShieldCheck size={compact ? 13 : 15} className="shrink-0 text-success" />
           <span className="min-w-0">
-            <span className="block truncate text-primary">{current.label}</span>
+            <span className="block truncate text-primary">{t(PERMISSION_MODE_LABEL_KEYS[current.value])}</span>
             {!compact && (
               <span className="mt-0.5 block truncate text-xs text-dim">
-                {current.description}
+                {t(PERMISSION_MODE_DESCRIPTION_KEYS[current.value])}
               </span>
             )}
           </span>
@@ -83,9 +90,9 @@ export function PermissionSelector({
                 {option.value === mode && <Check size={13} className="text-success" />}
               </span>
               <span className="min-w-0">
-                <span className="block text-sm text-primary">{option.label}</span>
+                <span className="block text-sm text-primary">{t(PERMISSION_MODE_LABEL_KEYS[option.value])}</span>
                 <span className="mt-0.5 block text-xs leading-4 text-dim">
-                  {option.description}
+                  {t(PERMISSION_MODE_DESCRIPTION_KEYS[option.value])}
                 </span>
               </span>
             </button>

@@ -57,6 +57,7 @@ export const IPC_CHANNELS = {
   // Settings
   SETTINGS_GET_ALL: 'settings:get-all',
   SETTINGS_SAVE: 'settings:save',
+  I18N_GET_ENVIRONMENT: 'i18n:get-environment',
 
   // Permission rules
   PERMISSION_RULES_GET: 'permission-rules:get',
@@ -959,9 +960,15 @@ export interface ModelsFileInfo {
   name: string
 }
 
+/** Why the models file could not be used. Display text is built from this. */
+export type ModelsReadFailure =
+  | { kind: 'unreadable'; detail: string }
+  | { kind: 'invalid-syntax'; format: 'json' | 'yaml'; detail: string }
+  | { kind: 'missing-providers' }
+
 export type ModelsReadResult =
   | { config: ModelsConfigType; location: ModelsFileInfo }
-  | { error: string; raw: string; location: ModelsFileInfo }
+  | { error: string; failure: ModelsReadFailure; raw: string; location: ModelsFileInfo }
 
 // ─── Agent Message Types ────────────────────────────────────────────────────
 
@@ -1142,8 +1149,17 @@ export interface AppSettings {
   // Show OS desktop notifications when a turn finishes, fails, or waits for
   // approval in a workspace the user is not currently looking at.
   desktopNotifications: boolean
+  // Interface language: 'system' (follow the OS language list) or a bundled
+  // language code. Unknown values reset to 'system' on load.
+  language: string
   // Multi-agent council planning configuration.
   council: CouncilConfig
+}
+
+/** What the renderer needs to resolve the `language` setting like main does. */
+export interface I18nEnvironment {
+  systemLanguages: string[]
+  pseudoLanguageEnabled: boolean
 }
 
 // ─── Update Check Types ─────────────────────────────────────────────────────
@@ -1385,6 +1401,16 @@ export interface DiagnosticsProviderInfo {
   envVar?: string
 }
 
+/** Where a resolved Pi path came from, for logging and error messaging. */
+export type PiResolutionSource =
+  | 'override'
+  | 'npm-prefix'
+  | 'path'
+  | 'version-manager'
+  | 'common-location'
+  | 'omp'
+  | 'fallback'
+
 /** Everything the Diagnostics view shows, assembled in one main-side pass. */
 export interface DiagnosticsReport {
   generatedAt: number
@@ -1398,7 +1424,7 @@ export interface DiagnosticsReport {
   piBinary: {
     found: boolean
     script: string
-    source: string
+    source: PiResolutionSource
     useNode: boolean
     nodeBinary: string
     nodeFound: boolean
@@ -1494,9 +1520,13 @@ export interface DiffFile {
 
 // ─── Timeline Event Types ───────────────────────────────────────────────────
 
+export type TimelineEventKind = 'agent-run'
+
 export interface TimelineEvent {
   id: string
   type: 'user_message' | 'assistant_message' | 'tool_start' | 'tool_end' | 'thinking' | 'compaction' | 'retry' | 'queue' | 'system' | 'error'
+  /** Stable identity for events that logic pairs up; `title` is display text. */
+  kind?: TimelineEventKind
   timestamp: number
   duration?: number
   title: string

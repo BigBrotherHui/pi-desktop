@@ -1,5 +1,12 @@
 import { clsx } from 'clsx'
-import { BUILTIN_SOURCE, commandDisplayName, type CommandGroup, type PiCommand } from '../../../shared/pi-command'
+import { useTranslation } from 'react-i18next'
+import {
+  BUILTIN_SOURCE,
+  commandDisplayName,
+  commandSourceLabel,
+  type CommandGroup,
+  type PiCommand,
+} from '../../../shared/pi-command'
 
 const SOURCE_BADGE: Record<string, string> = {
   skill: 'bg-special-bg text-special',
@@ -28,10 +35,11 @@ export function CommandResults({
   onSelect,
   onHover,
 }: CommandResultsProps): React.JSX.Element {
+  const { t } = useTranslation()
   return (
     <>
       {grouped.map((group) => (
-        <div key={group.label}>
+        <div key={group.id}>
           <div className="px-3 py-1 text-[10px] uppercase tracking-wide text-faint">
             {group.label}
           </div>
@@ -54,7 +62,7 @@ export function CommandResults({
                     SOURCE_BADGE[cmd.source] ?? 'bg-card text-muted'
                   )}
                 >
-                  {cmd.source}
+                  {commandSourceLabel(cmd.source, t)}
                 </span>
                 {/* The name never shrinks (issue #60): the description is the
                     part that truncates when the row runs out of room. */}

@@ -5,7 +5,8 @@ import type { DiagnosticsReport, DiagnosticsWorkspaceInfo } from '../shared/ipc-
 import {
   countPathEntries,
   extractVersionLine,
-  sanitizeProvidersError,
+  reportModelsReadFailure,
+  reportPiStartFailure,
   summarizeProviders,
 } from './diagnostics-report'
 import type { WorkspaceManager } from './workspace-manager'
@@ -63,7 +64,7 @@ export async function collectDiagnostics(
 
   const modelsRead = await readModelsConfigFile(getConfiguredEngineKind())
   const providers = 'config' in modelsRead ? summarizeProviders(modelsRead.config, process.env) : null
-  const providersError = 'error' in modelsRead ? sanitizeProvidersError(modelsRead.error) : null
+  const providersError = 'failure' in modelsRead ? reportModelsReadFailure(modelsRead.location.name, modelsRead.failure) : null
 
   const globalRules = await readGlobalRuleCount()
   const sessionsRoot = getConfiguredEngineKind() === 'omp' ? getOmpSessionsRoot() : getSessionsRoot()
@@ -86,7 +87,7 @@ export async function collectDiagnostics(
       nodeFound: cli.nodeFound,
       needsShell: cli.needsShell,
       rejectedOverride: resolution.rejectedOverride,
-      failureReason: cli.failureReason,
+      failureReason: reportPiStartFailure(cli.failureReason),
       pathEntryCount: countPathEntries(resolution.pathEnv, process.platform === 'win32'),
     },
     piVersion: piVersionResult.success ? extractVersionLine(piVersionResult.output) : null,

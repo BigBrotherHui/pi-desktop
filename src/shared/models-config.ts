@@ -1,3 +1,5 @@
+import { t } from './i18n'
+
 export interface CustomModelCost {
   input: number
   output: number
@@ -52,24 +54,24 @@ export function validateModelsConfig(config: ModelsConfig): string[] {
   const providers = config.providers ?? {}
   for (const [key, provider] of Object.entries(providers)) {
     if (key.trim().length === 0) {
-      errors.push('Provider key must not be empty')
+      errors.push(t('errors.models.providerKeyEmpty'))
     }
     const models = provider.models ?? []
     const seen = new Set<string>()
     for (const model of models) {
       const id = (model.id ?? '').trim()
       if (id.length === 0) {
-        errors.push(`Provider "${key}": a model is missing an id`)
+        errors.push(t('errors.models.modelMissingId', { key }))
         continue
       }
       if (seen.has(id)) {
-        errors.push(`Provider "${key}": duplicate model id "${id}"`)
+        errors.push(t('errors.models.duplicateModelId', { key, id }))
       }
       seen.add(id)
       for (const field of NUMERIC_MODEL_FIELDS) {
         const value = model[field]
         if (value !== undefined && (typeof value !== 'number' || !Number.isFinite(value))) {
-          errors.push(`Provider "${key}", model "${id}": ${field} must be a finite number`)
+          errors.push(t('errors.models.fieldNotFiniteNumber', { key, id, field }))
         }
       }
     }

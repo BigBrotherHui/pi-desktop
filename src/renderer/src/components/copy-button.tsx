@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
 import { Copy, Check } from 'lucide-react'
 
@@ -9,6 +10,7 @@ export function CopyButton({
   text: string
   className?: string
 }): React.JSX.Element {
+  const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
 
   const handleCopy = (e: React.MouseEvent) => {
@@ -21,8 +23,8 @@ export function CopyButton({
   return (
     <button
       onClick={handleCopy}
-      title={copied ? 'Copied' : 'Copy'}
-      aria-label={copied ? 'Copied' : 'Copy'}
+      title={copied ? t('common.copied') : t('common.copy')}
+      aria-label={copied ? t('common.copied') : t('common.copy')}
       className={clsx(
         'z-10 rounded p-1 text-dim transition-colors hover:bg-surface-hover hover:text-primary',
         className

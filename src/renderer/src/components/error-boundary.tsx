@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { AlertTriangle } from 'lucide-react'
+import { t } from '../../../shared/i18n'
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -27,7 +28,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         this.props.fallback ?? (
           <div className="flex items-center gap-1.5 rounded-md border border-error-bg bg-error-bg px-2 py-1 text-xs text-error">
             <AlertTriangle size={12} className="shrink-0" />
-            Failed to render content
+            {t('app.errorBoundary.fallback')}
           </div>
         )
       )

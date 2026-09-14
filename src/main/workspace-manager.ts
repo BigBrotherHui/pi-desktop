@@ -20,6 +20,8 @@ import { appLog } from './app-log'
 import { inspectSessionContent } from './session-metadata'
 import {
   createGitWorktree,
+  describeGitFailure,
+  GitCommandError,
   inspectGitRepository,
   listGitWorktrees,
   removeGitWorktree,
@@ -28,6 +30,7 @@ import {
   worktreeTargetPath,
 } from './git-worktree'
 import { extractGitHubPullRequestUrl, resolvePullRequestHeadBranch } from './git-conveyor'
+import { t, tEnglish } from '../shared/i18n'
 
 /**
  * Manages project workspaces and their independent Pi session runtimes.
@@ -376,7 +379,7 @@ export class WorkspaceManager {
 
   private createSessionRuntime(workspaceId: string, sessionPath: string | null): SessionRuntimeEntry {
     if (sessionPath && this.runtimeOwningSessionPath(sessionPath)) {
-      throw new Error('Session file is already attached to a live runtime')
+      throw new Error(t('errors.session.alreadyAttached'))
     }
     // A new tab is started right after it is created, so make room for its
     // process before the tab exists.
@@ -498,13 +501,13 @@ export class WorkspaceManager {
   /** Activate a session without waiting for Pi startup. */
   async activateSession(workspaceId: string, sessionPath: string): Promise<SessionRuntimeInfo> {
     const workspace = this.workspaces.find((item) => item.id === workspaceId)
-    if (!workspace) throw new Error(`Workspace not found: ${workspaceId}`)
+    if (!workspace) throw new Error(t('errors.workspace.notFound', { workspaceId }))
     if (this.activeWorkspaceId !== workspaceId) await this.setActiveWorkspace(workspaceId)
     const key = pathGroupKey(sessionPath)
     let runtimeId = this.runtimeBySessionPath.get(key)
     let entry = runtimeId ? this.sessionRuntimes.get(runtimeId) : undefined
     if (entry && entry.info.workspaceId !== workspaceId) {
-      throw new Error('Session is already attached to a different workspace runtime')
+      throw new Error(t('errors.session.attachedToDifferentWorkspace'))
     }
     if (!entry) entry = this.createSessionRuntime(workspaceId, sessionPath)
     runtimeId = entry.info.runtimeId
@@ -516,7 +519,7 @@ export class WorkspaceManager {
   /** Create an empty session runtime and make it active immediately. */
   async createNewSessionRuntime(workspaceId: string): Promise<SessionRuntimeInfo> {
     const workspace = this.workspaces.find((item) => item.id === workspaceId)
-    if (!workspace) throw new Error(`Workspace not found: ${workspaceId}`)
+    if (!workspace) throw new Error(t('errors.workspace.notFound', { workspaceId }))
     if (this.activeWorkspaceId !== workspaceId) await this.setActiveWorkspace(workspaceId)
     const entry = this.createSessionRuntime(workspaceId, null)
     this.setActiveRuntime(workspaceId, entry.info.runtimeId)
@@ -525,9 +528,9 @@ export class WorkspaceManager {
 
   async startSessionRuntime(runtimeId: string, options: PiStartOptions = {}): Promise<SessionRuntimeInfo> {
     const entry = this.sessionRuntimes.get(runtimeId)
-    if (!entry) throw new Error(`Session runtime not found: ${runtimeId}`)
+    if (!entry) throw new Error(t('errors.session.runtimeNotFound', { runtimeId }))
     const workspace = this.workspaces.find((item) => item.id === entry.info.workspaceId)
-    if (!workspace) throw new Error(`Workspace not found: ${entry.info.workspaceId}`)
+    if (!workspace) throw new Error(t('errors.workspace.notFound', { workspaceId: entry.info.workspaceId }))
     // A start that binds this runtime to a file it did not write hands it a
     // conversation that predates us, so the file stops being ours to discard.
     // Read the caller's own options, not the merged ones: the merge re-supplies
@@ -606,7 +609,7 @@ export class WorkspaceManager {
   }
   async restartSessionRuntime(runtimeId: string, options: PiStartOptions = {}): Promise<SessionRuntimeInfo> {
     const entry = this.sessionRuntimes.get(runtimeId)
-    if (!entry) throw new Error(`Session runtime not found: ${runtimeId}`)
+    if (!entry) throw new Error(t('errors.session.runtimeNotFound', { runtimeId }))
     entry.manager.stop()
     return this.startSessionRuntime(runtimeId, options)
   }
@@ -678,7 +681,7 @@ export class WorkspaceManager {
 
   sendCommandToSessionRuntime(runtimeId: string, command: Record<string, unknown>): Promise<unknown> {
     const entry = this.sessionRuntimes.get(runtimeId)
-    if (!entry) return Promise.reject(new Error(`Session runtime not found: ${runtimeId}`))
+    if (!entry) return Promise.reject(new Error(t('errors.session.runtimeNotFound', { runtimeId })))
     this.touchRuntime(entry)
     return entry.manager.sendCommand(command)
   }
@@ -791,7 +794,7 @@ export class WorkspaceManager {
 
   async setActiveWorkspace(workspaceId: string): Promise<Workspace> {
     const workspace = this.workspaces.find((w) => w.id === workspaceId)
-    if (!workspace) throw new Error(`Workspace not found: ${workspaceId}`)
+    if (!workspace) throw new Error(t('errors.workspace.notFound', { workspaceId }))
 
     const changed = this.activeWorkspaceId !== workspaceId
     workspace.lastActiveAt = Date.now()
@@ -814,7 +817,7 @@ export class WorkspaceManager {
 
   async removeWorkspace(workspaceId: string): Promise<WorkspaceRemoveResult> {
     const index = this.workspaces.findIndex((w) => w.id === workspaceId)
-    if (index === -1) throw new Error(`Workspace not found: ${workspaceId}`)
+    if (index === -1) throw new Error(t('errors.workspace.notFound', { workspaceId }))
     const workspace = this.workspaces[index]
     let worktreeRemoved: boolean | undefined
     let preservedWorktreePath: string | undefined
@@ -847,7 +850,10 @@ export class WorkspaceManager {
       } catch (err) {
         // Keep dirty/missing worktrees on disk instead of forcing deletion.
         preservedWorktreePath = workspace.path
-        appLog.warn('workspaces', 'Preserved managed worktree while closing tab', err)
+        const detail = err instanceof GitCommandError
+          ? describeGitFailure(err.args, err.stdout, err.stderr, tEnglish)
+          : err
+        appLog.warn('workspaces', 'Preserved managed worktree while closing tab', detail)
       }
     }
 
@@ -877,7 +883,7 @@ export class WorkspaceManager {
 
   async renameWorkspace(workspaceId: string, name: string): Promise<void> {
     const workspace = this.workspaces.find((w) => w.id === workspaceId)
-    if (!workspace) throw new Error(`Workspace not found: ${workspaceId}`)
+    if (!workspace) throw new Error(t('errors.workspace.notFound', { workspaceId }))
 
     workspace.name = name
     await this.saveWorkspaces()
@@ -891,11 +897,11 @@ export class WorkspaceManager {
    */
   async changeWorkspacePath(workspaceId: string, newPath: string): Promise<void> {
     const workspace = this.workspaces.find((w) => w.id === workspaceId)
-    if (!workspace) throw new Error(`Workspace not found: ${workspaceId}`)
+    if (!workspace) throw new Error(t('errors.workspace.notFound', { workspaceId }))
     if (workspace.kind === 'worktree') {
-      throw new Error('Managed worktree tabs cannot change folder; close the tab and create another one')
+      throw new Error(t('errors.workspace.managedWorktreeCannotChangeFolder'))
     }
-    if (!existsSync(newPath)) throw new Error(`Folder does not exist: ${newPath}`)
+    if (!existsSync(newPath)) throw new Error(t('errors.workspace.folderMissing', { path: newPath }))
 
     workspace.path = newPath
     // Pi's working directory is bound at spawn, so every session runtime must
@@ -1038,8 +1044,8 @@ export class WorkspaceManager {
     const source = options.sourceWorkspaceId
       ? this.workspaces.find((w) => w.id === options.sourceWorkspaceId)
       : this.getActiveWorkspace()
-    if (!source) throw new Error('No source workspace available for a new tab')
-    if (!existsSync(source.path)) throw new Error(`Source folder does not exist: ${source.path}`)
+    if (!source) throw new Error(t('errors.workspace.noSourceForNewTab'))
+    if (!existsSync(source.path)) throw new Error(t('errors.workspace.sourceFolderMissing', { path: source.path }))
 
     const git = await inspectGitRepository(source.path)
     const taskPrompt = options.taskPrompt?.trim() || ''
@@ -1049,7 +1055,7 @@ export class WorkspaceManager {
       if (related) return related
     }
     if (pullRequestUrl) {
-      throw new Error('The task references a GitHub pull request that is not checked out in a local worktree')
+      throw new Error(t('errors.workspace.pullRequestNotCheckedOut'))
     }
     const sourceWasDirty = git.status.trim().length > 0
     const id = `ws-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -1085,7 +1091,7 @@ export class WorkspaceManager {
 
   async startPiForWorkspace(workspaceId: string, options?: PiStartOptions): Promise<void> {
     const workspace = this.workspaces.find((w) => w.id === workspaceId)
-    if (!workspace) throw new Error(`Workspace not found: ${workspaceId}`)
+    if (!workspace) throw new Error(t('errors.workspace.notFound', { workspaceId }))
 
     const runtimeId = this.activeRuntimeByWorkspace.get(workspaceId)
     let runtime = runtimeId ? this.sessionRuntimes.get(runtimeId) : undefined

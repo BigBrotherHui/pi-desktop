@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import { t, type Translate } from './i18n'
 import {
   BUILTIN_SOURCE,
   commandDisplayName,
+  commandSourceLabel,
   filterCommands,
   groupCommands,
   invocationToken,
@@ -128,6 +130,24 @@ test('groupCommands puts unknown sources in a trailing Other group', () => {
     ['Prompts', 'Other']
   )
   assert.equal(grouped[1].items[0].name, 'mystery')
+})
+
+test('commandSourceLabel translates known sources', () => {
+  assert.deepEqual(
+    ['skill', 'prompt', BUILTIN_SOURCE, 'extension'].map((source) => commandSourceLabel(source, t)),
+    ['skill', 'prompt', 'builtin', 'extension']
+  )
+})
+
+test('commandSourceLabel shows an unknown source as Pi sent it', () => {
+  const unknownSource = 'plugin'
+  let translatorCalled = false
+  const spy = ((key: string) => {
+    translatorCalled = true
+    return key
+  }) as unknown as Translate
+  assert.equal(commandSourceLabel(unknownSource, spy), unknownSource)
+  assert.equal(translatorCalled, false)
 })
 
 test('groupCommands flat list matches visual group order', () => {

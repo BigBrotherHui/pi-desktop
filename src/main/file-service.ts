@@ -6,10 +6,16 @@ import { promisify } from 'util'
 import { describeWriteError } from './fs-errors'
 import { appLog } from './app-log'
 import type { FileChangeEvent } from '../shared/ipc-contracts'
+import { i18n, t, tEnglish, type Translate } from '../shared/i18n'
 
 const execFileAsync = promisify(execFile)
 
 const PARENT_ESCAPE = '..'
+
+const WORKSPACE_ESCAPE_KEYS = {
+  read: 'errors.fileService.refusedRead',
+  write: 'errors.fileService.refusedWrite',
+} as const satisfies Record<'read' | 'write', string>
 
 const NOT_GIT_REPO_RE = /not a git repository/i
 // Bare repos: rev-parse succeeds but status/diff refuse to run.
@@ -28,12 +34,15 @@ export function isBenignGitError(err: unknown): boolean {
   return NOT_GIT_REPO_RE.test(text) || NO_WORK_TREE_RE.test(text)
 }
 
-/** Compact failure text for a git subcommand: first stderr line, else message. */
-export function describeGitError(operation: string, err: unknown): string {
+/**
+ * Compact failure text for a git subcommand: first stderr line, else message.
+ * `t` defaults to the interface language; the log passes `tEnglish`.
+ */
+export function describeGitError(operation: string, err: unknown, t: Translate = i18n.t): string {
   const { stderr, message } = (err ?? {}) as { stderr?: unknown; message?: unknown }
   const stderrLine = typeof stderr === 'string' ? stderr.trim().split('\n')[0] : ''
-  const reason = stderrLine || (typeof message === 'string' ? message : String(err))
-  return `git ${operation} failed: ${reason}`
+  const detail = stderrLine || (typeof message === 'string' ? message : String(err))
+  return t('errors.git.commandFailedWithDetail', { command: `git ${operation}`, detail })
 }
 
 // One log entry per workspace+operation per run — git status is polled every
@@ -317,15 +326,17 @@ export class FileService {
   }
 
   private describeAndLogGitError(operation: string, err: unknown): Error {
-    const description = describeGitError(operation, err)
+    // The log stays English, so it (and its dedup key) uses the English text;
+    // the returned error carries the interface-language text for the UI.
+    const englishDescription = describeGitError(operation, err, tEnglish)
     // Dedup by error signature, not just operation, so a NEW failure mode for
     // the same command still reaches the log.
-    const key = `${this.workspacePath}:${description}`
+    const key = `${this.workspacePath}:${englishDescription}`
     if (!gitErrorLogged.has(key)) {
       gitErrorLogged.add(key)
-      appLog.warn('git', `${description} (${this.workspacePath})`, err)
+      appLog.warn('git', `${englishDescription} (${this.workspacePath})`, err)
     }
-    return new Error(description)
+    return new Error(describeGitError(operation, err))
   }
 
   // Some git subcommands fail outside a repo with errors that never mention
@@ -444,7 +455,7 @@ export class FileService {
    */
   private async resolveInsideWorkspace(filePath: string, action: 'read' | 'write'): Promise<string> {
     if (!isPathInsideWorkspace(this.workspacePath, filePath)) {
-      throw new Error(`Refusing to ${action} outside the active workspace`)
+      throw new Error(t(WORKSPACE_ESCAPE_KEYS[action]))
     }
     const fullPath = isAbsolute(filePath) ? filePath : join(this.workspacePath, filePath)
     const resolvedFile = resolve(fullPath)
@@ -453,7 +464,7 @@ export class FileService {
     const realWorkspace = await realpath(this.workspacePath)
     const realTarget = await realpathDeepest(resolvedFile)
     if (!isPathInsideWorkspace(realWorkspace, realTarget)) {
-      throw new Error(`Refusing to ${action} outside the active workspace`)
+      throw new Error(t(WORKSPACE_ESCAPE_KEYS[action]))
     }
     return resolvedFile
   }

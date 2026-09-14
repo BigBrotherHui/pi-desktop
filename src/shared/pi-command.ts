@@ -1,3 +1,9 @@
+// Aliased: groupLabel/groupCommands take their translator as a parameter
+// named `t` (shadowing this import inside the function body) so
+// `i18next-cli`'s static extractor — which looks for calls on an identifier
+// named `t` — still finds and keeps these keys.
+import { t as sharedT, type Translate } from './i18n'
+
 /** A command exposed by Pi via the RPC `get_commands` request. */
 export interface PiCommand {
   name: string
@@ -30,14 +36,52 @@ export function commandDisplayName(cmd: PiCommand): string {
   return cmd.name
 }
 
-const GROUPS: Array<{ source: string; label: string }> = [
-  { source: 'skill', label: 'Skills' },
-  { source: 'prompt', label: 'Prompts' },
-  { source: BUILTIN_SOURCE, label: 'Commands' },
-  { source: 'extension', label: 'Extensions' },
-]
+/** Command sources that get their own group, in display order. */
+const GROUP_SOURCES = ['skill', 'prompt', BUILTIN_SOURCE, 'extension'] as const
+
+/** Group id of the catch-all for commands from any other source. */
+const OTHER_GROUP_ID = 'other'
+
+export type CommandGroupId = (typeof GROUP_SOURCES)[number] | typeof OTHER_GROUP_ID
+
+/** The display label for one command group, in the interface language. */
+function groupLabel(id: CommandGroupId, t: Translate): string {
+  switch (id) {
+    case 'skill':
+      return t('common.skills')
+    case 'prompt':
+      return t('commandGroups.prompts')
+    case BUILTIN_SOURCE:
+      return t('commandGroups.commands')
+    case 'extension':
+      return t('commandGroups.extensions')
+    case OTHER_GROUP_ID:
+      return t('commandGroups.other')
+  }
+}
+
+/**
+ * The badge text for a command's source, in the interface language. A source
+ * this app does not know is shown exactly as Pi sent it.
+ */
+export function commandSourceLabel(source: string, t: Translate): string {
+  switch (source) {
+    case 'skill':
+      return t('commandSources.skill')
+    case 'prompt':
+      return t('commandSources.prompt')
+    case BUILTIN_SOURCE:
+      return t('commandSources.builtin')
+    case 'extension':
+      return t('commandSources.extension')
+    default:
+      return source
+  }
+}
 
 export interface CommandGroup {
+  /** Stable group id (the command source, or the catch-all id), for React keys. */
+  id: CommandGroupId
   label: string
   items: PiCommand[]
 }
@@ -76,16 +120,20 @@ export function invocationToken(name: string, source: string): string {
  * "Other" catch-all for any unexpected source so nothing is silently hidden.
  * `flat` matches the visual order — keyboard navigation indexes it.
  */
-export function groupCommands(results: PiCommand[]): {
+export function groupCommands(
+  results: PiCommand[],
+  t: Translate = sharedT
+): {
   grouped: CommandGroup[]
   flat: PiCommand[]
 } {
-  const known = new Set(GROUPS.map((g) => g.source))
-  const grouped = GROUPS.map((g) => ({
-    label: g.label,
-    items: results.filter((r) => r.source === g.source),
-  })).filter((g) => g.items.length > 0)
-  const other = results.filter((r) => !known.has(r.source))
-  if (other.length > 0) grouped.push({ label: 'Other', items: other })
+  const known = new Set<string>(GROUP_SOURCES)
+  const groups: Array<{ id: CommandGroupId; items: PiCommand[] }> = [
+    ...GROUP_SOURCES.map((source) => ({ id: source, items: results.filter((r) => r.source === source) })),
+    { id: OTHER_GROUP_ID, items: results.filter((r) => !known.has(r.source)) },
+  ]
+  const grouped = groups
+    .filter((g) => g.items.length > 0)
+    .map((g) => ({ id: g.id, label: groupLabel(g.id, t), items: g.items }))
   return { grouped, flat: grouped.flatMap((g) => g.items) }
 }

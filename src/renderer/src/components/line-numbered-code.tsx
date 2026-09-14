@@ -1,4 +1,5 @@
 import { clsx } from 'clsx'
+import { useTranslation } from 'react-i18next'
 import { highlightCodeToHtml } from './chat-code-highlight'
 
 /**
@@ -22,6 +23,7 @@ export function LineNumberedCode({
   lang: string
   onFirstLineClick?: () => void
 }): React.JSX.Element {
+  const { t } = useTranslation()
   const html = highlightCodeToHtml(content, lang)
   const lines = (html ?? content).split('\n')
   const gutter = `${String(lines.length).length}ch`
@@ -35,7 +37,7 @@ export function LineNumberedCode({
             key={i}
             className={clsx('flex', clickable && 'cursor-pointer hover:bg-surface-hover/40')}
             onClick={clickable ? onFirstLineClick : undefined}
-            title={clickable ? 'Collapse' : undefined}
+            title={clickable ? t('common.collapse') : undefined}
           >
             <span
               className="mr-3 shrink-0 select-none text-right text-faint"

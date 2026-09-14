@@ -27,6 +27,7 @@ Still in alpha, so expect rough edges.
 - Terminal with ANSI colors
 - Package browser connected to pi.dev/packages, with instant local search
 - Session tags, model switching, live-preview settings, themes (7 built-ins plus System, and custom themes you can create in-app, import, export, or install from a URL)
+- Translatable interface: pick the language in Settings (English ships today; see [Translations](CONTRIBUTING.md#translations) to add one)
 
 ## Review rail
 

@@ -5,6 +5,8 @@
 // every transition — teardown outruns any renderer-side ask, so the decision
 // has to be local to main.
 
+import { t } from '../shared/i18n'
+
 export interface EditorGuard {
   /** Mirror of the renderer's dirty flag; new edits re-arm a confirmed discard. */
   setDirty(dirty: boolean, fileName: string | null): void
@@ -42,7 +44,7 @@ export function createEditorGuard(): EditorGuard {
       discardConfirmed = true
     },
     promptMessage() {
-      return fileName ? `Discard unsaved changes to ${fileName}?` : 'Discard unsaved changes?'
+      return fileName ? t('editorGuard.discardFile', { fileName }) : t('editorGuard.discard')
     },
   }
 }

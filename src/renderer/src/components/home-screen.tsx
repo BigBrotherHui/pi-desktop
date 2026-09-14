@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getSessionTitle } from '../utils/session-title'
 import { DEFAULT_AGENT_ENGINE_LABEL, agentEngineLabel } from '../../../shared/agent-engine-label'
+import { PI_DESKTOP_PRODUCT_NAME } from '../../../shared/product-name'
 import { clsx } from 'clsx'
 import {
   FolderOpen,
@@ -36,6 +38,7 @@ export function HomeScreen(): React.JSX.Element {
  * Home body: activity stats, changed files, recent workspaces/sessions.
  */
 export function HomeInfoSummary({ compact }: { compact?: boolean }): React.JSX.Element {
+  const { t } = useTranslation()
   const workspaces = useAppStore((s) => s.workspaces)
   const activeWorkspace = useAppStore((s) => s.activeWorkspace)
   const sessionList = useAppStore((s) => s.sessionList)
@@ -138,14 +141,14 @@ export function HomeInfoSummary({ compact }: { compact?: boolean }): React.JSX.E
         <section className="space-y-3">
           <div className="rounded-lg border border-border bg-surface/50">
             <div className="flex items-center justify-between px-4 py-2.5">
-              <SectionLabel className="mb-0">Changed Files</SectionLabel>
+              <SectionLabel className="mb-0">{t('common.changedFilesHeading')}</SectionLabel>
               <span className="rounded-full bg-card px-2 py-0.5 text-[10px] text-muted">
                 {changedFiles.length}
               </span>
             </div>
             {changedFiles.length === 0 ? (
               <div className="px-4 pb-3 text-xs text-faint">
-                {activeWorkspace ? 'No working tree changes.' : 'No workspace selected.'}
+                {activeWorkspace ? t('common.noWorkingTreeChanges') : t('home.changedFiles.noWorkspace')}
               </div>
             ) : (
               <div className="max-h-40 overflow-y-auto border-t border-border/60 py-1">
@@ -168,7 +171,7 @@ export function HomeInfoSummary({ compact }: { compact?: boolean }): React.JSX.E
                     className="flex w-full items-center gap-1.5 px-4 py-1.5 text-xs text-dim hover:text-secondary"
                   >
                     <GitCompare size={11} />
-                    +{changedFiles.length - MAX_CHANGED_FILES} more — open diff review
+                    {t('home.changedFiles.moreOpenDiff', { count: changedFiles.length - MAX_CHANGED_FILES })}
                   </button>
                 )}
               </div>
@@ -178,10 +181,10 @@ export function HomeInfoSummary({ compact }: { compact?: boolean }): React.JSX.E
 
         <section className="space-y-6">
           <div>
-            <SectionLabel>Recent Workspaces</SectionLabel>
+            <SectionLabel>{t('home.recentWorkspaces.title')}</SectionLabel>
             <div className="space-y-1.5">
               {recentWorkspaces.length === 0 ? (
-                <EmptyHint>No workspaces yet.</EmptyHint>
+                <EmptyHint>{t('home.recentWorkspaces.empty')}</EmptyHint>
               ) : (
                 recentWorkspaces.map((ws) => (
                   <button
@@ -196,7 +199,7 @@ export function HomeInfoSummary({ compact }: { compact?: boolean }): React.JSX.E
                     </div>
                     {ws.id === activeWorkspace?.id && (
                       <span className="shrink-0 rounded bg-accent-bg px-1.5 py-0.5 text-[10px] text-accent-fg">
-                        last
+                        {t('home.recentWorkspaces.last')}
                       </span>
                     )}
                   </button>
@@ -206,10 +209,10 @@ export function HomeInfoSummary({ compact }: { compact?: boolean }): React.JSX.E
           </div>
 
           <div>
-            <SectionLabel>Recent Sessions</SectionLabel>
+            <SectionLabel>{t('home.recentSessions.title')}</SectionLabel>
             <div className="space-y-1.5">
               {recentSessions.length === 0 ? (
-                <EmptyHint>No sessions yet.</EmptyHint>
+                <EmptyHint>{t('home.recentSessions.empty')}</EmptyHint>
               ) : (
                 recentSessions.map((session) => (
                   <button
@@ -236,6 +239,7 @@ export function HomeInfoSummary({ compact }: { compact?: boolean }): React.JSX.E
 }
 
 function PiErrorBanner(): React.JSX.Element | null {
+  const { t } = useTranslation()
   const piStatus = useAppStore((s) => s.piStatus)
   const piError = useAppStore((s) => s.piError)
   const engineLabel = useAppStore((s) => agentEngineLabel(s.piEngine) ?? DEFAULT_AGENT_ENGINE_LABEL)
@@ -245,16 +249,16 @@ function PiErrorBanner(): React.JSX.Element | null {
     <div className="mb-6 flex items-start gap-3 rounded-lg border border-error-bg bg-error-bg px-4 py-3 text-sm text-error">
       <AlertTriangle size={16} className="mt-0.5 shrink-0" />
       <div className="flex-1">
-        <div className="font-medium">Couldn&apos;t start {engineLabel}</div>
+        <div className="font-medium">{t('home.errorBanner.couldntStart', { agent: engineLabel })}</div>
         <div className="mt-0.5 text-error/80">{piError}</div>
-        <div className="mt-1 text-xs text-error/70">Check that {engineLabel} is installed and its path is correct.</div>
+        <div className="mt-1 text-xs text-error/70">{t('home.errorBanner.checkInstalled', { agent: engineLabel })}</div>
       </div>
       <button
         onClick={() => setCurrentView('settings')}
         className="flex shrink-0 items-center gap-1.5 rounded-md bg-error/25 px-2.5 py-1 text-xs text-error hover:bg-error/40"
       >
         <SettingsIcon size={12} />
-        Settings
+        {t('common.settings')}
       </button>
     </div>
   )
@@ -281,6 +285,7 @@ function EmptyHint({ children }: { children: React.ReactNode }): React.JSX.Eleme
 }
 
 function HomeScreenInfo(): React.JSX.Element {
+  const { t } = useTranslation()
   const activeWorkspace = useAppStore((s) => s.activeWorkspace)
   const activateWorkspace = useAppStore((s) => s.activateWorkspace)
   const createWorkspace = useAppStore((s) => s.createWorkspace)
@@ -298,7 +303,7 @@ function HomeScreenInfo(): React.JSX.Element {
   }
 
   const openFolder = async (): Promise<void> => {
-    const path = await window.piDesktop.system.openDialog({ title: 'Open Folder' })
+    const path = await window.piDesktop.system.openDialog({ title: t('dialogs.openFolder.title') })
     if (!path) return
     setBusy(true)
     try {
@@ -339,9 +344,9 @@ function HomeScreenInfo(): React.JSX.Element {
         <PiErrorBanner />
 
         <div className="mb-6 flex flex-col items-center text-center">
-          <img src={piLogo} alt="Pi Desktop" className="h-16 w-16" />
-          <h1 className="mt-4 text-2xl font-semibold text-primary">Pi Desktop</h1>
-          <p className="mt-1 text-sm text-dim">Open a workspace or pick up where you left off.</p>
+          <img src={piLogo} alt={PI_DESKTOP_PRODUCT_NAME} className="h-16 w-16" />
+          <h1 className="mt-4 text-2xl font-semibold text-primary">{PI_DESKTOP_PRODUCT_NAME}</h1>
+          <p className="mt-1 text-sm text-dim">{t('home.subtitle')}</p>
         </div>
 
         <div className="mb-6 grid gap-3 sm:grid-cols-3">
@@ -351,8 +356,8 @@ function HomeScreenInfo(): React.JSX.Element {
           >
             <FolderOpen size={18} className="shrink-0 text-muted" />
             <div className="min-w-0">
-              <div className="text-sm font-medium text-primary">Open Folder</div>
-              <div className="text-xs text-dim">Browse for a project to open as a workspace</div>
+              <div className="text-sm font-medium text-primary">{t('home.actions.openFolder.title')}</div>
+              <div className="text-xs text-dim">{t('home.actions.openFolder.description')}</div>
             </div>
           </button>
           <button
@@ -361,9 +366,11 @@ function HomeScreenInfo(): React.JSX.Element {
           >
             <Plus size={18} className="shrink-0 text-muted" />
             <div className="min-w-0">
-              <div className="text-sm font-medium text-primary">New Session</div>
+              <div className="text-sm font-medium text-primary">{t('common.newSession')}</div>
               <div className="truncate text-xs text-dim">
-                {activeWorkspace ? `In ${activeWorkspace.name}` : 'Pick a folder first'}
+                {activeWorkspace
+                  ? t('home.actions.newSession.inWorkspace', { project: activeWorkspace.name })
+                  : t('home.actions.newSession.pickFolderFirst')}
               </div>
             </div>
           </button>
@@ -373,8 +380,8 @@ function HomeScreenInfo(): React.JSX.Element {
           >
             <Play size={18} className="shrink-0 text-accent-fg" />
             <div className="min-w-0">
-              <div className="text-sm font-medium text-primary">New Task</div>
-              <div className="truncate text-xs text-dim">Start work in a fresh Pi session</div>
+              <div className="text-sm font-medium text-primary">{t('home.actions.newTask.title')}</div>
+              <div className="truncate text-xs text-dim">{t('home.actions.newTask.description')}</div>
             </div>
           </button>
         </div>

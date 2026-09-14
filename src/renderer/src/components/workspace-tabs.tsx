@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { AlertCircle, CheckCircle2, FolderOpen, GitBranch, Loader2, MessageSquarePlus, PanelLeft, Plus, Settings, X, XCircle } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useAppStore } from '../store'
@@ -13,6 +14,7 @@ function tabLabel(workspace: Workspace): string {
 }
 
 export function WorkspaceTabs(): React.JSX.Element {
+  const { t } = useTranslation()
   const workspaces = useAppStore((state) => state.workspaces)
   const activeWorkspace = useAppStore((state) => state.activeWorkspace)
   const sessionList = useAppStore((state) => state.sessionList)
@@ -56,8 +58,8 @@ export function WorkspaceTabs(): React.JSX.Element {
           type="button"
           onClick={toggleSidebar}
           className="mb-1 flex h-7 w-7 shrink-0 animate-fade-in items-center justify-center rounded-md border border-border-strong bg-surface text-muted shadow-sm transition-colors hover:bg-surface-hover hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-focus"
-          title="Show sidebar"
-          aria-label="Show sidebar"
+          title={t('common.showSidebar')}
+          aria-label={t('common.showSidebar')}
         >
           <PanelLeft size={15} />
         </button>
@@ -119,8 +121,12 @@ export function WorkspaceTabs(): React.JSX.Element {
                 type="button"
                 onClick={() => void removeWorkspace(workspace.id)}
                 className="shrink-0 rounded p-0.5 text-faint opacity-0 transition-all hover:bg-highlight hover:text-primary group-hover:opacity-100"
-                title={isWorktree ? 'Close tab' : 'Remove workspace'}
-                aria-label={isWorktree ? `Close ${tabLabel(workspace)}` : `Remove ${tabLabel(workspace)}`}
+                title={isWorktree ? t('store.confirm.closeTabLabel') : t('store.confirm.removeWorkspaceTitle')}
+                aria-label={
+                  isWorktree
+                    ? t('workspaceTabs.closeTabAriaLabel', { name: tabLabel(workspace) })
+                    : t('workspaceTabs.removeWorkspaceAriaLabel', { name: tabLabel(workspace) })
+                }
               >
                 <X size={12} />
               </button>
@@ -138,10 +144,10 @@ export function WorkspaceTabs(): React.JSX.Element {
           <div
             aria-current="page"
             className="flex min-w-0 flex-1 items-center gap-2 px-2.5 text-left text-xs"
-            title="Tools"
+            title={t('workspaceTabs.tools')}
           >
             <Settings size={13} className="shrink-0 text-accent-fg" />
-            <span className="truncate font-medium">Tools</span>
+            <span className="truncate font-medium">{t('workspaceTabs.tools')}</span>
           </div>
           <button
             type="button"
@@ -150,8 +156,8 @@ export function WorkspaceTabs(): React.JSX.Element {
               setCurrentView('chat')
             }}
             className="mr-1 rounded p-1 text-faint opacity-0 transition-all hover:bg-highlight hover:text-primary group-hover:opacity-100"
-            title="Close tools"
-            aria-label="Close tools"
+            title={t('workspaceTabs.closeTools')}
+            aria-label={t('workspaceTabs.closeTools')}
           >
             <X size={12} />
           </button>
@@ -166,8 +172,8 @@ export function WorkspaceTabs(): React.JSX.Element {
           void createNewSession()
         }}
         className="mb-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-primary transition-colors"
-        title="New session in this project (Ctrl/Cmd+N)"
-        aria-label="New session in this project"
+        title={t('workspaceTabs.newSessionTitle')}
+        aria-label={t('workspaceTabs.newSessionAriaLabel')}
       >
         <MessageSquarePlus size={15} />
       </button>
@@ -175,15 +181,15 @@ export function WorkspaceTabs(): React.JSX.Element {
         type="button"
         onClick={() => void createWorktreeTab()}
         className="mb-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-primary transition-colors"
-        title="New isolated Git tab (requires a Git project)"
-        aria-label="New isolated Git tab"
+        title={t('workspaceTabs.newIsolatedTabTitle')}
+        aria-label={t('workspaceTabs.newIsolatedTabAriaLabel')}
       >
         <Plus size={15} />
       </button>
     </div>
     {sessionTabs.length > 0 && (
       <div className="flex h-8 shrink-0 items-center gap-1 overflow-x-auto border-b border-border/70 px-2">
-        <span className="mr-1 shrink-0 text-[10px] uppercase tracking-wide text-faint">Sessions</span>
+        <span className="mr-1 shrink-0 text-[10px] uppercase tracking-wide text-faint">{t('workspaceTabs.sessions')}</span>
         {sessionTabs.map((runtime) => {
           const session = sessionList.find((item) => runtime.sessionPath && pathsEqual(item.path, runtime.sessionPath))
           const active = runtime.runtimeId === activeSessionRuntimeId || runtime.active
@@ -213,15 +219,15 @@ export function WorkspaceTabs(): React.JSX.Element {
               >
                 <SessionRuntimeIndicator runtime={runtime} />
                 <span className="truncate">
-                  {session ? getSessionTitle(session.name, session.sessionId, session.preview) : 'New session'}
+                  {session ? getSessionTitle(session.name, session.sessionId, session.preview) : t('workspaceTabs.newSessionFallback')}
                 </span>
               </button>
               <button
                 type="button"
                 onClick={() => void closeSessionTab(runtime.runtimeId)}
                 className="shrink-0 rounded p-0.5 text-faint opacity-0 transition-all hover:bg-highlight-strong hover:text-primary group-hover:opacity-100"
-                title="Close session tab"
-                aria-label="Close session tab"
+                title={t('workspaceTabs.closeSessionTab')}
+                aria-label={t('workspaceTabs.closeSessionTab')}
               >
                 <X size={11} />
               </button>

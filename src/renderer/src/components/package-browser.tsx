@@ -1,8 +1,9 @@
 import { useAppStore } from '../store'
 import { isRpcSkillPath } from '../../../shared/ipc-contracts'
-import type { CatalogPackage, InstalledSkill, PackageUpdate } from '../../../shared/ipc-contracts'
+import type { CatalogPackage, InstalledPackage, InstalledSkill, PackageUpdate } from '../../../shared/ipc-contracts'
 import { filterCatalog } from '../../../shared/package-filter'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
 import {
   Package,
@@ -22,6 +23,7 @@ import {
 } from 'lucide-react'
 
 export function PackageBrowser(): React.JSX.Element {
+  const { t } = useTranslation()
   const installedPackages = useAppStore((state) => state.installedPackages)
   const catalogPackages = useAppStore((state) => state.catalogPackages)
   const packageLoading = useAppStore((state) => state.packageLoading)
@@ -83,7 +85,7 @@ export function PackageBrowser(): React.JSX.Element {
       <div className="border-b border-border px-4 py-3">
         <div className="flex items-center gap-2 mb-3">
           <Package size={16} className="text-muted" />
-          <h2 className="text-sm font-medium text-primary">Packages & Skills</h2>
+          <h2 className="text-sm font-medium text-primary">{t('packages.title')}</h2>
         </div>
 
         {/* Tabs */}
@@ -92,20 +94,20 @@ export function PackageBrowser(): React.JSX.Element {
             active={activeTab === 'installed'}
             onClick={() => setActiveTab('installed')}
             icon={<FolderOpen size={12} />}
-            label="Installed"
+            label={t('packages.tabs.installed')}
             count={installedPackages.length}
           />
           <TabButton
             active={activeTab === 'catalog'}
             onClick={() => setActiveTab('catalog')}
             icon={<Store size={12} />}
-            label="Catalog"
+            label={t('packages.tabs.catalog')}
           />
           <TabButton
             active={activeTab === 'skills'}
             onClick={() => setActiveTab('skills')}
             icon={<Puzzle size={12} />}
-            label="Skills"
+            label={t('common.skills')}
             count={installedSkills.length}
           />
         </div>
@@ -131,7 +133,7 @@ export function PackageBrowser(): React.JSX.Element {
             type="button"
             onClick={clearPackageNotification}
             className="shrink-0 rounded p-0.5 opacity-60 hover:opacity-100 transition-opacity"
-            aria-label="Dismiss"
+            aria-label={t('common.dismiss')}
           >
             <X size={13} />
           </button>
@@ -173,6 +175,7 @@ export function PackageBrowser(): React.JSX.Element {
 // Isolated so typing a package spec only re-renders this small component — it
 // never touches the Installed/Catalog/Skills lists. Install runs only on click.
 function InstallBar(): React.JSX.Element {
+  const { t } = useTranslation()
   const installPackage = useAppStore((state) => state.installPackage)
   const [installInput, setInstallInput] = useState('')
   const [installing, setInstalling] = useState(false)
@@ -193,7 +196,7 @@ function InstallBar(): React.JSX.Element {
           type="text"
           value={installInput}
           onChange={(e) => setInstallInput(e.target.value)}
-          placeholder="npm:package-name or git:github.com/user/repo"
+          placeholder={t('packages.installBar.placeholder')}
           className="flex-1 rounded-md border border-border-strong bg-surface px-3 py-1.5 text-sm text-primary placeholder:text-faint focus:border-focus focus:outline-none"
           onKeyDown={(e) => {
             if (e.key === 'Enter') handleInstall()
@@ -206,7 +209,7 @@ function InstallBar(): React.JSX.Element {
           className="flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-sm text-white hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {installing ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-          Install
+          {t('common.install')}
         </button>
       </div>
     </div>
@@ -250,6 +253,14 @@ function TabButton({
 
 // ─── Installed Tab ───────────────────────────────────────────────────────────
 
+const PACKAGE_TYPE_KEYS = {
+  extension: 'packages.type.extension',
+  skill: 'packages.type.skill',
+  prompt: 'packages.type.prompt',
+  theme: 'packages.type.theme',
+  package: 'packages.type.package',
+} as const satisfies Record<InstalledPackage['type'], string>
+
 const InstalledTab = memo(function InstalledTab({
   packages,
   loading,
@@ -260,7 +271,7 @@ const InstalledTab = memo(function InstalledTab({
   onUpdateAll,
   onCheckUpdates,
 }: {
-  packages: Array<{ name: string; source: string; type: string; version: string | null }>
+  packages: InstalledPackage[]
   loading: boolean
   updates: Map<string, PackageUpdate>
   checkingUpdates: boolean
@@ -269,6 +280,8 @@ const InstalledTab = memo(function InstalledTab({
   onUpdateAll: () => void
   onCheckUpdates: () => void
 }): React.JSX.Element {
+  const { t } = useTranslation()
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -281,8 +294,8 @@ const InstalledTab = memo(function InstalledTab({
     return (
       <div className="flex flex-col items-center justify-center py-12 text-dim">
         <Package size={32} className="mb-3 text-faint" />
-        <p className="text-sm">No packages installed</p>
-        <p className="mt-1 text-xs text-faint">Browse the catalog or use the install bar above</p>
+        <p className="text-sm">{t('packages.installed.emptyTitle')}</p>
+        <p className="mt-1 text-xs text-faint">{t('packages.installed.emptyHint')}</p>
       </div>
     )
   }
@@ -295,9 +308,9 @@ const InstalledTab = memo(function InstalledTab({
       <div className="flex items-center justify-between gap-2 pb-1">
         <span className="text-xs text-dim">
           {checkingUpdates
-            ? 'Checking for updates…'
+            ? t('packages.installed.checkingUpdates')
             : outdatedCount > 0
-              ? `${outdatedCount} update${outdatedCount === 1 ? '' : 's'} available`
+              ? t('packages.installed.updatesAvailable', { count: outdatedCount })
               : ''}
         </span>
         <div className="flex items-center gap-1.5">
@@ -306,8 +319,8 @@ const InstalledTab = memo(function InstalledTab({
             onClick={onCheckUpdates}
             disabled={checkingUpdates}
             className="rounded p-1.5 text-dim hover:bg-surface-hover hover:text-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Check for updates"
-            aria-label="Check for updates"
+            title={t('packages.installed.checkUpdatesButton')}
+            aria-label={t('packages.installed.checkUpdatesButton')}
           >
             <RefreshCw size={14} className={clsx(checkingUpdates && 'animate-spin')} />
           </button>
@@ -317,7 +330,7 @@ const InstalledTab = memo(function InstalledTab({
             className="flex items-center gap-1 rounded bg-accent px-2.5 py-1 text-xs text-white hover:bg-accent-hover transition-colors"
           >
             <CircleArrowUp size={12} />
-            Update all
+            {t('packages.installed.updateAllButton')}
           </button>
         </div>
       </div>
@@ -337,11 +350,14 @@ const InstalledTab = memo(function InstalledTab({
                   </span>
                 )}
                 <span className="rounded bg-accent-bg px-1.5 py-0.5 text-[10px] text-accent-fg">
-                  {pkg.type}
+                  {t(PACKAGE_TYPE_KEYS[pkg.type])}
                 </span>
                 {update && (
                   <span className="rounded bg-warning-bg px-1.5 py-0.5 text-[10px] text-warning">
-                    v{update.installedVersion} → v{update.latestVersion}
+                    {t('packages.installed.versionUpdateArrow', {
+                      from: update.installedVersion,
+                      to: update.latestVersion,
+                    })}
                   </span>
                 )}
               </div>
@@ -353,8 +369,8 @@ const InstalledTab = memo(function InstalledTab({
                   type="button"
                   onClick={() => onUpdate(pkg.source)}
                   className="rounded p-1.5 text-dim hover:bg-accent-bg hover:text-accent-fg transition-colors"
-                  title={`Update to v${update.latestVersion}`}
-                  aria-label={`Update ${pkg.name}`}
+                  title={t('packages.installed.updateToVersion', { version: update.latestVersion })}
+                  aria-label={t('packages.installed.updatePackageAria', { name: pkg.name })}
                 >
                   <CircleArrowUp size={14} />
                 </button>
@@ -363,7 +379,7 @@ const InstalledTab = memo(function InstalledTab({
                 type="button"
                 onClick={() => window.piDesktop.system.openExternal(`https://www.npmjs.com/package/${pkg.name}`)}
                 className="rounded p-1.5 text-dim hover:bg-surface-hover hover:text-secondary transition-colors"
-                title="View on npm"
+                title={t('packages.viewOnNpm')}
               >
                 <ExternalLink size={14} />
               </button>
@@ -371,7 +387,7 @@ const InstalledTab = memo(function InstalledTab({
                 type="button"
                 onClick={() => onRemove(pkg.source)}
                 className="rounded p-1.5 text-dim hover:bg-error-bg hover:text-error transition-colors"
-                title="Remove package"
+                title={t('packages.installed.removeButton')}
               >
                 <Trash2 size={14} />
               </button>
@@ -400,6 +416,7 @@ const CatalogTab = memo(function CatalogTab({
   onInstall: (spec: string) => void
   installedNames: Set<string>
 }): React.JSX.Element {
+  const { t } = useTranslation()
   // Search is local state and filtering runs in-renderer against the already
   // loaded catalog — no per-keystroke IPC or loading toggle.
   const [query, setQuery] = useState('')
@@ -416,7 +433,7 @@ const CatalogTab = memo(function CatalogTab({
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search packages..."
+            placeholder={t('packages.catalog.searchPlaceholder')}
             className="w-full rounded-lg border border-border-strong bg-surface py-2 pl-9 pr-4 text-sm text-primary placeholder:text-faint focus:border-focus focus:outline-none"
           />
         </div>
@@ -429,17 +446,20 @@ const CatalogTab = memo(function CatalogTab({
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-dim">
           <Store size={32} className="mb-3 text-faint" />
-          <p className="text-sm">No packages found</p>
+          <p className="text-sm">{t('packages.catalog.emptyTitle')}</p>
           <p className="mt-1 text-xs text-faint">
-            Visit{' '}
-            <button
-              type="button"
-              onClick={() => window.piDesktop.system.openExternal('https://pi.dev/packages')}
-              className="text-accent-fg hover:underline"
-            >
-              pi.dev/packages
-            </button>{' '}
-            to browse
+            <Trans
+              i18nKey="packages.catalog.emptyHint"
+              components={{
+                link: (
+                  <button
+                    type="button"
+                    onClick={() => window.piDesktop.system.openExternal('https://pi.dev/packages')}
+                    className="text-accent-fg hover:underline"
+                  />
+                ),
+              }}
+            />
           </p>
         </div>
       ) : (
@@ -476,7 +496,7 @@ const CatalogTab = memo(function CatalogTab({
                       type="button"
                       onClick={() => window.piDesktop.system.openExternal(pkg.npmUrl!)}
                       className="rounded p-1.5 text-dim hover:bg-surface-hover hover:text-secondary transition-colors"
-                      title="View on npm"
+                      title={t('packages.viewOnNpm')}
                     >
                       <ExternalLink size={13} />
                     </button>
@@ -486,7 +506,7 @@ const CatalogTab = memo(function CatalogTab({
                       type="button"
                       onClick={() => window.piDesktop.system.openExternal(pkg.repoUrl!)}
                       className="rounded p-1.5 text-dim hover:bg-surface-hover hover:text-secondary transition-colors"
-                      title="View repo"
+                      title={t('packages.catalog.viewRepo')}
                     >
                       <ExternalLink size={13} />
                     </button>
@@ -494,7 +514,7 @@ const CatalogTab = memo(function CatalogTab({
                   {installedNames.has(pkg.name) ? (
                     <span className="flex items-center gap-1 rounded bg-success-bg px-2.5 py-1 text-xs text-success">
                       <CheckCircle2 size={12} />
-                      Installed
+                      {t('common.installed')}
                     </span>
                   ) : (
                     <button
@@ -503,7 +523,7 @@ const CatalogTab = memo(function CatalogTab({
                       className="flex items-center gap-1 rounded bg-accent px-2.5 py-1 text-xs text-white hover:bg-accent-hover transition-colors"
                     >
                       <Download size={12} />
-                      Install
+                      {t('common.install')}
                     </button>
                   )}
                 </div>
@@ -512,7 +532,7 @@ const CatalogTab = memo(function CatalogTab({
           ))}
           {filtered.length > shown.length && (
             <div className="py-3 text-center text-xs text-faint">
-              Showing {shown.length} of {filtered.length} — refine your search to narrow results.
+              {t('packages.catalog.resultsCap', { shown: shown.length, total: filtered.length })}
             </div>
           )}
         </div>
@@ -530,18 +550,28 @@ const SKILL_SOURCE_STYLE: Record<InstalledSkill['source'], string> = {
   cli: 'bg-warning-bg text-warning',
 }
 
+// Same enum and English wording as status-popover.tsx's status.scope.* keys.
+const SKILL_SOURCE_KEYS = {
+  global: 'status.scope.global',
+  project: 'status.scope.project',
+  package: 'status.scope.package',
+  cli: 'status.scope.cli',
+} as const satisfies Record<InstalledSkill['source'], string>
+
 const SkillsTab = memo(function SkillsTab({
   skills,
 }: {
   skills: InstalledSkill[]
 }): React.JSX.Element {
+  const { t } = useTranslation()
+
   if (skills.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-dim">
         <Puzzle size={32} className="mb-3 text-faint" />
-        <p className="text-sm">No skills found</p>
+        <p className="text-sm">{t('skills.emptyTitle')}</p>
         <p className="mt-1 text-xs text-faint">
-          Install skill packages or create skills in .pi/skills/
+          {t('skills.emptyHint')}
         </p>
       </div>
     )
@@ -558,13 +588,13 @@ const SkillsTab = memo(function SkillsTab({
             <Puzzle size={14} className="text-special" />
             <span className="text-sm font-medium text-primary">{skill.name}</span>
             <span className={clsx('rounded px-1.5 py-0.5 text-[10px]', SKILL_SOURCE_STYLE[skill.source])}>
-              {skill.source}
+              {t(SKILL_SOURCE_KEYS[skill.source])}
             </span>
           </div>
           <p className="mt-1 text-xs text-dim">{skill.description}</p>
           <div className="mt-2 flex items-center gap-2 text-xs text-faint">
             <span className="truncate">
-              {isRpcSkillPath(skill.path) ? 'Provided by an installed plugin' : skill.path}
+              {isRpcSkillPath(skill.path) ? t('skills.providedByPlugin') : skill.path}
             </span>
           </div>
         </div>

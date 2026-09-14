@@ -69,6 +69,7 @@ import type {
   GitConveyorCommitOptions,
   GitConveyorPullRequestOptions,
   GitConveyorPullRequestResult,
+  I18nEnvironment,
 } from '../shared/ipc-contracts'
 import type { ThemeFile } from '../shared/theme/theme-file'
 import { IPC_CHANNELS } from '../shared/ipc-contracts'
@@ -137,6 +138,11 @@ interface PiDesktopAPI {
   settings: {
     getAll(): Promise<AppSettings>
     save(settings: Partial<AppSettings>): Promise<AppSettings>
+  }
+
+  // Interface language
+  i18n: {
+    getEnvironment(): Promise<I18nEnvironment>
   }
 
   // Permission rules
@@ -403,6 +409,10 @@ const api: PiDesktopAPI = {
   settings: {
     getAll: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GET_ALL),
     save: (settings) => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_SAVE, settings),
+  },
+
+  i18n: {
+    getEnvironment: () => ipcRenderer.invoke(IPC_CHANNELS.I18N_GET_ENVIRONMENT),
   },
 
   permissionRules: {
