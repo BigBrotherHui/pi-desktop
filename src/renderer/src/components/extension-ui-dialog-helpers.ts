@@ -8,8 +8,11 @@
 
 const LINE_BREAK = '\n'
 
-/** Key that hides or shows the pending prompt, mirroring Pi's terminal UI. */
-export const DIALOG_TOGGLE_KEY = 'o'
+/**
+ * Chord that hides or shows the pending prompt, mirroring Pi's terminal UI.
+ * Matched on the physical key: on macOS Option+O reports `key` as a symbol.
+ */
+export const DIALOG_TOGGLE_CODE = 'KeyO'
 export const DIALOG_TOGGLE_LABEL = 'Alt+O'
 
 export interface PromptText {
@@ -29,20 +32,20 @@ export function splitPromptText(text: string): PromptText {
 }
 
 export interface ToggleKeyEvent {
-  key: string
+  code: string
   altKey: boolean
   ctrlKey: boolean
   metaKey: boolean
   shiftKey: boolean
 }
 
-/** True for the bare Alt+O chord (no other modifier), in either letter case. */
+/** True for the bare Alt+O chord (no other modifier) on any keyboard layout. */
 export function isDialogToggleKey(event: ToggleKeyEvent): boolean {
   return (
     event.altKey &&
     !event.ctrlKey &&
     !event.metaKey &&
     !event.shiftKey &&
-    event.key.toLowerCase() === DIALOG_TOGGLE_KEY
+    event.code === DIALOG_TOGGLE_CODE
   )
 }

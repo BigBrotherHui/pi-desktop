@@ -22,7 +22,7 @@ test('surrounding whitespace is trimmed from heading and body', () => {
 })
 
 const chord = (overrides: Partial<ToggleKeyEvent>): ToggleKeyEvent => ({
-  key: 'o',
+  code: 'KeyO',
   altKey: true,
   ctrlKey: false,
   metaKey: false,
@@ -30,9 +30,8 @@ const chord = (overrides: Partial<ToggleKeyEvent>): ToggleKeyEvent => ({
   ...overrides,
 })
 
-test('Alt+O toggles in either letter case', () => {
+test('Alt+O toggles by physical key, so macOS Option+O still works', () => {
   assert.equal(isDialogToggleKey(chord({})), true)
-  assert.equal(isDialogToggleKey(chord({ key: 'O' })), true)
 })
 
 test('other modifiers or keys do not toggle', () => {
@@ -40,5 +39,5 @@ test('other modifiers or keys do not toggle', () => {
   assert.equal(isDialogToggleKey(chord({ ctrlKey: true })), false)
   assert.equal(isDialogToggleKey(chord({ metaKey: true })), false)
   assert.equal(isDialogToggleKey(chord({ shiftKey: true })), false)
-  assert.equal(isDialogToggleKey(chord({ key: 'p' })), false)
+  assert.equal(isDialogToggleKey(chord({ code: 'KeyP' })), false)
 })
