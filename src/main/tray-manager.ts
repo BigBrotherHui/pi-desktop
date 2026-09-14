@@ -1,6 +1,7 @@
-import { Tray, Menu, Notification, nativeImage, type BrowserWindow } from 'electron'
+import { app, Tray, Menu, Notification, nativeImage, type BrowserWindow } from 'electron'
 import { execFile } from 'child_process'
 import { trayIsSupported, parseDbusBoolean } from './tray-decision'
+import { i18n, t } from '../shared/i18n'
 
 // System-tray lifecycle for "minimize to tray on close" (Windows/Linux; macOS
 // is excluded — see tray-decision.ts). Owns the single Tray instance, the
@@ -39,6 +40,9 @@ let warnedNoTray = false
 export function setupTray(injected: TrayDeps): void {
   deps = injected
   hintSeen = injected.hasSeenHint
+  i18n.on('languageChanged', () => {
+    if (tray) applyTrayText(tray)
+  })
 }
 
 function showWindow(): void {
@@ -49,6 +53,18 @@ function showWindow(): void {
   win.focus()
 }
 
+// Tooltip is the product name (not translated); the menu follows the language.
+function applyTrayText(target: Tray): void {
+  target.setToolTip(app.getName())
+  target.setContextMenu(
+    Menu.buildFromTemplate([
+      { label: t('tray.show'), click: () => showWindow() },
+      { type: 'separator' },
+      { label: t('app.quit'), click: () => deps?.quit() },
+    ]),
+  )
+}
+
 /** Create the tray icon. Returns whether it was created (false on failure). */
 function createTray(): boolean {
   if (tray) return true // idempotent
@@ -57,16 +73,10 @@ function createTray(): boolean {
   try {
     const image = nativeImage.createFromPath(deps.iconPath)
     tray = new Tray(image)
-    tray.setToolTip('Pi Desktop')
 
-    const menu = Menu.buildFromTemplate([
-      { label: 'Show Pi Desktop', click: () => showWindow() },
-      { type: 'separator' },
-      { label: 'Quit Pi Desktop', click: () => deps?.quit() },
-    ])
-    // setContextMenu is the primary interface on Linux, where left-click
-    // activation is unreliable across desktop environments.
-    tray.setContextMenu(menu)
+    // setContextMenu (inside applyTrayText) is the primary interface on Linux,
+    // where left-click activation is unreliable across desktop environments.
+    applyTrayText(tray)
     // Windows: a left-click restores the window directly.
     tray.on('click', () => showWindow())
     return true
@@ -132,8 +142,8 @@ function warnNoTrayOnce(): void {
   )
   if (Notification.isSupported()) {
     new Notification({
-      title: 'System tray unavailable',
-      body: 'This desktop has no system tray, so Pi Desktop will close normally instead of minimizing to the tray.',
+      title: t('tray.unavailableTitle'),
+      body: t('tray.unavailableBody'),
       ...(deps?.iconPath ? { icon: deps.iconPath } : {}),
     }).show()
   }
@@ -202,8 +212,8 @@ export function notifyFirstHide(): void {
   deps?.onHintShown()
   if (Notification.isSupported()) {
     new Notification({
-      title: 'Pi Desktop is still running',
-      body: 'The window was hidden to the system tray. Click the tray icon to reopen it, or use Quit to exit.',
+      title: t('tray.stillRunningTitle'),
+      body: t('tray.stillRunningBody'),
       ...(deps?.iconPath ? { icon: deps.iconPath } : {}),
     }).show()
   }

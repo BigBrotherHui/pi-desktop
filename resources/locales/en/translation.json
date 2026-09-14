@@ -1,10 +1,45 @@
 {
+  "app": {
+    "quit": "Quit Pi Desktop"
+  },
   "common": {
     "cancel": "Cancel",
     "delete": "Delete"
   },
+  "editorGuard": {
+    "discard": "Discard unsaved changes?",
+    "discardButton": "Discard changes",
+    "discardFile": "Discard unsaved changes to {{fileName}}?",
+    "keepEditing": "Keep editing",
+    "title": "Unsaved changes"
+  },
   "language": {
     "nativeName": "English"
+  },
+  "menu": {
+    "actualSize": "Actual Size",
+    "close": "Close Window",
+    "copy": "Copy",
+    "cut": "Cut",
+    "edit": "Edit",
+    "file": "File",
+    "forceReload": "Force Reload",
+    "minimize": "Minimize",
+    "newSession": "New Session",
+    "newWorkspace": "New Workspace...",
+    "openProject": "Open Project...",
+    "paste": "Paste",
+    "redo": "Redo",
+    "reload": "Reload",
+    "selectAll": "Select All",
+    "toggleDevTools": "Toggle Developer Tools",
+    "toggleFullScreen": "Toggle Full Screen",
+    "undo": "Undo",
+    "view": "View",
+    "window": "Window",
+    "zoom": "Zoom",
+    "zoomIn": "Zoom In",
+    "zoomOut": "Zoom Out"
   },
   "models": {
     "readFailure": {
@@ -13,6 +48,12 @@
       "missingProviders": "{{file}} is not a valid models config (missing \"providers\")",
       "unreadable": "Could not read {{file}}: {{detail}}"
     }
+  },
+  "notifications": {
+    "completed": "Pi finished working.",
+    "failed": "Pi stopped with an error.",
+    "needs-approval": "Pi is waiting for your approval.",
+    "withSession": "{{body}} Click to open the finished session."
   },
   "settings": {
     "actions": {
@@ -234,5 +275,12 @@
       "summaryNext_one": "created a file",
       "summaryNext_other": "created {{count}} files"
     }
+  },
+  "tray": {
+    "show": "Show Pi Desktop",
+    "stillRunningBody": "The window was hidden to the system tray. Click the tray icon to reopen it, or use Quit to exit.",
+    "stillRunningTitle": "Pi Desktop is still running",
+    "unavailableBody": "This desktop has no system tray, so Pi Desktop will close normally instead of minimizing to the tray.",
+    "unavailableTitle": "System tray unavailable"
   }
 }

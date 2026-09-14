@@ -7,6 +7,7 @@ import { WorkspaceManager } from './workspace-manager'
 import { registerIpcHandlers, loadAppSettings, saveAppSettings } from './ipc-handlers'
 import { setPiExecutableOverride, cleanupPiChildTempDir } from './pi-rpc-manager'
 import { applyLanguageSetting } from './i18n'
+import { i18n, t } from '../shared/i18n'
 import { fetchAllCatalogPackages } from './package-catalog'
 import { activityStatsStore } from './activity-stats'
 import { configureGuiDataDir, getCanonicalUserDataDir, getExternalGuiDataDir, migrateLegacyGuiData } from './app-data-paths'
@@ -86,9 +87,9 @@ async function confirmEditorDiscard(window: BrowserWindow | null): Promise<boole
   if (window && !window.isDestroyed() && !window.isVisible()) window.show()
   const options = {
     type: 'warning' as const,
-    title: 'Unsaved changes',
+    title: t('editorGuard.title'),
     message: editorGuard.promptMessage(),
-    buttons: ['Discard changes', 'Keep editing'],
+    buttons: [t('editorGuard.discardButton'), t('editorGuard.keepEditing')],
     defaultId: 1,
     cancelId: 1,
   }
@@ -314,10 +315,10 @@ function showMainWindow(): void {
 function createApplicationMenu(): void {
   const template: Electron.MenuItemConstructorOptions[] = [
     {
-      label: 'File',
+      label: t('menu.file'),
       submenu: [
         {
-          label: 'New Session',
+          label: t('menu.newSession'),
           accelerator: 'CmdOrCtrl+N',
           click: () => {
             const focusedWindow = BrowserWindow.getFocusedWindow()
@@ -325,7 +326,7 @@ function createApplicationMenu(): void {
           },
         },
         {
-          label: 'New Workspace...',
+          label: t('menu.newWorkspace'),
           accelerator: 'CmdOrCtrl+Shift+N',
           click: () => {
             const focusedWindow = BrowserWindow.getFocusedWindow()
@@ -333,7 +334,7 @@ function createApplicationMenu(): void {
           },
         },
         {
-          label: 'Open Project...',
+          label: t('menu.openProject'),
           accelerator: 'CmdOrCtrl+O',
           click: () => {
             const focusedWindow = BrowserWindow.getFocusedWindow()
@@ -341,49 +342,54 @@ function createApplicationMenu(): void {
           },
         },
         { type: 'separator' },
-        { role: 'quit' },
+        // Role items get explicit labels: Electron's own role labels are English.
+        { role: 'quit', label: t('app.quit') },
       ],
     },
     {
-      label: 'Edit',
+      label: t('menu.edit'),
       submenu: [
-        { role: 'undo' },
-        { role: 'redo' },
+        { role: 'undo', label: t('menu.undo') },
+        { role: 'redo', label: t('menu.redo') },
         { type: 'separator' },
-        { role: 'cut' },
-        { role: 'copy' },
-        { role: 'paste' },
-        { role: 'selectAll' },
+        { role: 'cut', label: t('menu.cut') },
+        { role: 'copy', label: t('menu.copy') },
+        { role: 'paste', label: t('menu.paste') },
+        { role: 'selectAll', label: t('menu.selectAll') },
       ],
     },
     {
-      label: 'View',
+      label: t('menu.view'),
       submenu: [
         // Not the bare roles: a reload destroys the renderer and its unsaved
         // editor buffer, so both run through the same discard guard as
         // close/quit before touching webContents.
         {
-          label: 'Reload',
+          label: t('menu.reload'),
           accelerator: 'CmdOrCtrl+R',
           click: () => void reloadMainWindowWithGuard(false),
         },
         {
-          label: 'Force Reload',
+          label: t('menu.forceReload'),
           accelerator: 'Shift+CmdOrCtrl+R',
           click: () => void reloadMainWindowWithGuard(true),
         },
-        { role: 'toggleDevTools' },
+        { role: 'toggleDevTools', label: t('menu.toggleDevTools') },
         { type: 'separator' },
-        { role: 'resetZoom' },
-        { role: 'zoomIn' },
-        { role: 'zoomOut' },
+        { role: 'resetZoom', label: t('menu.actualSize') },
+        { role: 'zoomIn', label: t('menu.zoomIn') },
+        { role: 'zoomOut', label: t('menu.zoomOut') },
         { type: 'separator' },
-        { role: 'togglefullscreen' },
+        { role: 'togglefullscreen', label: t('menu.toggleFullScreen') },
       ],
     },
     {
-      label: 'Window',
-      submenu: [{ role: 'minimize' }, { role: 'zoom' }, { role: 'close' }],
+      label: t('menu.window'),
+      submenu: [
+        { role: 'minimize', label: t('menu.minimize') },
+        { role: 'zoom', label: t('menu.zoom') },
+        { role: 'close', label: t('menu.close') },
+      ],
     },
   ]
 
@@ -439,8 +445,10 @@ app.whenReady().then(async () => {
     editorGuard.setDirty(dirty === true, typeof fileName === 'string' ? fileName : null)
   })
 
-  // Create application menu
+  // Create the application menu, and build it again in the new language
+  // whenever the language setting changes.
   createApplicationMenu()
+  i18n.on('languageChanged', () => createApplicationMenu())
 
   // Create main window
   createMainWindow()
