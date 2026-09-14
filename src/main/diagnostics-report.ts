@@ -1,6 +1,6 @@
 import type { DiagnosticsProviderInfo, ModelsConfig, ModelsReadFailure, ProviderKeyState } from '../shared/ipc-contracts'
 import { describePiStartFailure, type PiStartFailure } from './pi-binary-resolution'
-import { tEnglish } from '../shared/i18n'
+import { tEnglish, type Translate } from '../shared/i18n'
 
 /**
  * Pure diagnostics-report helpers, Electron-free so they are unit-testable
@@ -61,19 +61,27 @@ export function countPathEntries(pathEnv: string, isWindows: boolean): number {
 
 /**
  * The models-file failure line for the shareable report. The report is always
- * English and is built from the failure code, never from display text. Parse
- * detail is left out: V8's JSON.parse errors quote the source around the bad
- * token, and the YAML parser prints the offending line with a caret — either
- * can include literal apiKey material.
+ * English (ruling R15) and is built from the failure code, never from display
+ * text — rendered with the fixed-English translator using the same keys as
+ * `describeModelsReadFailure`'s interface-language text. Parse detail is left
+ * out: V8's JSON.parse errors quote the source around the bad token, and the
+ * YAML parser prints the offending line with a caret — either can include
+ * literal apiKey material.
  */
-export function reportModelsReadFailure(fileName: string, failure: ModelsReadFailure): string {
+export function reportModelsReadFailure(
+  fileName: string,
+  failure: ModelsReadFailure,
+  t: Translate = tEnglish,
+): string {
   switch (failure.kind) {
     case 'invalid-syntax':
-      return `${fileName} is not valid ${failure.format === 'json' ? 'JSON' : 'YAML'}`
+      return failure.format === 'json'
+        ? t('models.readFailure.invalidJsonNoDetail', { file: fileName })
+        : t('models.readFailure.invalidYamlNoDetail', { file: fileName })
     case 'missing-providers':
-      return `${fileName} is not a valid models config (missing "providers")`
+      return t('models.readFailure.missingProviders', { file: fileName })
     case 'unreadable':
-      return `Could not read ${fileName}: ${failure.detail}`
+      return t('models.readFailure.unreadable', { file: fileName, detail: failure.detail })
   }
 }
 

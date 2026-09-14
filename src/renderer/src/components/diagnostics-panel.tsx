@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { clsx } from 'clsx'
 import { useTranslation } from 'react-i18next'
-import { tEnglish, type Translate } from '../../../shared/i18n'
 import {
   AlertTriangle,
   CheckCircle2,
@@ -10,7 +9,7 @@ import {
   Stethoscope,
   XCircle,
 } from 'lucide-react'
-import type { AppLogEntry, DiagnosticsReport } from '../../../shared/ipc-contracts'
+import type { AppLogEntry, DiagnosticsReport, ProviderKeyState } from '../../../shared/ipc-contracts'
 import { useAppStore } from '../store'
 import { DEFAULT_AGENT_ENGINE_LABEL, agentEngineLabel } from '../../../shared/agent-engine-label'
 import { formatRelativeTime } from '../utils/format-relative-time'
@@ -28,27 +27,22 @@ const TONE_TEXT: Record<Exclude<RowTone, 'plain'>, string> = {
 /** Newest log entries shown in the Recent Errors section. */
 const MAX_VISIBLE_LOG_ENTRIES = 30
 
-// Report content (ruling R15): rendered with the fixed-English translator, not
-// the interface one, so a copy-pasted bug report always reads in English. Each
-// takes `t` as a parameter (never renamed) so the extractor still finds the keys.
-function workspacePathMissingLabel(t: Translate): string {
-  return t('diagnostics.workspacePathMissing')
-}
+// Explicit key map so `i18next-cli` can resolve every literal key (the lookup
+// value has a union type it cannot trace through a template literal).
+const KEY_STATE_LABEL_KEYS = {
+  literal: 'diagnostics.keyState.literal',
+  'env-set': 'diagnostics.keyState.envSet',
+  'env-missing': 'diagnostics.keyState.envMissing',
+  shell: 'diagnostics.keyState.shell',
+  none: 'diagnostics.keyState.none',
+} as const satisfies Record<ProviderKeyState, string>
 
-function workspaceTrustedLabel(t: Translate): string {
-  return t('diagnostics.workspaceTrustedBadge')
-}
-
-function providerModelCountLabel(count: number, t: Translate): string {
-  return t('diagnostics.providerModelCount', { count })
-}
-
-const KEY_STATE_LABELS: Record<string, { label: string; tone: RowTone }> = {
-  literal: { label: 'key configured', tone: 'ok' },
-  'env-set': { label: 'env var set', tone: 'ok' },
-  'env-missing': { label: 'env var missing', tone: 'fail' },
-  shell: { label: 'shell command', tone: 'plain' },
-  none: { label: 'no key', tone: 'plain' },
+const KEY_STATE_TONE: Record<ProviderKeyState, RowTone> = {
+  literal: 'ok',
+  'env-set': 'ok',
+  'env-missing': 'fail',
+  shell: 'plain',
+  none: 'plain',
 }
 
 export function DiagnosticsPanel(): React.JSX.Element {
@@ -141,10 +135,14 @@ export function DiagnosticsPanel(): React.JSX.Element {
               )}
               <DiagRow
                 label={t('diagnostics.fields.binaryFound')}
-                value={report.piBinary.found ? 'yes' : 'no'}
+                value={report.piBinary.found ? t('common.yes') : t('common.no')}
                 tone={report.piBinary.found ? 'ok' : 'fail'}
               />
-              <DiagRow label={t('diagnostics.fields.engineVersion', { agent: engineLabel })} value={report.piVersion ?? 'unknown'} tone={report.piVersion ? 'plain' : 'warn'} />
+              <DiagRow
+                label={t('diagnostics.fields.engineVersion', { agent: engineLabel })}
+                value={report.piVersion ?? t('diagnostics.fields.unknownVersion')}
+                tone={report.piVersion ? 'plain' : 'warn'}
+              />
               <DiagRow label={t('diagnostics.fields.script')} value={report.piBinary.script} mono />
               <DiagRow label={t('diagnostics.fields.resolutionSource')} value={report.piBinary.source} />
               {report.piBinary.useNode && (
@@ -155,7 +153,10 @@ export function DiagnosticsPanel(): React.JSX.Element {
                   tone={report.piBinary.nodeFound ? 'plain' : 'fail'}
                 />
               )}
-              <DiagRow label={t('diagnostics.fields.needsShell')} value={report.piBinary.needsShell ? 'yes' : 'no'} />
+              <DiagRow
+                label={t('diagnostics.fields.needsShell')}
+                value={report.piBinary.needsShell ? t('common.yes') : t('common.no')}
+              />
               <DiagRow label={t('diagnostics.fields.pathEntriesSearched')} value={String(report.piBinary.pathEntryCount)} />
             </DiagSection>
 
@@ -170,8 +171,8 @@ export function DiagnosticsPanel(): React.JSX.Element {
                     <span className="min-w-0 flex-1 truncate font-mono text-faint" title={ws.path}>
                       {ws.path}
                     </span>
-                    {!ws.pathExists && <span className="shrink-0 text-error">{workspacePathMissingLabel(tEnglish)}</span>}
-                    {ws.trusted && <span className="shrink-0 text-success">{workspaceTrustedLabel(tEnglish)}</span>}
+                    {!ws.pathExists && <span className="shrink-0 text-error">{t('diagnostics.workspacePathMissing')}</span>}
+                    {ws.trusted && <span className="shrink-0 text-success">{t('diagnostics.workspaceTrustedBadge')}</span>}
                     <span className="shrink-0 text-muted">{ws.piStatus}</span>
                   </div>
                 ))
@@ -188,22 +189,22 @@ export function DiagnosticsPanel(): React.JSX.Element {
                 <p className="text-xs text-dim">{t('diagnostics.noCustomProviders')}</p>
               ) : (
                 report.providers.map((provider) => {
-                  const keyInfo = KEY_STATE_LABELS[provider.keyState] ?? { label: provider.keyState, tone: 'plain' as RowTone }
+                  const keyTone = KEY_STATE_TONE[provider.keyState]
                   return (
                     <div key={provider.name} className="flex items-center gap-2 py-1 text-xs">
-                      <StatusGlyph tone={keyInfo.tone === 'plain' ? 'ok' : keyInfo.tone} />
+                      <StatusGlyph tone={keyTone === 'plain' ? 'ok' : keyTone} />
                       <span className="shrink-0 text-secondary">{provider.name}</span>
                       <span className="shrink-0 text-faint">
-                        {providerModelCountLabel(provider.modelCount, tEnglish)}
+                        {t('diagnostics.providerModelCount', { count: provider.modelCount })}
                       </span>
                       <span
                         className={clsx(
                           'min-w-0 flex-1 truncate text-right',
-                          keyInfo.tone === 'plain' ? 'text-muted' : TONE_TEXT[keyInfo.tone]
+                          keyTone === 'plain' ? 'text-muted' : TONE_TEXT[keyTone]
                         )}
                         title={provider.envVar ? `$${provider.envVar}` : undefined}
                       >
-                        {keyInfo.label}
+                        {t(KEY_STATE_LABEL_KEYS[provider.keyState])}
                         {provider.envVar ? ` ($${provider.envVar})` : ''}
                       </span>
                     </div>
@@ -218,7 +219,9 @@ export function DiagnosticsPanel(): React.JSX.Element {
                 label={t('diagnostics.fields.globalRules')}
                 value={
                   report.permissions.globalRuleCount === null
-                    ? `invalid file: ${report.permissions.globalRulesError ?? 'unknown error'}`
+                    ? t('diagnostics.fields.globalRulesInvalid', {
+                        error: report.permissions.globalRulesError ?? t('diagnostics.fields.unknownError'),
+                      })
                     : String(report.permissions.globalRuleCount)
                 }
                 tone={report.permissions.globalRuleCount === null ? 'fail' : 'plain'}
@@ -226,15 +229,21 @@ export function DiagnosticsPanel(): React.JSX.Element {
               <DiagRow
                 label={t('diagnostics.fields.workspaceRules')}
                 value={
-                  report.permissions.workspace.hasWorkspaceRules
-                    ? `present${report.permissions.workspace.hasAllowRules ? ', has allow rules' : ''}`
-                    : 'none'
+                  !report.permissions.workspace.hasWorkspaceRules
+                    ? t('diagnostics.fields.workspaceRulesNone')
+                    : report.permissions.workspace.hasAllowRules
+                      ? t('diagnostics.fields.workspaceRulesPresentWithAllowRules')
+                      : t('diagnostics.fields.workspaceRulesPresent')
                 }
               />
               {report.permissions.workspace.workspacePath && (
                 <DiagRow
                   label={t('diagnostics.fields.workspaceTrust')}
-                  value={report.permissions.workspace.trusted ? 'trusted' : 'not trusted'}
+                  value={
+                    report.permissions.workspace.trusted
+                      ? t('diagnostics.workspaceTrustedBadge')
+                      : t('diagnostics.workspaceNotTrustedBadge')
+                  }
                   tone={
                     report.permissions.workspace.hasAllowRules && !report.permissions.workspace.trusted
                       ? 'warn'

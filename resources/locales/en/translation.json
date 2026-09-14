@@ -189,6 +189,7 @@
     "moreCount_one": "+{{count}} more",
     "moreCount_other": "+{{count}} more",
     "newSession": "New Session",
+    "no": "no",
     "noWorkingTreeChanges": "No working tree changes.",
     "paste": "Paste",
     "project": "Project",
@@ -203,7 +204,8 @@
     "skills": "Skills",
     "submit": "Submit",
     "thinking": "Thinking",
-    "workflowRuns": "Workflow runs"
+    "workflowRuns": "Workflow runs",
+    "yes": "yes"
   },
   "composer": {
     "permissionMenu": {
@@ -344,6 +346,7 @@
       "electron": "Electron",
       "engineVersion": "{{agent}} version",
       "globalRules": "Global rules",
+      "globalRulesInvalid": "invalid file: {{error}}",
       "guiDataDir": "GUI data dir",
       "mode": "Mode",
       "needsShell": "Needs shell",
@@ -356,8 +359,20 @@
       "script": "Script",
       "sessionsRoot": "Sessions root",
       "settingsFile": "Settings file",
+      "unknownError": "unknown error",
+      "unknownVersion": "unknown",
       "workspaceRules": "Workspace rules",
+      "workspaceRulesNone": "none",
+      "workspaceRulesPresent": "present",
+      "workspaceRulesPresentWithAllowRules": "present, has allow rules",
       "workspaceTrust": "Workspace trust"
+    },
+    "keyState": {
+      "envMissing": "env var missing",
+      "envSet": "env var set",
+      "literal": "key configured",
+      "none": "no key",
+      "shell": "shell command"
     },
     "loadErrorTitle": "Couldn't build the report",
     "noCustomProviders": "No custom providers configured (models.json).",
@@ -376,6 +391,7 @@
       "workspaces": "Workspaces"
     },
     "title": "Diagnostics",
+    "workspaceNotTrustedBadge": "not trusted",
     "workspacePathMissing": "missing",
     "workspaceTrustedBadge": "trusted"
   },
@@ -697,7 +713,9 @@
   "models": {
     "readFailure": {
       "invalidJson": "{{file}} is not valid JSON: {{detail}}",
+      "invalidJsonNoDetail": "{{file}} is not valid JSON",
       "invalidYaml": "{{file}} is not valid YAML: {{detail}}",
+      "invalidYamlNoDetail": "{{file}} is not valid YAML",
       "missingProviders": "{{file}} is not a valid models config (missing \"providers\")",
       "unreadable": "Could not read {{file}}: {{detail}}"
     },
