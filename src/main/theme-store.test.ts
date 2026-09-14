@@ -30,6 +30,15 @@ test('save + list round-trip', async () => {
   assert.deepEqual(themes.map((t) => t.id), ['my-theme'])
 })
 
+test('an unreadable themes directory yields a warning instead of a rejection', async () => {
+  const blocker = join(await freshDir(), 'themes')
+  await writeFile(blocker, 'not a directory')
+  const { themes, warnings } = await listUserThemes(blocker)
+  assert.deepEqual(themes, [])
+  assert.equal(warnings.length, 1)
+  assert.match(warnings[0], /themes/)
+})
+
 test('name collision gets numeric suffix', async () => {
   const dir = await freshDir()
   await saveUserTheme(dir, theme('Dup'))

@@ -17,11 +17,21 @@ export interface UserThemeList {
   warnings: string[]
 }
 
+/** Theme file names in `dir`, or a warning when the directory cannot be read. */
+async function readThemeEntries(dir: string): Promise<{ entries: string[]; warning: string | null }> {
+  try {
+    await mkdir(dir, { recursive: true })
+    return { entries: (await readdir(dir)).filter((f) => f.endsWith(THEME_FILE_EXT)).sort(), warning: null }
+  } catch (error) {
+    return { entries: [], warning: `${dir}: ${error instanceof Error ? error.message : String(error)}` }
+  }
+}
+
 export async function listUserThemes(dir: string): Promise<UserThemeList> {
-  await mkdir(dir, { recursive: true })
   const themes: UserThemeList['themes'] = []
-  const warnings: string[] = []
-  for (const entry of (await readdir(dir)).filter((f) => f.endsWith(THEME_FILE_EXT)).sort()) {
+  const { entries, warning } = await readThemeEntries(dir)
+  const warnings: string[] = warning ? [warning] : []
+  for (const entry of entries) {
     const id = entry.slice(0, -THEME_FILE_EXT.length)
     try {
       // These warnings only ever reach console.warn (renderer store.ts), never

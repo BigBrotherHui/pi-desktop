@@ -1890,11 +1890,17 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
       const settings = await window.piDesktop.settings.getAll()
       set({ settings })
 
-      const { themes, warnings } = await window.piDesktop.themes.list()
-      for (const warning of warnings) {
-        console.warn(warning)
+      // User themes are optional: when the list fails, the built-in themes,
+      // font size, and language below must still apply.
+      try {
+        const { themes, warnings } = await window.piDesktop.themes.list()
+        for (const warning of warnings) {
+          console.warn(warning)
+        }
+        setUserThemes(themes)
+      } catch (error) {
+        console.warn('[settings] user themes unavailable', error)
       }
-      setUserThemes(themes)
 
       applyThemeSettings(settings)
       rememberBootTheme(settings)
