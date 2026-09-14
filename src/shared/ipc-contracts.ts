@@ -1510,9 +1510,13 @@ export interface DiffFile {
 
 // ─── Timeline Event Types ───────────────────────────────────────────────────
 
+export type TimelineEventKind = 'agent-run'
+
 export interface TimelineEvent {
   id: string
   type: 'user_message' | 'assistant_message' | 'tool_start' | 'tool_end' | 'thinking' | 'compaction' | 'retry' | 'queue' | 'system' | 'error'
+  /** Stable identity for events that logic pairs up; `title` is display text. */
+  kind?: TimelineEventKind
   timestamp: number
   duration?: number
   title: string

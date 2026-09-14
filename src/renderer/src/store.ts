@@ -2057,6 +2057,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
         get().addTimelineEvent({
           id: generateId(),
           type: 'system',
+          kind: 'agent-run',
           timestamp: Date.now(),
           title: 'Agent started processing',
           status: 'running',
@@ -2066,12 +2067,10 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
       case 'agent_end':
         set((state) => ({
           isStreaming: false,
-          // Close out the matching 'Agent started processing' entry so its
-          // spinner stops. Without this, the run-state indicator on the
-          // start entry persists forever even after the agent completes.
-          timelineEvents: closeMostRecentRunning(state.timelineEvents, (e) =>
-            e.type === 'system' && e.title === 'Agent started processing'
-          , 'success'),
+          // Close out the matching agent-run entry so its spinner stops.
+          // Without this, the run-state indicator on the start entry
+          // persists forever even after the agent completes.
+          timelineEvents: closeMostRecentRunning(state.timelineEvents, (e) => e.kind === 'agent-run', 'success'),
         }))
         get().refreshSessionStats()
         get().addTimelineEvent({
