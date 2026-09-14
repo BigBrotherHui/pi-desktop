@@ -29,6 +29,30 @@ const PLACEHOLDER_TEMPLATES: PermissionPromptText = {
   command: '{{command}}',
 }
 
+// Shared by fillTemplate and the placeholder check below. Never call .test()
+// or .exec() on this: a global regex keeps `lastIndex` state between calls.
+// matchAll and replace() both reset it internally, so those stay safe.
+const PLACEHOLDER_PATTERN = /\{\{(\w+)\}\}/g
+
+function placeholderNames(template: string): Set<string> {
+  return new Set(Array.from(template.matchAll(PLACEHOLDER_PATTERN), (match) => match[1]))
+}
+
+// Every placeholder the English template for a key uses is required in any
+// translation of that key, so a translation can never drop or misspell a
+// value the user must see to decide (e.g. the command being run).
+const REQUIRED_PLACEHOLDERS = Object.fromEntries(
+  PERMISSION_PROMPT_KEYS.map((key) => [key, placeholderNames(PLACEHOLDER_TEMPLATES[key])])
+) as Record<PermissionPromptKey, Set<string>>
+
+function hasRequiredPlaceholders(key: PermissionPromptKey, value: string): boolean {
+  const found = placeholderNames(value)
+  for (const name of REQUIRED_PLACEHOLDERS[key]) {
+    if (!found.has(name)) return false
+  }
+  return true
+}
+
 function readPromptSection(localesDir: string, language: string): Partial<PermissionPromptText> {
   if (!LANGUAGE_CODE.test(language)) return {}
   try {
@@ -38,7 +62,7 @@ function readPromptSection(localesDir: string, language: string): Partial<Permis
     const text: Partial<PermissionPromptText> = {}
     for (const key of PERMISSION_PROMPT_KEYS) {
       const value = (section as Record<string, unknown>)[key]
-      if (typeof value === 'string' && value !== '') text[key] = value
+      if (typeof value === 'string' && value !== '' && hasRequiredPlaceholders(key, value)) text[key] = value
     }
     return text
   } catch {
@@ -56,5 +80,5 @@ export function loadPermissionPromptText(localesDir: string | null, language: st
 
 /** Fill {{name}} placeholders. A function replacer keeps `$&` in values literal. */
 export function fillTemplate(template: string, values: Readonly<Record<string, string>>): string {
-  return template.replace(/\{\{(\w+)\}\}/g, (match, name: string) => values[name] ?? match)
+  return template.replace(PLACEHOLDER_PATTERN, (match, name: string) => values[name] ?? match)
 }
