@@ -55,6 +55,14 @@
     "needs-approval": "Pi is waiting for your approval.",
     "withSession": "{{body}} Click to open the finished session."
   },
+  "permissions": {
+    "prompt": {
+      "body": "{{agent}} wants to run the {{tool}} tool.",
+      "command": "Command:\n{{command}}",
+      "target": "Target: {{path}}",
+      "title": "Allow {{tool}}?"
+    }
+  },
   "settings": {
     "actions": {
       "reset": "Reset to Defaults",

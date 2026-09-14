@@ -17,6 +17,8 @@
     "./src/themes/*.json",
     "../../resources/permission-rules.ts",
     "../../resources/permission-rules.test.ts",
+    "../../resources/permission-prompt-text.ts",
+    "../../resources/permission-prompt-text.test.ts",
     "../../resources/locales/*/translation.json"
   ]
 }
