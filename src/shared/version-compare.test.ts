@@ -23,3 +23,11 @@ test('isNewerVersion pads a short core with zeros', () => {
   assert.equal(isNewerVersion('1.1', '1.0.9'), true)
   assert.equal(isNewerVersion('1', '1.0.0'), false)
 })
+
+test('isNewerVersion compares numeric prerelease identifiers as numbers', () => {
+  assert.equal(isNewerVersion('2.0.0-next.12', '2.0.0-next.9'), true)
+  assert.equal(isNewerVersion('1.0.0-beta.10', '1.0.0-beta.9'), true)
+  assert.equal(isNewerVersion('1.0.0-beta.9', '1.0.0-beta.10'), false)
+  assert.equal(isNewerVersion('1.0.0-beta.2', '1.0.0-beta'), true)
+  assert.equal(isNewerVersion('1.0.0-alpha.1', '1.0.0-1'), true)
+})
