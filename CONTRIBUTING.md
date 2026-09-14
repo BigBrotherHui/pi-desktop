@@ -140,6 +140,22 @@ Conventions, not enforced by ESLint (the lint step checks the recommended rule s
 - Trailing commas in multi-line
 - Max line length: 120 characters
 
+## Translations
+
+Interface text lives in `resources/locales/<code>/translation.json`. English (`en`) is the source.
+
+To add a language:
+
+1. Copy `resources/locales/en/translation.json` to `resources/locales/<code>/translation.json`. Use a BCP 47 code such as `de`, `pt-BR`, or `zh-Hans`.
+2. Translate the values. Do not change keys, `{{placeholders}}`, `<tags>`, or the product names Pi Desktop, Pi, and OMP. Leave a value empty if you are not sure; the app shows English for it.
+3. Set `language.nativeName` to the language's own name, for example `Deutsch`.
+4. Add the file to `src/shared/i18n/resources.ts` (one import and one entry).
+5. Run `npm run lint` and the unit tests, then open a pull request. The CLA applies to translations.
+
+To try a language, pick it in Settings > Appearance > Language.
+
+When you add interface text in code, use a key with `t()` and run `npx i18next-cli extract` to add the key to every language file. Then write the English text in `resources/locales/en/translation.json`.
+
 ## Testing
 
 Before submitting a pull request:
