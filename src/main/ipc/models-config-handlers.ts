@@ -1,9 +1,10 @@
 import { ipcMain } from 'electron'
-import type { AgentEngineKind, ModelsFileInfo, ModelsReadResult } from '../../shared/ipc-contracts'
+import type { AgentEngineKind, ModelsFileInfo, ModelsReadFailure, ModelsReadResult } from '../../shared/ipc-contracts'
 import { IPC_CHANNELS } from '../../shared/ipc-contracts'
 import { readFile, writeFile, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import {
+  describeModelsReadFailure,
   isModelsConfig,
   parseModelsFile,
   resolveModelsFile,
@@ -22,6 +23,15 @@ function fileInfo(engine: AgentEngineKind, location: ModelsFileLocation): Models
   return { engine, file: location.file, name: location.name }
 }
 
+function failed(
+  location: ModelsFileLocation,
+  info: ModelsFileInfo,
+  failure: ModelsReadFailure,
+  raw: string,
+): ModelsReadResult {
+  return { error: describeModelsReadFailure(location.name, failure), failure, raw, location: info }
+}
+
 export async function readModelsConfigFile(engine: AgentEngineKind): Promise<ModelsReadResult> {
   const location = modelsFileLocation(engine)
   const info = fileInfo(engine, location)
@@ -30,25 +40,20 @@ export async function readModelsConfigFile(engine: AgentEngineKind): Promise<Mod
   try {
     raw = await readFile(location.file, 'utf-8')
   } catch (err) {
-    return {
-      error: `Could not read ${location.name}: ${err instanceof Error ? err.message : String(err)}`,
-      raw: '',
-      location: info,
-    }
+    return failed(location, info, { kind: 'unreadable', detail: err instanceof Error ? err.message : String(err) }, '')
   }
   try {
     const parsed = parseModelsFile(raw, location.format)
     if (!isModelsConfig(parsed)) {
-      return { error: `${location.name} is not a valid models config (missing "providers")`, raw, location: info }
+      return failed(location, info, { kind: 'missing-providers' }, raw)
     }
     return { config: parsed, location: info }
   } catch (err) {
-    const syntax = location.format === 'json' ? 'JSON' : 'YAML'
-    return {
-      error: `${location.name} is not valid ${syntax}: ${err instanceof Error ? err.message : String(err)}`,
-      raw,
-      location: info,
-    }
+    return failed(location, info, {
+      kind: 'invalid-syntax',
+      format: location.format,
+      detail: err instanceof Error ? err.message : String(err),
+    }, raw)
   }
 }
 

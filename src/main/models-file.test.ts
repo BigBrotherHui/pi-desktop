@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import {
+  describeModelsReadFailure,
   isModelsConfig,
   parseModelsFile,
   resolveModelsFile,
@@ -95,4 +96,19 @@ test('parseModelsFile treats an empty YAML document as an empty config', () => {
   assert.equal(isModelsConfig(parseModelsFile('providers:\n', 'yaml')), true)
   // JSON keeps strict semantics: an empty file is still malformed.
   assert.throws(() => parseModelsFile('', 'json'))
+})
+
+test('describeModelsReadFailure keeps the current English messages', () => {
+  assert.equal(
+    describeModelsReadFailure('models.json', { kind: 'invalid-syntax', format: 'json', detail: 'bad token' }),
+    'models.json is not valid JSON: bad token',
+  )
+  assert.equal(
+    describeModelsReadFailure('models.yml', { kind: 'missing-providers' }),
+    'models.yml is not a valid models config (missing "providers")',
+  )
+  assert.equal(
+    describeModelsReadFailure('models.json', { kind: 'unreadable', detail: 'EACCES' }),
+    'Could not read models.json: EACCES',
+  )
 })

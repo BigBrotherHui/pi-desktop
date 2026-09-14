@@ -4,7 +4,7 @@ import {
   classifyProviderKey,
   countPathEntries,
   extractVersionLine,
-  sanitizeProvidersError,
+  reportModelsReadFailure,
   summarizeProviders,
 } from './diagnostics-report'
 import type { ModelsConfig } from '../shared/ipc-contracts'
@@ -53,29 +53,47 @@ test('extractVersionLine takes the first non-empty line', () => {
   assert.equal(extractVersionLine(''), null)
 })
 
-test('sanitizeProvidersError withholds JSON.parse detail that can quote file content', () => {
+test('reportModelsReadFailure withholds parse detail that can quote file content', () => {
   assert.equal(
-    sanitizeProvidersError('models.json is not valid JSON: Unexpected token s, ..."apiKey": sk-live-ab"...'),
+    reportModelsReadFailure('models.json', {
+      kind: 'invalid-syntax',
+      format: 'json',
+      detail: 'Unexpected token s, ..."apiKey": sk-live-ab"...',
+    }),
     'models.json is not valid JSON',
   )
   assert.equal(
-    sanitizeProvidersError('models.json is not a valid models config (missing "providers")'),
+    reportModelsReadFailure('models.yml', {
+      kind: 'invalid-syntax',
+      format: 'yaml',
+      detail: 'Nested mappings are not allowed at line 3:\n\n    apiKey: sk-live-abcdef: oops\n            ^',
+    }),
+    'models.yml is not valid YAML',
+  )
+})
+
+test('reportModelsReadFailure keeps safe detail', () => {
+  assert.equal(
+    reportModelsReadFailure('models.json', { kind: 'missing-providers' }),
     'models.json is not a valid models config (missing "providers")',
   )
   assert.equal(
-    sanitizeProvidersError('Could not read models.json: EACCES: permission denied'),
+    reportModelsReadFailure('models.json', { kind: 'unreadable', detail: 'EACCES: permission denied' }),
     'Could not read models.json: EACCES: permission denied',
   )
 })
 
-test('sanitizeProvidersError withholds YAML parse detail that prints the source line', () => {
-  assert.equal(
-    sanitizeProvidersError(
-      'models.yml is not valid YAML: Nested mappings are not allowed at line 3:\n\n    apiKey: sk-live-abcdef: oops\n            ^'
-    ),
-    'models.yml is not valid YAML',
-  )
-  assert.equal(sanitizeProvidersError('models.yaml is not valid YAML: bad'), 'models.yaml is not valid YAML')
+test('reportModelsReadFailure does not depend on the interface language', async () => {
+  const { i18n } = await import('../shared/i18n')
+  await i18n.changeLanguage('en-XA')
+  try {
+    assert.equal(
+      reportModelsReadFailure('models.json', { kind: 'invalid-syntax', format: 'json', detail: 'apiKey: sk-live' }),
+      'models.json is not valid JSON',
+    )
+  } finally {
+    await i18n.changeLanguage('en')
+  }
 })
 
 test('countPathEntries splits on the platform delimiter and drops blanks', () => {

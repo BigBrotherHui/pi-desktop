@@ -1,4 +1,4 @@
-import type { DiagnosticsProviderInfo, ModelsConfig, ProviderKeyState } from '../shared/ipc-contracts'
+import type { DiagnosticsProviderInfo, ModelsConfig, ModelsReadFailure, ProviderKeyState } from '../shared/ipc-contracts'
 
 /**
  * Pure diagnostics-report helpers, Electron-free so they are unit-testable
@@ -58,14 +58,19 @@ export function countPathEntries(pathEnv: string, isWindows: boolean): number {
 }
 
 /**
- * Keep models-file failure text out of the shareable report when it may embed
- * file content: V8's JSON.parse errors quote the source around the bad token,
- * and the YAML parser prints the offending line with a caret — either can
- * include literal apiKey material.
+ * The models-file failure line for the shareable report. The report is always
+ * English and is built from the failure code, never from display text. Parse
+ * detail is left out: V8's JSON.parse errors quote the source around the bad
+ * token, and the YAML parser prints the offending line with a caret — either
+ * can include literal apiKey material.
  */
-const MODELS_PARSE_ERROR_PREFIX = /^(models\.(?:json|ya?ml)) is not valid (JSON|YAML)/
-
-export function sanitizeProvidersError(error: string): string {
-  const match = error.match(MODELS_PARSE_ERROR_PREFIX)
-  return match ? `${match[1]} is not valid ${match[2]}` : error
+export function reportModelsReadFailure(fileName: string, failure: ModelsReadFailure): string {
+  switch (failure.kind) {
+    case 'invalid-syntax':
+      return `${fileName} is not valid ${failure.format === 'json' ? 'JSON' : 'YAML'}`
+    case 'missing-providers':
+      return `${fileName} is not a valid models config (missing "providers")`
+    case 'unreadable':
+      return `Could not read ${fileName}: ${failure.detail}`
+  }
 }

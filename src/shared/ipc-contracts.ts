@@ -960,9 +960,15 @@ export interface ModelsFileInfo {
   name: string
 }
 
+/** Why the models file could not be used. Display text is built from this. */
+export type ModelsReadFailure =
+  | { kind: 'unreadable'; detail: string }
+  | { kind: 'invalid-syntax'; format: 'json' | 'yaml'; detail: string }
+  | { kind: 'missing-providers' }
+
 export type ModelsReadResult =
   | { config: ModelsConfigType; location: ModelsFileInfo }
-  | { error: string; raw: string; location: ModelsFileInfo }
+  | { error: string; failure: ModelsReadFailure; raw: string; location: ModelsFileInfo }
 
 // ─── Agent Message Types ────────────────────────────────────────────────────
 

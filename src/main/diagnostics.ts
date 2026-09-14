@@ -5,7 +5,7 @@ import type { DiagnosticsReport, DiagnosticsWorkspaceInfo } from '../shared/ipc-
 import {
   countPathEntries,
   extractVersionLine,
-  sanitizeProvidersError,
+  reportModelsReadFailure,
   summarizeProviders,
 } from './diagnostics-report'
 import type { WorkspaceManager } from './workspace-manager'
@@ -63,7 +63,7 @@ export async function collectDiagnostics(
 
   const modelsRead = await readModelsConfigFile(getConfiguredEngineKind())
   const providers = 'config' in modelsRead ? summarizeProviders(modelsRead.config, process.env) : null
-  const providersError = 'error' in modelsRead ? sanitizeProvidersError(modelsRead.error) : null
+  const providersError = 'failure' in modelsRead ? reportModelsReadFailure(modelsRead.location.name, modelsRead.failure) : null
 
   const globalRules = await readGlobalRuleCount()
   const sessionsRoot = getConfiguredEngineKind() === 'omp' ? getOmpSessionsRoot() : getSessionsRoot()

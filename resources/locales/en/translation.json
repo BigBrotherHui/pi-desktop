@@ -6,6 +6,14 @@
   "language": {
     "nativeName": "English"
   },
+  "models": {
+    "readFailure": {
+      "invalidJson": "{{file}} is not valid JSON: {{detail}}",
+      "invalidYaml": "{{file}} is not valid YAML: {{detail}}",
+      "missingProviders": "{{file}} is not a valid models config (missing \"providers\")",
+      "unreadable": "Could not read {{file}}: {{detail}}"
+    }
+  },
   "settings": {
     "actions": {
       "reset": "Reset to Defaults",

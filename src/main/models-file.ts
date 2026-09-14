@@ -1,7 +1,8 @@
 import { join } from 'path'
 import { existsSync } from 'fs'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
-import type { AgentEngineKind, ModelsConfig } from '../shared/ipc-contracts'
+import { t } from '../shared/i18n'
+import type { AgentEngineKind, ModelsConfig, ModelsReadFailure } from '../shared/ipc-contracts'
 
 /**
  * Per-engine custom-models file resolution and (de)serialization.
@@ -71,4 +72,18 @@ export function isModelsConfig(value: unknown): value is ModelsConfig {
   if (typeof value !== 'object' || value === null) return false
   const providers = (value as { providers?: unknown }).providers
   return typeof providers === 'object' && providers !== null && !Array.isArray(providers)
+}
+
+/** The message the Custom Models editor shows, in the interface language. */
+export function describeModelsReadFailure(fileName: string, failure: ModelsReadFailure): string {
+  switch (failure.kind) {
+    case 'unreadable':
+      return t('models.readFailure.unreadable', { file: fileName, detail: failure.detail })
+    case 'invalid-syntax':
+      return failure.format === 'json'
+        ? t('models.readFailure.invalidJson', { file: fileName, detail: failure.detail })
+        : t('models.readFailure.invalidYaml', { file: fileName, detail: failure.detail })
+    case 'missing-providers':
+      return t('models.readFailure.missingProviders', { file: fileName })
+  }
 }
