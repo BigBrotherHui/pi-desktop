@@ -48,10 +48,17 @@ export function applyBootLanguage(): void {
 
 /** The OS language list and pseudo switch from main, fetched once per window. */
 export function loadI18nEnvironment(): Promise<I18nEnvironment> {
-  environmentRequest ??= window.piDesktop.i18n.getEnvironment().then((loaded) => {
-    environment = loaded
-    return loaded
-  })
+  environmentRequest ??= window.piDesktop.i18n.getEnvironment().then(
+    (loaded) => {
+      environment = loaded
+      return loaded
+    },
+    (error: unknown) => {
+      // A failed request must not stick: the next settings load retries it.
+      environmentRequest = null
+      throw error
+    },
+  )
   return environmentRequest
 }
 

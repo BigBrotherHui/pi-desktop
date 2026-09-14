@@ -1,7 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { bootLanguageFrom, languagePickerOptions } from './i18n'
+import { bootLanguageFrom, languagePickerOptions, loadedI18nEnvironment, loadI18nEnvironment } from './i18n'
 import { PSEUDO_LANGUAGE, SOURCE_LANGUAGE, SYSTEM_LANGUAGE } from '../../shared/i18n/languages'
+
+const ENVIRONMENT_LOAD_FAILURE = new Error('environment load failed')
+const RETRIED_ENVIRONMENT = { systemLanguages: [], pseudoLanguageEnabled: false }
 
 test('bootLanguageFrom accepts a stored available code', () => {
   assert.equal(bootLanguageFrom(SOURCE_LANGUAGE), SOURCE_LANGUAGE)
@@ -26,4 +29,26 @@ test('the picker offers the pseudo-language only when enabled', () => {
   assert.ok(values.includes(PSEUDO_LANGUAGE))
   const plain = languagePickerOptions({ systemLanguages: [], pseudoLanguageEnabled: false }).map((o) => o.value)
   assert.ok(!plain.includes(PSEUDO_LANGUAGE))
+})
+
+test('loadI18nEnvironment retries after a failed request instead of caching the rejection', async () => {
+  let callCount = 0
+  const originalWindow = (globalThis as { window?: unknown }).window
+  ;(globalThis as { window: unknown }).window = {
+    piDesktop: {
+      i18n: {
+        getEnvironment: () => {
+          callCount += 1
+          return callCount === 1 ? Promise.reject(ENVIRONMENT_LOAD_FAILURE) : Promise.resolve(RETRIED_ENVIRONMENT)
+        },
+      },
+    },
+  }
+  try {
+    await assert.rejects(loadI18nEnvironment(), ENVIRONMENT_LOAD_FAILURE)
+    assert.deepEqual(await loadI18nEnvironment(), RETRIED_ENVIRONMENT)
+    assert.deepEqual(loadedI18nEnvironment(), RETRIED_ENVIRONMENT)
+  } finally {
+    ;(globalThis as { window?: unknown }).window = originalWindow
+  }
 })
