@@ -1,11 +1,7 @@
 {
   "common": {
     "cancel": "Cancel",
-    "claude": "Claude",
-    "codex": "Codex",
-    "delete": "Delete",
-    "omp": "OMP",
-    "pi": "Pi"
+    "delete": "Delete"
   },
   "language": {
     "nativeName": "English"
@@ -109,7 +105,8 @@
       "removeWorkspaceConfirmLabel": "Remove",
       "removeWorkspaceConfirmMessage": "Delete this workspace's .pi-desktop/permission-rules.json? Global permission rules will apply again.",
       "removeWorkspaceConfirmTitle": "Remove workspace rules",
-      "saveError": "Settings saved, but {{scope}} permission rules were not saved: {{error}}",
+      "saveError_global": "Settings saved, but global permission rules were not saved: {{error}}",
+      "saveError_workspace": "Settings saved, but workspace permission rules were not saved: {{error}}",
       "scopeTabListAriaLabel": "Permission rules scope",
       "workspaceScopeTab": "This workspace"
     },

@@ -43,6 +43,7 @@ import {
   MIN_TIMEOUT_SECONDS as COUNCIL_MIN_TIMEOUT,
   MAX_TIMEOUT_SECONDS as COUNCIL_MAX_TIMEOUT,
   clampTimeoutSeconds as clampCouncilTimeout,
+  councilAgentLabel,
 } from '../../../shared/council-config'
 
 // Empty `match` from the input means "no pattern" and must not be persisted
@@ -582,7 +583,15 @@ export function SettingsPanel(): React.JSX.Element {
         // do not clear either draft, so the user's rules edits survive and
         // can be retried.
         setRulesScope(scope)
-        setRulesActionError(t('settings.permissionRules.saveError', { scope, error: rulesResult.error }))
+        // i18next-cli cannot statically resolve `scope`'s possible values back
+        // to `context:` variants here (it comes from iterating a filtered
+        // array, not a directly-typed literal), so the two full keys are
+        // spelled out explicitly instead of relying on the context option.
+        setRulesActionError(
+          scope === 'global'
+            ? t('settings.permissionRules.saveError_global', { error: rulesResult.error })
+            : t('settings.permissionRules.saveError_workspace', { error: rulesResult.error }),
+        )
         return
       }
       setScopeRules((prev) => ({
@@ -688,7 +697,7 @@ export function SettingsPanel(): React.JSX.Element {
                   {detectedAgentInstalls.map((installation) => (
                     <option key={`${installation.kind}:${installation.path}`} value={installation.path}>
                       {t('settings.agentInstallation.installedOption', {
-                        engine: installation.kind === 'omp' ? t('common.omp') : t('common.pi'),
+                        engine: agentEngineLabel(installation.kind) ?? DEFAULT_AGENT_ENGINE_LABEL,
                         path: installation.path,
                       })}
                     </option>
@@ -730,8 +739,8 @@ export function SettingsPanel(): React.JSX.Element {
                     className="rounded-md border border-border-strong bg-surface px-2 py-1.5 text-sm text-primary focus:border-focus focus:outline-none"
                   >
                     <option value="auto">{t('settings.agentInstallation.engineAutoOption')}</option>
-                    <option value="pi">{t('common.pi')}</option>
-                    <option value="omp">{t('common.omp')}</option>
+                    <option value="pi">{agentEngineLabel('pi')}</option>
+                    <option value="omp">{agentEngineLabel('omp')}</option>
                   </select>
                 </div>
               )}
@@ -1035,7 +1044,7 @@ export function SettingsPanel(): React.JSX.Element {
                 <div className="flex flex-col gap-2">
                   {(['pi', 'claude', 'codex'] as const).map((id) => {
                     const detected = detectedAgents[id]
-                    const label = id === 'pi' ? t('common.pi') : id === 'claude' ? t('common.claude') : t('common.codex')
+                    const label = councilAgentLabel(id)
                     return (
                       <label
                         key={id}
@@ -1303,9 +1312,16 @@ function LanguageSelect({
   value: string
   onChange: (language: string) => void
 }): React.JSX.Element {
+  // Subscribes this component to language changes so its option labels
+  // (each language's own name) re-render when the language changes elsewhere.
+  useTranslation()
   const [environment, setEnvironment] = useState<I18nEnvironment | null>(loadedI18nEnvironment)
   useEffect(() => {
-    if (!environment) void loadI18nEnvironment().then(setEnvironment)
+    if (!environment) {
+      // On failure, leave the options empty; the next time this panel opens,
+      // environment is still null and this effect retries the load.
+      void loadI18nEnvironment().then(setEnvironment).catch(() => {})
+    }
   }, [environment])
   const options = environment ? languagePickerOptions(environment) : []
   return (

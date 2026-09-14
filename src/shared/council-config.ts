@@ -110,6 +110,11 @@ const AGENT_LABELS: Record<CouncilAgentId, string> = {
   codex: 'Codex',
 }
 
+// Product names. Never translated — see the Settings council-members list.
+export function councilAgentLabel(id: CouncilAgentId): string {
+  return AGENT_LABELS[id]
+}
+
 // Consultant plans are output from separate agents that may themselves have read
 // untrusted project content. They are delimited as untrusted data so an injected
 // directive in a plan is treated as a proposal to weigh, not a command to obey.

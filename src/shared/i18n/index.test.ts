@@ -36,3 +36,16 @@ test('the pseudo-language marks text but not explicit English lookups', async ()
     await i18n.changeLanguage(SOURCE_LANGUAGE)
   }
 })
+
+test('the pseudo-language bundle leaves interpolated values unmarked', async () => {
+  await i18n.changeLanguage(PSEUDO_LANGUAGE)
+  try {
+    // The placeholder is substituted after lookup, so the pseudo-localized
+    // sentence around it is marked but the inserted value is plain English.
+    assert.match(t('settings.language.system', { language: 'English' }), /\(English\)/)
+    // An explicit English lookup is never pseudo-localized.
+    assert.equal(t('settings.language.label', { lng: SOURCE_LANGUAGE }), 'Language')
+  } finally {
+    await i18n.changeLanguage(SOURCE_LANGUAGE)
+  }
+})

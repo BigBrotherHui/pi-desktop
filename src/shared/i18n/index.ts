@@ -1,28 +1,26 @@
-import i18next, { type PostProcessorModule } from 'i18next'
+import i18next from 'i18next'
 import { BUNDLED_LANGUAGES, LANGUAGE_RESOURCES } from './resources'
 import { PSEUDO_LANGUAGE, SOURCE_LANGUAGE } from './languages'
-import { pseudoLocalize } from './pseudo'
+import { pseudoLocalizeTree } from './pseudo'
 
-const PSEUDO_POST_PROCESSOR = 'pseudo'
 const NAMESPACE = 'translation'
-
-// Runs on every t() result. An explicit { lng } (the English word next to the
-// Language label) is honored, so only text in the pseudo-language is marked.
-const pseudoPostProcessor: PostProcessorModule = {
-  type: 'postProcessor',
-  name: PSEUDO_POST_PROCESSOR,
-  process(value, _key, options, translator) {
-    const language = (options as { lng?: string }).lng ?? translator.language
-    return language === PSEUDO_LANGUAGE ? pseudoLocalize(value) : value
-  },
-}
 
 // One instance per process (main, renderer, and each test process). Init is
 // synchronous because the resources are bundled, so t() works as soon as this
 // module is imported, always starting in English.
+//
+// The pseudo-language is a generated resource bundle, not a post-processor
+// run on every t() result: a post-processor runs after interpolation, so it
+// would also mangle already-substituted placeholder values and mark English
+// text pulled in via an explicit { lng: 'en' } lookup. Generating the bundle
+// once here, from the English tree, keeps placeholders and explicit English
+// lookups untouched — only the English text itself is pseudo-localized.
 if (!i18next.isInitialized) {
-  void i18next.use(pseudoPostProcessor).init({
-    resources: LANGUAGE_RESOURCES,
+  void i18next.init({
+    resources: {
+      ...LANGUAGE_RESOURCES,
+      [PSEUDO_LANGUAGE]: { translation: pseudoLocalizeTree(LANGUAGE_RESOURCES.en.translation) },
+    },
     lng: SOURCE_LANGUAGE,
     fallbackLng: SOURCE_LANGUAGE,
     defaultNS: NAMESPACE,
@@ -31,7 +29,6 @@ if (!i18next.isInitialized) {
     returnEmptyString: false,
     // React escapes output; menus, dialogs, and notifications are not HTML.
     interpolation: { escapeValue: false },
-    postProcess: [PSEUDO_POST_PROCESSOR],
   })
 }
 
