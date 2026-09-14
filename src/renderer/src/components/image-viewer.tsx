@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../store'
 import { Image as ImageIcon, Loader2, X } from 'lucide-react'
 
@@ -8,6 +9,7 @@ import { Image as ImageIcon, Loader2, X } from 'lucide-react'
  * and renders the base64 payload as a data URL.
  */
 export function ImageViewer(): React.JSX.Element | null {
+  const { t } = useTranslation()
   const target = useAppStore((state) => state.previewTarget)
   const image = target?.kind === 'image' ? target : null
   const [dataUrl, setDataUrl] = useState<string | null>(null)
@@ -35,10 +37,10 @@ export function ImageViewer(): React.JSX.Element | null {
           // SVG is read as text; render it directly from its markup.
           setDataUrl(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(result.content)}`)
         } else {
-          setError('Not a supported image file')
+          setError(t('imageViewer.unsupportedFile'))
         }
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to read image')
+        if (!cancelled) setError(err instanceof Error ? err.message : t('imageViewer.readFailed'))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -47,7 +49,7 @@ export function ImageViewer(): React.JSX.Element | null {
     return () => {
       cancelled = true
     }
-  }, [image])
+  }, [image, t])
 
   if (!image) return null
 
@@ -62,7 +64,7 @@ export function ImageViewer(): React.JSX.Element | null {
         <button
           onClick={() => void useAppStore.getState().setPreviewTarget(null)}
           className="rounded p-1 text-dim hover:text-secondary"
-          title="Close image"
+          title={t('imageViewer.closeTitle')}
         >
           <X size={12} />
         </button>

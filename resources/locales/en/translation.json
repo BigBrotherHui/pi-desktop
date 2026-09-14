@@ -232,6 +232,50 @@
     "unarchive": "Unarchive",
     "workflowRuns": "Workflow Runs"
   },
+  "conveyor": {
+    "branchStatusClean": "{{branch}}",
+    "branchStatusDirty_one": "{{branch}} · {{count}} changed",
+    "branchStatusDirty_other": "{{branch}} · {{count}} changed",
+    "commit": "Commit",
+    "commitButtonTitle": "Commit staged changes or changes in this workspace",
+    "createPrButton": "Create PR",
+    "detachedBranch": "detached",
+    "dialog": {
+      "baseBranchLabel": "Base branch",
+      "baseBranchPlaceholder": "Leave blank for repository default",
+      "closeAriaLabel": "Close dialog",
+      "commitMessageLabel": "Commit message",
+      "commitTitle": "Commit changes",
+      "descriptionLabel": "Description",
+      "prTitle": "Create pull request",
+      "titleLabel": "Title"
+    },
+    "errors": {
+      "branchRequired": "A named branch is required to create a pull request.",
+      "commitBeforePr": "Commit changes before creating a pull request.",
+      "commitBeforePush": "Commit the working tree before pushing.",
+      "commitMessageRequired": "Commit message is required.",
+      "prTitleRequired": "Pull request title is required.",
+      "pushBeforePr": "Push the branch before creating a pull request."
+    },
+    "feedback": {
+      "branchPushed": "Branch pushed.",
+      "committed": "Committed {{sha}}.",
+      "prCreated": "Pull request created.",
+      "prCreatedWithUrl": "Pull request created: {{url}}",
+      "pushedCommits_one": "Pushed {{count}} commit.",
+      "pushedCommits_other": "Pushed {{count}} commits."
+    },
+    "prButtonLabel": "PR",
+    "prButtonTitle": "Create a pull request with GitHub CLI",
+    "push": "Push",
+    "pushButtonTitle": "Push the current branch after confirmation",
+    "pushConfirm": {
+      "currentBranchFallback": "the current branch",
+      "message": "Push {{branch}} to {{target}}?",
+      "title": "Push branch?"
+    }
+  },
   "council": {
     "consensusPlan": {
       "heading": "Consensus plan",
@@ -349,6 +393,21 @@
       "fileFilterName": "Theme",
       "importTitle": "Import Theme"
     }
+  },
+  "diff": {
+    "closeAriaLabel": "Close diff viewer",
+    "deletedFileBadge": "DELETED",
+    "fileCount_one": "{{count}} file",
+    "fileCount_other": "{{count}} files",
+    "heading": "Diff Viewer",
+    "loadErrorTitle": "Couldn't load the diff",
+    "newFileBadge": "NEW",
+    "noChanges": "No changes",
+    "noStagedChanges": "No staged changes",
+    "refreshAriaLabel": "Refresh diff",
+    "stagedToggle": "Staged",
+    "workingToggle": "Working",
+    "workingTreeClean": "Working tree is clean"
   },
   "editorGuard": {
     "discard": "Discard unsaved changes?",
@@ -491,6 +550,39 @@
       "sourceFolderMissing": "Source folder does not exist: {{path}}"
     }
   },
+  "files": {
+    "preview": {
+      "closeTitle": "Close editor",
+      "modifiedBadge": "modified",
+      "previewViewTitle": "Preview",
+      "readFailed": "Failed to read file",
+      "revertTitle": "Revert changes",
+      "savedBadge": "saved",
+      "saveFailed": "Failed to save file",
+      "saveTitle": "Save file",
+      "scriptsDisabledNotice": "Scripts are disabled for this untrusted workspace's preview.",
+      "sourceViewTitle": "Source",
+      "trustWorkspaceButton": "Trust workspace"
+    },
+    "search": {
+      "contentPlaceholder": "Search file contents...",
+      "contentToggle": "CONTENT",
+      "escToClose": "Esc to close",
+      "filesToggle": "FILES",
+      "lineSnippet": "Line {{line}}: {{snippet}}",
+      "namePlaceholder": "Search files by name...",
+      "noResults": "No results found",
+      "resultCount_one": "{{count}} results",
+      "resultCount_other": "{{count}} results",
+      "typeToSearch": "Type to search..."
+    },
+    "tree": {
+      "folderMissingHint": "The folder may have moved or been deleted. Right-click the workspace in the sidebar and choose “Change folder…” to point it somewhere else.",
+      "folderNotFound": "Folder not found",
+      "noWorkspaceHint": "Switch to a project folder from the workspace switcher in the sidebar.",
+      "noWorkspaceOpen": "No workspace open"
+    }
+  },
   "home": {
     "actions": {
       "newSession": {
@@ -527,6 +619,11 @@
       "title": "Recent Workspaces"
     },
     "subtitle": "Open a workspace or pick up where you left off."
+  },
+  "imageViewer": {
+    "closeTitle": "Close image",
+    "readFailed": "Failed to read image",
+    "unsupportedFile": "Not a supported image file"
   },
   "language": {
     "nativeName": "English"
@@ -760,6 +857,29 @@
       "target": "Target: {{path}}",
       "title": "Allow {{tool}}?"
     }
+  },
+  "review": {
+    "changedFilesHeading": "Changed Files",
+    "gitStatusUnavailable": "Git status unavailable",
+    "heading": "Review",
+    "moreFiles_one": "+{{count}} more",
+    "moreFiles_other": "+{{count}} more",
+    "noWorkingTreeChanges": "No working tree changes.",
+    "openDiffButton": "Open diff review",
+    "openDiffHint": "Inspect working tree changes.",
+    "pendingApprovals": {
+      "none": "No approval requests waiting.",
+      "queued_one": "{{count}} queued item waiting for the active session.",
+      "queued_other": "{{count}} queued items waiting for the active session."
+    },
+    "pendingApprovalsHeading": "Pending Approvals",
+    "permissionsHeading": "Permissions",
+    "sessionStatus": {
+      "idle": "{{agent}} is idle in the active session.",
+      "working": "{{agent}} is working in the active session."
+    },
+    "sessionStatusHeading": "Session Status",
+    "subtitle": "Control what {{agent}} can do before changes move forward."
   },
   "sessions": {
     "activeBadge": "active",
@@ -1282,6 +1402,14 @@
     "subtitle": "Start a fresh Pi session and send the task immediately.",
     "task": "Task",
     "taskPlaceholder": "Fix the failing tests, explain the root cause, and prepare the changes for review…"
+  },
+  "terminal": {
+    "clearAriaLabel": "Clear terminal",
+    "clearTitle": "Clear",
+    "closeTitle": "Close terminal",
+    "maximizeLabel": "Maximize terminal",
+    "restoreLabel": "Restore terminal",
+    "title": "Terminal"
   },
   "themes": {
     "builtin": {

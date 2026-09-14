@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../store'
 import { createDebouncedBuffer } from '../utils/debounced-buffer'
 import { createStaleGuard } from '../utils/stale-guard'
@@ -47,6 +48,7 @@ function toFileUrl(absolutePath: string): string {
 const SAFETY_POLL_MS = 15000
 
 export function FileTree(): React.JSX.Element {
+  const { t } = useTranslation()
   const [tree, setTree] = useState<FileTreeNode | null>(null)
   const [gitStatus, setGitStatus] = useState<Record<string, GitFileStatus>>({})
   const [gitBranch, setGitBranch] = useState<string | null>(null)
@@ -159,11 +161,10 @@ export function FileTree(): React.JSX.Element {
       return (
         <div className="flex flex-col items-center justify-center px-4 py-8 text-center text-dim">
           <FolderOpen size={24} className="mb-2 text-warning/70" />
-          <p className="text-xs text-warning">Folder not found</p>
+          <p className="text-xs text-warning">{t('files.tree.folderNotFound')}</p>
           <p className="mt-1 break-all text-[11px] text-dim">{activeWorkspace.path}</p>
           <p className="mt-2 text-[11px] text-faint">
-            The folder may have moved or been deleted. Right-click the workspace in the
-            sidebar and choose “Change folder…” to point it somewhere else.
+            {t('files.tree.folderMissingHint')}
           </p>
         </div>
       )
@@ -171,9 +172,9 @@ export function FileTree(): React.JSX.Element {
     return (
       <div className="flex flex-col items-center justify-center px-4 py-8 text-center text-dim">
         <FolderOpen size={24} className="mb-2 text-faint" />
-        <p className="text-xs">No workspace open</p>
+        <p className="text-xs">{t('files.tree.noWorkspaceOpen')}</p>
         <p className="mt-1 text-[11px] text-faint">
-          Switch to a project folder from the workspace switcher in the sidebar.
+          {t('files.tree.noWorkspaceHint')}
         </p>
       </div>
     )
@@ -307,6 +308,7 @@ interface FileSearchProps {
 }
 
 export function FileSearch({ isOpen, onClose }: FileSearchProps): React.JSX.Element | null {
+  const { t } = useTranslation()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<FileSearchResult[]>([])
   const [loading, setLoading] = useState(false)
@@ -385,7 +387,7 @@ export function FileSearch({ isOpen, onClose }: FileSearchProps): React.JSX.Elem
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={contentMode ? 'Search file contents...' : 'Search files by name...'}
+            placeholder={contentMode ? t('files.search.contentPlaceholder') : t('files.search.namePlaceholder')}
             className="flex-1 ml-3 bg-transparent text-sm text-primary placeholder:text-faint outline-none"
             autoFocus
           />
@@ -398,7 +400,7 @@ export function FileSearch({ isOpen, onClose }: FileSearchProps): React.JSX.Elem
                 : 'bg-card text-dim hover:text-secondary'
             )}
           >
-            {contentMode ? 'CONTENT' : 'FILES'}
+            {contentMode ? t('files.search.contentToggle') : t('files.search.filesToggle')}
           </button>
           <button
             onClick={onClose}
@@ -416,7 +418,7 @@ export function FileSearch({ isOpen, onClose }: FileSearchProps): React.JSX.Elem
             </div>
           ) : results.length === 0 ? (
             <div className="py-8 text-center text-xs text-faint">
-              {query.trim() ? 'No results found' : 'Type to search...'}
+              {query.trim() ? t('files.search.noResults') : t('files.search.typeToSearch')}
             </div>
           ) : (
             <div className="py-1">
@@ -433,7 +435,7 @@ export function FileSearch({ isOpen, onClose }: FileSearchProps): React.JSX.Elem
                     </div>
                     {result.matchType === 'content' && result.snippet && (
                       <div className="text-xs text-dim truncate mt-0.5">
-                        Line {result.line}: {result.snippet}
+                        {t('files.search.lineSnippet', { line: result.line, snippet: result.snippet })}
                       </div>
                     )}
                   </div>
@@ -445,8 +447,8 @@ export function FileSearch({ isOpen, onClose }: FileSearchProps): React.JSX.Elem
 
         {/* Footer */}
         <div className="border-t border-border px-4 py-2 flex items-center justify-between text-xs text-faint">
-          <span>{results.length} results</span>
-          <span>Esc to close</span>
+          <span>{t('files.search.resultCount', { count: results.length })}</span>
+          <span>{t('files.search.escToClose')}</span>
         </div>
       </div>
     </div>
@@ -461,6 +463,7 @@ export function FileSearch({ isOpen, onClose }: FileSearchProps): React.JSX.Elem
 const EDITOR_INPUT_DEBOUNCE_MS = 150
 
 export function FilePreview(): React.JSX.Element | null {
+  const { t } = useTranslation()
   const target = useAppStore((state) => state.previewTarget)
   const file = target?.kind === 'code' ? target : null
   const [content, setContent] = useState<string | null>(null)
@@ -518,7 +521,7 @@ export function FilePreview(): React.JSX.Element | null {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to read file')
+          setError(err instanceof Error ? err.message : t('files.preview.readFailed'))
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -530,7 +533,7 @@ export function FilePreview(): React.JSX.Element | null {
     return () => {
       cancelled = true
     }
-  }, [path, isPdf, editBuffer])
+  }, [path, isPdf, editBuffer, t])
 
   // Default to the rendered preview for markdown/HTML, source otherwise.
   useEffect(() => {
@@ -595,7 +598,7 @@ export function FilePreview(): React.JSX.Element | null {
       setReloadKey((k) => k + 1)
       setTimeout(() => setSaveSuccess(false), 2000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save file')
+      setError(err instanceof Error ? err.message : t('files.preview.saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -618,11 +621,11 @@ export function FilePreview(): React.JSX.Element | null {
           <span className="text-xs text-secondary truncate">{displayPath}</span>
           {saveSuccess ? (
             <span className="rounded bg-success-bg px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-success">
-              saved
+              {t('files.preview.savedBadge')}
             </span>
           ) : isDirty ? (
             <span className="rounded bg-warning-bg px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-warning">
-              modified
+              {t('files.preview.modifiedBadge')}
             </span>
           ) : null}
         </div>
@@ -635,7 +638,7 @@ export function FilePreview(): React.JSX.Element | null {
                   'rounded p-1 transition-colors',
                   viewMode === 'source' ? 'bg-elevated text-primary' : 'text-dim hover:text-secondary'
                 )}
-                title="Source"
+                title={t('files.preview.sourceViewTitle')}
               >
                 <Code2 size={12} />
               </button>
@@ -645,7 +648,7 @@ export function FilePreview(): React.JSX.Element | null {
                   'rounded p-1 transition-colors',
                   viewMode === 'preview' ? 'bg-elevated text-primary' : 'text-dim hover:text-secondary'
                 )}
-                title="Preview"
+                title={t('files.preview.previewViewTitle')}
               >
                 <Eye size={12} />
               </button>
@@ -657,7 +660,7 @@ export function FilePreview(): React.JSX.Element | null {
                 onClick={handleRevert}
                 disabled={!isDirty || saving}
                 className="rounded p-1 text-dim transition-colors hover:text-secondary disabled:cursor-not-allowed disabled:opacity-40"
-                title="Revert changes"
+                title={t('files.preview.revertTitle')}
               >
                 <RotateCcw size={12} />
               </button>
@@ -665,7 +668,7 @@ export function FilePreview(): React.JSX.Element | null {
                 onClick={handleSave}
                 disabled={!isDirty || saving}
                 className="rounded p-1 text-dim transition-colors hover:text-secondary disabled:cursor-not-allowed disabled:opacity-40"
-                title="Save file"
+                title={t('files.preview.saveTitle')}
               >
                 <Save size={12} />
               </button>
@@ -674,7 +677,7 @@ export function FilePreview(): React.JSX.Element | null {
           <button
             onClick={() => void useAppStore.getState().setPreviewTarget(null)}
             className="rounded p-1 text-dim hover:text-secondary"
-            title="Close editor"
+            title={t('files.preview.closeTitle')}
           >
             <X size={12} />
           </button>
@@ -709,14 +712,14 @@ export function FilePreview(): React.JSX.Element | null {
               <div className="flex items-center justify-between gap-2 border-b border-warning-bg bg-warning-bg px-3 py-1.5 text-xs text-warning">
                 <span className="flex items-center gap-1.5">
                   <ShieldAlert size={13} className="shrink-0" />
-                  Scripts are disabled for this untrusted workspace&apos;s preview.
+                  {t('files.preview.scriptsDisabledNotice')}
                 </span>
                 <button
                   type="button"
                   onClick={() => void handleTrustWorkspace()}
                   className="shrink-0 rounded-md border border-border-strong bg-surface px-2 py-1 text-primary transition-colors hover:border-border-strong-hover"
                 >
-                  Trust workspace
+                  {t('files.preview.trustWorkspaceButton')}
                 </button>
               </div>
             )}

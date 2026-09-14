@@ -1,5 +1,6 @@
 import { AlertCircle, CheckCircle2, FileSearch, GitCompare, ShieldCheck } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../store'
 import { DEFAULT_AGENT_ENGINE_LABEL, agentEngineLabel } from '../../../shared/agent-engine-label'
 import { PermissionSelector } from './permission-selector'
@@ -12,6 +13,7 @@ interface ChangedFile {
 }
 
 export function ReviewRail(): React.JSX.Element | null {
+  const { t } = useTranslation()
   const reviewOpen = useAppStore((state) => state.reviewOpen)
   const settings = useAppStore((state) => state.settings)
   const setPermissionMode = useAppStore((state) => state.setPermissionMode)
@@ -68,17 +70,17 @@ export function ReviewRail(): React.JSX.Element | null {
       <div className="border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
           <ShieldCheck size={16} className="text-success" />
-          <h2 className="text-sm font-semibold text-primary">Review</h2>
+          <h2 className="text-sm font-semibold text-primary">{t('review.heading')}</h2>
         </div>
         <p className="mt-1 text-xs leading-5 text-dim">
-          Control what Pi can do before changes move forward.
+          {t('review.subtitle', { agent: engineLabel })}
         </p>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <section>
           <div className="mb-2 text-xs font-medium uppercase tracking-wide text-dim">
-            Permissions
+            {t('review.permissionsHeading')}
           </div>
           <PermissionSelector
             value={settings?.permissionMode}
@@ -89,7 +91,7 @@ export function ReviewRail(): React.JSX.Element | null {
         <section className="mt-6">
           <div className="mb-2 flex items-center justify-between">
             <div className="text-xs font-medium uppercase tracking-wide text-dim">
-              Pending Approvals
+              {t('review.pendingApprovalsHeading')}
             </div>
             <span className="rounded-full bg-card px-2 py-0.5 text-[10px] text-muted">
               {pendingCount}
@@ -99,12 +101,12 @@ export function ReviewRail(): React.JSX.Element | null {
             {pendingCount > 0 ? (
               <div className="flex items-start gap-2 text-sm text-warning">
                 <AlertCircle size={15} className="mt-0.5 shrink-0" />
-                <span>{pendingCount} queued item{pendingCount === 1 ? '' : 's'} waiting for the active session.</span>
+                <span>{t('review.pendingApprovals.queued', { count: pendingCount })}</span>
               </div>
             ) : (
               <div className="flex items-start gap-2 text-sm text-muted">
                 <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-success" />
-                <span>No approval requests waiting.</span>
+                <span>{t('review.pendingApprovals.none')}</span>
               </div>
             )}
           </div>
@@ -113,7 +115,7 @@ export function ReviewRail(): React.JSX.Element | null {
         <section className="mt-6">
           <div className="mb-2 flex items-center justify-between">
             <div className="text-xs font-medium uppercase tracking-wide text-dim">
-              Changed Files
+              {t('review.changedFilesHeading')}
             </div>
             <span className="rounded-full bg-card px-2 py-0.5 text-[10px] text-muted">
               {changedFiles.length}
@@ -123,10 +125,10 @@ export function ReviewRail(): React.JSX.Element | null {
             {gitError !== null ? (
               <div className="flex items-center gap-2 px-3 py-3 text-xs text-warning" title={gitError}>
                 <AlertCircle size={13} className="shrink-0" />
-                <span className="min-w-0 flex-1 truncate">Git status unavailable</span>
+                <span className="min-w-0 flex-1 truncate">{t('review.gitStatusUnavailable')}</span>
               </div>
             ) : changedFiles.length === 0 ? (
-              <div className="px-3 py-3 text-sm text-dim">No working tree changes.</div>
+              <div className="px-3 py-3 text-sm text-dim">{t('review.noWorkingTreeChanges')}</div>
             ) : (
               <div className="max-h-44 overflow-y-auto py-1">
                 {changedFiles.slice(0, 8).map((file) => (
@@ -145,7 +147,7 @@ export function ReviewRail(): React.JSX.Element | null {
                 ))}
                 {changedFiles.length > 8 && (
                   <div className="px-3 py-1.5 text-xs text-dim">
-                    +{changedFiles.length - 8} more
+                    {t('review.moreFiles', { count: changedFiles.length - 8 })}
                   </div>
                 )}
               </div>
@@ -158,9 +160,9 @@ export function ReviewRail(): React.JSX.Element | null {
           >
             <GitCompare size={15} className="shrink-0 text-dim" />
             <span className="min-w-0 flex-1">
-              <span className="block">Open diff review</span>
+              <span className="block">{t('review.openDiffButton')}</span>
               <span className="mt-0.5 block text-xs text-dim">
-                Inspect working tree changes.
+                {t('review.openDiffHint')}
               </span>
             </span>
           </button>
@@ -168,12 +170,12 @@ export function ReviewRail(): React.JSX.Element | null {
 
         <section className="mt-6">
           <div className="mb-2 text-xs font-medium uppercase tracking-wide text-dim">
-            Session Status
+            {t('review.sessionStatusHeading')}
           </div>
           <div className="rounded-md border border-border bg-surface/50 p-3 text-sm text-muted">
             <div className="flex items-center gap-2">
               <FileSearch size={15} className="text-dim" />
-              <span>{isStreaming ? `${engineLabel} is working in the active session.` : `${engineLabel} is idle in the active session.`}</span>
+              <span>{isStreaming ? t('review.sessionStatus.working', { agent: engineLabel }) : t('review.sessionStatus.idle', { agent: engineLabel })}</span>
             </div>
           </div>
         </section>
