@@ -477,6 +477,9 @@ export function useInitialize(): void {
     initialized.current = true
 
     const initialize = async (): Promise<void> => {
+      // Registered before the first theme apply so the native window
+      // background matches from the start.
+      subscribeAppliedTheme(syncWindowBackground)
       await loadSettings()
       const openToHome = useAppStore.getState().settings?.openToHomeOnLaunch ?? DEFAULT_SETTINGS.openToHomeOnLaunch
 
@@ -552,6 +555,15 @@ export function useNotePickerShortcut(): void {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
+}
+
+/**
+ * Copies the page background to the native window, which paints areas the
+ * page has not drawn yet (live-resize edges on Windows and macOS). The body
+ * uses the theme's app color, and its computed value is always rgb()/rgba().
+ */
+function syncWindowBackground(): void {
+  void window.piDesktop.themes.setWindowBackground(getComputedStyle(document.body).backgroundColor)
 }
 
 /**

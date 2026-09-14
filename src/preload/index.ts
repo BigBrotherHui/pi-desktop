@@ -160,6 +160,8 @@ interface PiDesktopAPI {
     import(): Promise<ThemeImportResult>
     gallery(): Promise<ThemeGalleryResult>
     galleryImage(url: string): Promise<ThemeGalleryImageResult>
+    /** Native window background, as a computed `rgb()`/`rgba()` color. */
+    setWindowBackground(color: string): Promise<void>
   }
 
   // Workspace management
@@ -422,6 +424,7 @@ const api: PiDesktopAPI = {
     import: () => ipcRenderer.invoke(IPC_CHANNELS.THEMES_IMPORT),
     gallery: () => ipcRenderer.invoke(IPC_CHANNELS.THEMES_GALLERY_LIST),
     galleryImage: (url) => ipcRenderer.invoke(IPC_CHANNELS.THEMES_GALLERY_IMAGE, url),
+    setWindowBackground: (color) => ipcRenderer.invoke(IPC_CHANNELS.THEMES_SET_WINDOW_BACKGROUND, color),
   },
 
   workspace: {

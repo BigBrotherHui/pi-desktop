@@ -51,6 +51,15 @@ export default tseslint.config(
       'react-hooks/exhaustive-deps': 'warn',
     },
   },
+  // Classic browser scripts copied as-is into the renderer build (loaded by
+  // index.html before the app bundle, so no modules).
+  {
+    files: ['src/renderer/public/**/*.js'],
+    languageOptions: {
+      sourceType: 'script',
+      globals: { ...globals.browser },
+    },
+  },
   // CommonJS Node scripts: CLI launcher and install hooks. `require()` is the
   // correct module syntax here, so the TS-oriented rule is disabled.
   {

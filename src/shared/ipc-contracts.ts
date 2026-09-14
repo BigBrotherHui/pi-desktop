@@ -182,6 +182,7 @@ export const IPC_CHANNELS = {
   THEMES_IMPORT: 'themes:import',
   THEMES_GALLERY_LIST: 'themes:gallery-list',
   THEMES_GALLERY_IMAGE: 'themes:gallery-image',
+  THEMES_SET_WINDOW_BACKGROUND: 'themes:set-window-background',
 
   // Events (main → renderer)
   EVENT_PI: 'event:pi',

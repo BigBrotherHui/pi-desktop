@@ -2,6 +2,7 @@ import type { AppSettings } from '../../../shared/ipc-contracts'
 import { DEFAULT_SETTINGS } from '../../../shared/default-settings'
 import type { ThemeFile } from '../../../shared/theme/theme-file'
 import { resolveThemeVars } from '../../../shared/theme/resolve'
+import { cssVarForToken } from '../../../shared/theme/tokens'
 import { BUILTIN_THEMES } from '../themes'
 import { applyThemeVars } from '../theme/engine'
 
@@ -16,6 +17,13 @@ const SYSTEM_THEME_DEFAULTS: Readonly<Record<ThemeKind, string>> = {
   light: DEFAULT_SETTINGS.systemLightTheme,
   dark: DEFAULT_SETTINGS.systemDarkTheme,
 }
+// Read by src/renderer/public/theme-boot.js before the first paint; keep the
+// key and the BootPaint shape in sync with that script.
+export const BOOT_THEME_STORAGE_KEY = 'pi-desktop.boot-theme'
+const APP_COLOR_VAR = cssVarForToken('app')
+const TEXT_COLOR_VAR = cssVarForToken('primary')
+
+interface BootPaint { app: string; text: string; kind: ThemeKind }
 
 const BUILTIN_IDS = new Set(BUILTIN_THEMES.map((t) => t.id))
 const registry = new Map<string, ThemeFile>(BUILTIN_THEMES.map((t) => [t.id, t.file]))
@@ -85,17 +93,41 @@ export function resolveThemeId(themeId: string): string {
   return resolveSystemThemeSlot(kind, systemThemes[kind])
 }
 
+function registeredOrFallback(themeId: string): string {
+  return registry.has(themeId) ? themeId : FALLBACK_THEME_ID
+}
+
 export function applyTheme(themeId: string): void {
-  const resolvedId = resolveThemeId(themeId)
-  const id = registry.has(resolvedId) ? resolvedId : FALLBACK_THEME_ID
+  const id = registeredOrFallback(resolveThemeId(themeId))
   const file = registry.get(id)!
   const html = document.documentElement
   appliedVarKeys = applyThemeVars(html, resolveThemeVars(file), appliedVarKeys)
   html.classList.toggle('light', file.kind === 'light')
   html.style.colorScheme = file.kind
-  if (id === appliedThemeId) return
   appliedThemeId = id
   for (const listener of appliedThemeListeners) listener()
+}
+
+function bootPaint(themeId: string): BootPaint {
+  const file = registry.get(registeredOrFallback(themeId))!
+  const vars = resolveThemeVars(file)
+  return { app: vars[APP_COLOR_VAR], text: vars[TEXT_COLOR_VAR], kind: file.kind }
+}
+
+// Stores what theme-boot.js paints before the app loads: one entry per OS
+// mode, so a System theme still starts right after the OS switched between
+// launches. A concrete theme stores the same paint for both. Storage
+// failures only cost the pre-paint, so they are ignored.
+export function rememberBootTheme(settings: ThemeSettings): void {
+  const idFor = (kind: ThemeKind): string => settings.theme === SYSTEM_THEME_ID
+    ? resolveSystemThemeSlot(kind, kind === 'light' ? settings.systemLightTheme : settings.systemDarkTheme)
+    : settings.theme
+  const paints: Record<ThemeKind, BootPaint> = { light: bootPaint(idFor('light')), dark: bootPaint(idFor('dark')) }
+  try {
+    localStorage.setItem(BOOT_THEME_STORAGE_KEY, JSON.stringify(paints))
+  } catch {
+    // Private-mode or quota failure: the next launch paints the default.
+  }
 }
 
 // Applies a theme settings snapshot (saved or unsaved draft), recording its
@@ -112,6 +144,8 @@ export function getAppliedThemeId(): string | null {
   return appliedThemeId
 }
 
+// Listeners run after every applyTheme, even when the id is unchanged, so
+// an edited theme saved under its own id still reaches them.
 export function subscribeAppliedTheme(listener: () => void): () => void {
   appliedThemeListeners.add(listener)
   return () => {

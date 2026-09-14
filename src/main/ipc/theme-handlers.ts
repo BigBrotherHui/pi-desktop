@@ -1,5 +1,6 @@
-import { ipcMain, dialog } from 'electron'
+import { ipcMain, dialog, BrowserWindow } from 'electron'
 import { getGuiDataDir } from '../app-data-paths'
+import { toWindowBackgroundColor } from '../window-background'
 import { listUserThemes, saveUserTheme, deleteUserTheme, installThemeFromUrl, fetchGalleryThemes, fetchGalleryImage } from '../theme-store'
 import {
   validateThemeFile, themeIdFromName, MAX_THEME_FILE_BYTES, type ThemeFile,
@@ -35,6 +36,13 @@ export function registerThemeHandlers(): void {
       throw new Error('existingId must be a string')
     }
     return saveUserTheme(themesDir(), file as ThemeFile, existingId)
+  })
+
+  // Unsupported color forms are ignored rather than thrown: a wrong native
+  // background is cosmetic and only visible at window edges.
+  ipcMain.handle(IPC_CHANNELS.THEMES_SET_WINDOW_BACKGROUND, (event, color: unknown) => {
+    const background = toWindowBackgroundColor(color)
+    if (background) BrowserWindow.fromWebContents(event.sender)?.setBackgroundColor(background)
   })
 
   ipcMain.handle(IPC_CHANNELS.THEMES_DELETE, async (_event, id: unknown) => {
