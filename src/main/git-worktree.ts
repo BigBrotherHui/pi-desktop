@@ -16,7 +16,7 @@ export interface GitCommandResult {
 
 function describeGitFailure(args: readonly string[], stdout: string, stderr: string): string {
   const detail = (stderr || stdout).trim()
-  const command = args.join(' ')
+  const command = `git ${args.join(' ')}`
   return detail
     ? t('errors.git.commandFailedWithDetail', { command, detail })
     : t('errors.git.commandFailed', { command })

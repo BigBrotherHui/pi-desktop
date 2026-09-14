@@ -31,7 +31,7 @@ export function CommandResults({
   return (
     <>
       {grouped.map((group) => (
-        <div key={group.label}>
+        <div key={group.id}>
           <div className="px-3 py-1 text-[10px] uppercase tracking-wide text-faint">
             {group.label}
           </div>

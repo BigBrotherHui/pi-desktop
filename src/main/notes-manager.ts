@@ -140,8 +140,8 @@ export class NotesManager {
 
     const tags = [...new Set(
       input.tags
-        .map((t) => t.trim().toLowerCase().replace(/^#/, ''))
-        .filter((t) => t.length > 0 && t.length <= MAX_TAG_LENGTH)
+        .map((tag) => tag.trim().toLowerCase().replace(/^#/, ''))
+        .filter((tag) => tag.length > 0 && tag.length <= MAX_TAG_LENGTH)
     )]
 
     return {

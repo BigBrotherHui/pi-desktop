@@ -6,6 +6,7 @@ import {
   countPathEntries,
   extractVersionLine,
   reportModelsReadFailure,
+  reportPiStartFailure,
   summarizeProviders,
 } from './diagnostics-report'
 import type { WorkspaceManager } from './workspace-manager'
@@ -86,7 +87,7 @@ export async function collectDiagnostics(
       nodeFound: cli.nodeFound,
       needsShell: cli.needsShell,
       rejectedOverride: resolution.rejectedOverride,
-      failureReason: cli.failureReason,
+      failureReason: reportPiStartFailure(cli.failureReason),
       pathEntryCount: countPathEntries(resolution.pathEnv, process.platform === 'win32'),
     },
     piVersion: piVersionResult.success ? extractVersionLine(piVersionResult.output) : null,

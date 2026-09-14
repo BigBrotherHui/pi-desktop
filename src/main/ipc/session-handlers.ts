@@ -253,12 +253,12 @@ export function registerSessionHandlers(ctx: IpcContext): void {
     assertTrustedSender(event)
     if (!isString(sessionPath)) throw new Error('sessionPath must be a string')
     if (!sessionPath.endsWith(SESSION_FILE_EXTENSION)) {
-      throw new Error(t('errors.session.mustBeJsonlFile', { field: 'sessionPath' }))
+      throw new Error('sessionPath must point to a .jsonl session file')
     }
     // Confine deletion to Pi's session store so a renderer cannot delete an
     // arbitrary .jsonl file elsewhere on disk.
     if (!isWithinSessionRoots(sessionPath)) {
-      throw new Error(t('errors.session.mustBeInsideSessionsDir', { field: 'sessionPath' }))
+      throw new Error('sessionPath must be inside the Pi sessions directory')
     }
 
     // Detach any live tab first. Otherwise deleting an active/session-tab file

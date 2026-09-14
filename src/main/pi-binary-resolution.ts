@@ -1,6 +1,6 @@
 import { basename, join, posix as posixPath } from 'path'
 import { buildNpmPrefixCommand, escapeCmdSpawn } from './cmd-escape'
-import { t } from '../shared/i18n'
+import { i18n, type Translate } from '../shared/i18n'
 
 /**
  * Locating the Pi CLI is the single most failure-prone step at startup, and the
@@ -615,28 +615,37 @@ export function resolvePiBinary(
   return finalize(deps, fallback, 'fallback', false, rejectedOverride, pathEnv)
 }
 
-function settingsHint(): string {
-  return t('errors.pi.settingsHint')
-}
-function installHint(): string {
-  return t('errors.pi.installHint')
-}
-
 /**
  * Explain a failed resolution. A stale configured path is the headline when
  * one exists, because "Pi is not installed" is actively misleading to someone
- * who did point the app at their install.
+ * who did point the app at their install. `t` defaults to the interface
+ * language.
  */
-export function describePiResolutionFailure(resolution: PiResolution): string {
+export function describePiResolutionFailure(resolution: PiResolution, t: Translate = i18n.t): string {
+  const settingsHint = t('errors.pi.settingsHint')
+  const installHint = t('errors.pi.installHint')
   if (resolution.rejectedOverride) {
     return t('errors.pi.configuredPathMissing', {
-      settingsHint: settingsHint(),
+      settingsHint,
       path: resolution.rejectedOverride,
-      installHint: installHint(),
+      installHint,
     })
   }
-  return t('errors.pi.notFound', {
-    installHint: installHint(),
-    settingsHint: settingsHint(),
-  })
+  return t('errors.pi.notFound', { installHint, settingsHint })
+}
+
+/**
+ * Why a resolved Pi invocation cannot start. Kept as data, not text, so each
+ * sink renders it in its own language: the interface language for the UI,
+ * English for the log and the diagnostics report.
+ */
+export type PiStartFailure =
+  | { kind: 'pi-not-found'; resolution: PiResolution }
+  | { kind: 'node-not-found'; node: string }
+
+/** Render a start failure with `t` (interface text) or `tEnglish` (log, report). */
+export function describePiStartFailure(failure: PiStartFailure, t: Translate): string {
+  return failure.kind === 'pi-not-found'
+    ? describePiResolutionFailure(failure.resolution, t)
+    : t('errors.pi.nodeNotFound', { node: failure.node })
 }

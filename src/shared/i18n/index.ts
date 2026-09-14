@@ -1,4 +1,4 @@
-import i18next from 'i18next'
+import i18next, { type TFunction } from 'i18next'
 import { BUNDLED_LANGUAGES, LANGUAGE_RESOURCES } from './resources'
 import { PSEUDO_LANGUAGE, SOURCE_LANGUAGE } from './languages'
 import { pseudoLocalizeTree } from './pseudo'
@@ -34,6 +34,10 @@ if (!i18next.isInitialized) {
 
 export const i18n = i18next
 export const t = i18next.t
+/** English whatever the interface language: for logs and the diagnostics report, which stay English. */
+export const tEnglish = i18next.getFixedT(SOURCE_LANGUAGE)
+/** A translator: `t` for interface text, `tEnglish` for logs and the diagnostics report. */
+export type Translate = TFunction
 
 /** Codes the Language picker offers. The pseudo-language only when enabled. */
 export function availableLanguages(pseudoEnabled: boolean): string[] {

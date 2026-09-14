@@ -32,23 +32,33 @@ export function commandDisplayName(cmd: PiCommand): string {
   return cmd.name
 }
 
-const GROUPS: Array<{ source: string }> = [
-  { source: 'skill' },
-  { source: 'prompt' },
-  { source: BUILTIN_SOURCE },
-  { source: 'extension' },
-]
+/** Command sources that get their own group, in display order. */
+const GROUP_SOURCES = ['skill', 'prompt', BUILTIN_SOURCE, 'extension'] as const
+
+/** Group id of the catch-all for commands from any other source. */
+const OTHER_GROUP_ID = 'other'
+
+export type CommandGroupId = (typeof GROUP_SOURCES)[number] | typeof OTHER_GROUP_ID
 
 /** The display label for one command group, in the interface language. */
-function groupLabel(source: string): string {
-  if (source === 'skill') return t('commandGroups.skills')
-  if (source === 'prompt') return t('commandGroups.prompts')
-  if (source === BUILTIN_SOURCE) return t('commandGroups.commands')
-  if (source === 'extension') return t('commandGroups.extensions')
-  return t('commandGroups.other')
+function groupLabel(id: CommandGroupId): string {
+  switch (id) {
+    case 'skill':
+      return t('commandGroups.skills')
+    case 'prompt':
+      return t('commandGroups.prompts')
+    case BUILTIN_SOURCE:
+      return t('commandGroups.commands')
+    case 'extension':
+      return t('commandGroups.extensions')
+    case OTHER_GROUP_ID:
+      return t('commandGroups.other')
+  }
 }
 
 export interface CommandGroup {
+  /** Stable group id (the command source, or the catch-all id), for React keys. */
+  id: CommandGroupId
   label: string
   items: PiCommand[]
 }
@@ -91,12 +101,13 @@ export function groupCommands(results: PiCommand[]): {
   grouped: CommandGroup[]
   flat: PiCommand[]
 } {
-  const known = new Set(GROUPS.map((g) => g.source))
-  const grouped = GROUPS.map((g) => ({
-    label: groupLabel(g.source),
-    items: results.filter((r) => r.source === g.source),
-  })).filter((g) => g.items.length > 0)
-  const other = results.filter((r) => !known.has(r.source))
-  if (other.length > 0) grouped.push({ label: t('commandGroups.other'), items: other })
+  const known = new Set<string>(GROUP_SOURCES)
+  const groups: Array<{ id: CommandGroupId; items: PiCommand[] }> = [
+    ...GROUP_SOURCES.map((source) => ({ id: source, items: results.filter((r) => r.source === source) })),
+    { id: OTHER_GROUP_ID, items: results.filter((r) => !known.has(r.source)) },
+  ]
+  const grouped = groups
+    .filter((g) => g.items.length > 0)
+    .map((g) => ({ id: g.id, label: groupLabel(g.id), items: g.items }))
   return { grouped, flat: grouped.flatMap((g) => g.items) }
 }

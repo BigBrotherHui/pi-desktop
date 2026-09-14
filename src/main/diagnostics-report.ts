@@ -1,4 +1,6 @@
 import type { DiagnosticsProviderInfo, ModelsConfig, ModelsReadFailure, ProviderKeyState } from '../shared/ipc-contracts'
+import { describePiStartFailure, type PiStartFailure } from './pi-binary-resolution'
+import { tEnglish } from '../shared/i18n'
 
 /**
  * Pure diagnostics-report helpers, Electron-free so they are unit-testable
@@ -73,4 +75,9 @@ export function reportModelsReadFailure(fileName: string, failure: ModelsReadFai
     case 'unreadable':
       return `Could not read ${fileName}: ${failure.detail}`
   }
+}
+
+/** Why Pi cannot start, for the shareable report: always English. */
+export function reportPiStartFailure(failure: PiStartFailure | null): string | null {
+  return failure && describePiStartFailure(failure, tEnglish)
 }

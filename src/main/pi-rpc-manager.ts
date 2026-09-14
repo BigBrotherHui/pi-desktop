@@ -13,9 +13,9 @@ import type {
   PiResponseEvent,
   AgentInstallation,
 } from '../shared/ipc-contracts'
-import type { CaptureOptions, PiEngine, PiResolution, ResolutionDeps } from './pi-binary-resolution'
+import type { CaptureOptions, PiEngine, PiResolution, PiStartFailure, ResolutionDeps } from './pi-binary-resolution'
 import {
-  describePiResolutionFailure,
+  describePiStartFailure,
   isOmpExecutable,
   normalizeOverride,
   resolvePiBinary,
@@ -24,7 +24,7 @@ import {
 import { escapeCmdSpawn } from './cmd-escape'
 import { appLog } from './app-log'
 import { getGuiDataPath } from './app-data-paths'
-import { t } from '../shared/i18n'
+import { t, tEnglish } from '../shared/i18n'
 
 /**
  * Manages a Pi RPC child process.
@@ -307,7 +307,8 @@ function findNodeBinary(): string {
 
 /**
  * Resolved Pi invocation. `found` is false when nothing was located and
- * `script` is only a hopeful fallback; `failureReason` then explains why.
+ * `script` is only a hopeful fallback; `failureReason` then explains why
+ * (render it with describePiStartFailure).
  */
 export interface PiCli {
   /** The selected engine. OMP deliberately keeps the Pi-compatible RPC path. */
@@ -318,7 +319,7 @@ export interface PiCli {
   needsShell: boolean
   found: boolean
   nodeFound: boolean
-  failureReason: string | null
+  failureReason: PiStartFailure | null
 }
 
 // Resolution is lazy and cached rather than computed at import time, because
@@ -426,15 +427,15 @@ function getNodeBinary(): string {
   return cachedNodeBinary
 }
 
-/** Pair a resolution with the Node binary and the failure text spawn needs. */
+/** Pair a resolution with the Node binary and the failure spawn needs. */
 function toPiCli(resolution: PiResolution, kind: AgentEngineKind): PiCli {
   const node = getNodeBinary()
   const nodeFound = !resolution.useNode || existsSync(node)
-  let failureReason: string | null = null
+  let failureReason: PiStartFailure | null = null
   if (!resolution.found) {
-    failureReason = describePiResolutionFailure(resolution)
+    failureReason = { kind: 'pi-not-found', resolution }
   } else if (!nodeFound) {
-    failureReason = t('errors.pi.nodeNotFound', { node })
+    failureReason = { kind: 'node-not-found', node }
   }
   return {
     kind,
@@ -735,20 +736,18 @@ export class PiRpcManager extends EventEmitter {
 
     // Pre-flight: if the binary we resolved doesn't exist, fail fast with a
     // clear message instead of letting spawn die with a cryptic ENOENT.
-    const cli = resolveStartCli(options)
-    if (cli.failureReason) {
-      this.stderrBuffer = cli.failureReason
-      this.setStatus('error')
-      console.error('[Pi] Pre-flight failed:', this.stderrBuffer)
-      appLog.error('pi', 'Pre-flight failed', this.stderrBuffer)
-      return this.getStatus()
+    const { failureReason } = resolveStartCli(options)
+    if (failureReason) {
+      return this.failPreflight(
+        describePiStartFailure(failureReason, t),
+        describePiStartFailure(failureReason, tEnglish)
+      )
     }
     if (options.cwd && (!existsSync(options.cwd) || !statSync(options.cwd).isDirectory())) {
-      this.stderrBuffer = t('errors.pi.cwdMissing', { cwd: options.cwd })
-      this.setStatus('error')
-      console.error('[Pi] Pre-flight failed:', this.stderrBuffer)
-      appLog.error('pi', 'Pre-flight failed', this.stderrBuffer)
-      return this.getStatus()
+      return this.failPreflight(
+        t('errors.pi.cwdMissing', { cwd: options.cwd }),
+        tEnglish('errors.pi.cwdMissing', { cwd: options.cwd })
+      )
     }
 
     // Spawn, with one retry reserved for a crash before readiness. See
@@ -788,6 +787,19 @@ export class PiRpcManager extends EventEmitter {
   }
 
   /**
+   * End a start before spawning. `reason` is the interface-language text the
+   * UI shows; `englishReason` is the same message for the log, which stays
+   * English.
+   */
+  private failPreflight(reason: string, englishReason: string): PiStatus {
+    this.stderrBuffer = reason
+    this.setStatus('error')
+    console.error('[Pi] Pre-flight failed:', englishReason)
+    appLog.error('pi', 'Pre-flight failed', englishReason)
+    return this.getStatus()
+  }
+
+  /**
    * The user-facing reason for a startup timeout. Names only what the streams
    * proved — never guesses at causes the evidence rules out (the old fixed
    * message misdiagnosed issue #58 for days).
@@ -797,9 +809,8 @@ export class PiRpcManager extends EventEmitter {
       ? this.startupTimeouts.engineBusyMs / MS_PER_SECOND
       : this.startupTimeouts.silenceMs / MS_PER_SECOND
     if (this.startupSawOutput) {
-      return captured
-        ? t('errors.pi.startupTimeoutBusyWithStderr', { seconds, detail: captured })
-        : t('errors.pi.startupTimeoutBusy', { seconds })
+      const busy = t('errors.pi.startupTimeoutBusy', { seconds })
+      return captured ? t('errors.pi.startupTimeoutBusyWithStderr', { message: busy, detail: captured }) : busy
     }
     return captured
       ? t('errors.pi.startupTimeoutSilentWithStderr', { seconds, detail: captured })
@@ -901,7 +912,8 @@ export class PiRpcManager extends EventEmitter {
       proc.on('error', (err) => {
         console.error('[Pi] Spawn error:', err.message)
         appLog.error('pi', 'Spawn error', err)
-        this.stderrBuffer += t('errors.pi.spawnError', { detail: err.message })
+        const spawnError = t('errors.pi.spawnError', { detail: err.message })
+        this.stderrBuffer += `${spawnError}\n`
         finish('crashed')
       })
 

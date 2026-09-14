@@ -93,9 +93,9 @@ export async function saveUserTheme(
 ): Promise<{ id: string }> {
   const theme = validateThemeFile(file)
   if (existingId !== undefined) {
-    if (!VALID_THEME_ID.test(existingId)) throw new Error(t('errors.theme.invalidThemeId', { id: existingId }))
+    if (!VALID_THEME_ID.test(existingId)) throw new Error(`invalid theme id: ${existingId}`)
     if ((BUILTIN_THEME_IDS as readonly string[]).includes(existingId)) {
-      throw new Error(t('errors.theme.cannotOverwriteBuiltin', { id: existingId }))
+      throw new Error(`cannot overwrite built-in theme id: ${existingId}`)
     }
   }
   await mkdir(dir, { recursive: true })
@@ -105,7 +105,7 @@ export async function saveUserTheme(
   let id: string
   if (existingId !== undefined) {
     const takenIds = new Set<string>(BUILTIN_THEME_IDS)
-    for (const t of themes) takenIds.add(t.id)
+    for (const userTheme of themes) takenIds.add(userTheme.id)
     id = nextAvailableId(base, (candidate) => takenIds.has(candidate) && candidate !== existingId)
   } else {
     // Fresh create, file import, or URL install: dedupe by identity
@@ -117,7 +117,7 @@ export async function saveUserTheme(
     const taken = new Map<string, string>(
       BUILTIN_THEME_IDS.map((builtinId) => [builtinId, BUILTIN_IDENTITY_SENTINEL]),
     )
-    for (const t of themes) taken.set(t.id, themeIdentity(t.file))
+    for (const userTheme of themes) taken.set(userTheme.id, themeIdentity(userTheme.file))
     const identity = themeIdentity(theme)
     id = nextAvailableId(base, (candidate) => taken.has(candidate) && taken.get(candidate) !== identity)
   }
@@ -127,7 +127,7 @@ export async function saveUserTheme(
 }
 
 export async function deleteUserTheme(dir: string, id: string): Promise<void> {
-  if (!VALID_THEME_ID.test(id)) throw new Error(t('errors.theme.invalidThemeId', { id }))
+  if (!VALID_THEME_ID.test(id)) throw new Error(`invalid theme id: ${id}`)
   await unlink(join(dir, `${id}${THEME_FILE_EXT}`))
 }
 
@@ -474,7 +474,9 @@ export async function fetchGalleryImage(
   if (!response.ok) throw new Error(t('errors.theme.screenshotDownloadFailed', { status: response.status }))
   const contentType = (response.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase()
   if (!GALLERY_IMAGE_CONTENT_TYPES.includes(contentType)) {
-    throw new Error(t('errors.theme.screenshotTypeNotAllowed', { contentType: contentType || 'none' }))
+    throw new Error(contentType
+      ? t('errors.theme.screenshotTypeNotAllowed', { contentType })
+      : t('errors.theme.screenshotTypeMissing'))
   }
   const bytes = await readCappedBytes(response, MAX_GALLERY_IMAGE_BYTES)
   return { dataUri: `data:${contentType};base64,${Buffer.from(bytes).toString('base64')}` }

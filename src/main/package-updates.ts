@@ -27,11 +27,6 @@ const DIST_TAG_PATTERN = /^[A-Za-z][\w.-]*$/
 const FLOATING_RANGE_PATTERN = /^[\^~]\d/
 const OMP_MISSING_BUN_MARKER = 'Executable not found in $PATH: "bun"'
 
-// Also exported as a value (evaluated once, in the interface language active at
-// import) for callers that need the text rather than a fresh translation on
-// every read; explainOmpFailure below always re-translates at call time.
-export const OMP_MISSING_BUN_MESSAGE = t('errors.packages.missingBun')
-
 /** A registry lookup: the package name and the dist-tag its update follows. */
 export interface RegistryQuery {
   name: string

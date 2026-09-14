@@ -6,7 +6,7 @@ import { promisify } from 'util'
 import { describeWriteError } from './fs-errors'
 import { appLog } from './app-log'
 import type { FileChangeEvent } from '../shared/ipc-contracts'
-import { t } from '../shared/i18n'
+import { i18n, t, tEnglish, type Translate } from '../shared/i18n'
 
 const execFileAsync = promisify(execFile)
 
@@ -34,12 +34,15 @@ export function isBenignGitError(err: unknown): boolean {
   return NOT_GIT_REPO_RE.test(text) || NO_WORK_TREE_RE.test(text)
 }
 
-/** Compact failure text for a git subcommand: first stderr line, else message. */
-export function describeGitError(operation: string, err: unknown): string {
+/**
+ * Compact failure text for a git subcommand: first stderr line, else message.
+ * `t` defaults to the interface language; the log passes `tEnglish`.
+ */
+export function describeGitError(operation: string, err: unknown, t: Translate = i18n.t): string {
   const { stderr, message } = (err ?? {}) as { stderr?: unknown; message?: unknown }
   const stderrLine = typeof stderr === 'string' ? stderr.trim().split('\n')[0] : ''
-  const reason = stderrLine || (typeof message === 'string' ? message : String(err))
-  return t('errors.git.subcommandFailed', { operation, reason })
+  const detail = stderrLine || (typeof message === 'string' ? message : String(err))
+  return t('errors.git.commandFailedWithDetail', { command: `git ${operation}`, detail })
 }
 
 // One log entry per workspace+operation per run — git status is polled every
@@ -294,15 +297,17 @@ export class FileService {
   }
 
   private describeAndLogGitError(operation: string, err: unknown): Error {
-    const description = describeGitError(operation, err)
+    // The log stays English, so it (and its dedup key) uses the English text;
+    // the returned error carries the interface-language text for the UI.
+    const englishDescription = describeGitError(operation, err, tEnglish)
     // Dedup by error signature, not just operation, so a NEW failure mode for
     // the same command still reaches the log.
-    const key = `${this.workspacePath}:${description}`
+    const key = `${this.workspacePath}:${englishDescription}`
     if (!gitErrorLogged.has(key)) {
       gitErrorLogged.add(key)
-      appLog.warn('git', `${description} (${this.workspacePath})`, err)
+      appLog.warn('git', `${englishDescription} (${this.workspacePath})`, err)
     }
-    return new Error(description)
+    return new Error(describeGitError(operation, err))
   }
 
   // Some git subcommands fail outside a repo with errors that never mention

@@ -107,8 +107,8 @@ function runCommand(file: string, args: readonly string[], cwd: string): Promise
       if (code === 0) resolvePromise(output)
       else reject(new Error(
         output
-          ? t('errors.git.subprocessFailedWithDetail', { command, detail: output })
-          : t('errors.git.subprocessFailed', { command })
+          ? t('errors.git.commandFailedWithDetail', { command, detail: output })
+          : t('errors.git.commandFailed', { command })
       ))
     })
   })

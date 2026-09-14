@@ -5,8 +5,10 @@ import {
   countPathEntries,
   extractVersionLine,
   reportModelsReadFailure,
+  reportPiStartFailure,
   summarizeProviders,
 } from './diagnostics-report'
+import { describePiStartFailure, PI_FALLBACK_BINARY_POSIX, type PiStartFailure } from './pi-binary-resolution'
 import type { ModelsConfig } from '../shared/ipc-contracts'
 import { PSEUDO_LANGUAGE, SOURCE_LANGUAGE } from '../shared/i18n/languages'
 
@@ -95,6 +97,40 @@ test('reportModelsReadFailure does not depend on the interface language', async 
   } finally {
     await i18n.changeLanguage(SOURCE_LANGUAGE)
   }
+})
+
+test('reportPiStartFailure stays English under the pseudo-language', async () => {
+  const { i18n, t } = await import('../shared/i18n')
+  const notFound: PiStartFailure = {
+    kind: 'pi-not-found',
+    resolution: {
+      script: PI_FALLBACK_BINARY_POSIX,
+      useNode: false,
+      needsShell: false,
+      source: 'fallback',
+      found: false,
+      rejectedOverride: null,
+      pathEnv: '',
+    },
+  }
+  const node = '/usr/bin/node'
+  const nodeMissing: PiStartFailure = { kind: 'node-not-found', node }
+  await i18n.changeLanguage(PSEUDO_LANGUAGE)
+  try {
+    const notFoundReport = reportPiStartFailure(notFound) ?? ''
+    assert.match(notFoundReport, /^Pi binary not found\. /)
+    assert.match(notFoundReport, /Settings > Agent Configuration > Agent Installation\.$/)
+    assert.equal(
+      reportPiStartFailure(nodeMissing),
+      `Node binary not found at resolved path:\n  ${node}\n\nPi's .js entry point requires Node. ` +
+        'Install Node from https://nodejs.org or set the NODE env var to your Node binary path.',
+    )
+    // The UI rendering of the same failure is in the interface language.
+    assert.notEqual(describePiStartFailure(nodeMissing, t), reportPiStartFailure(nodeMissing))
+  } finally {
+    await i18n.changeLanguage(SOURCE_LANGUAGE)
+  }
+  assert.equal(reportPiStartFailure(null), null)
 })
 
 test('countPathEntries splits on the platform delimiter and drops blanks', () => {
