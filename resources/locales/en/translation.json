@@ -1473,6 +1473,9 @@
     "effortWithLevel": "Thinking effort: {{level}}",
     "modelAwareDepth": "Model-aware thinking depth"
   },
+  "time": {
+    "justNow": "just now"
+  },
   "timeline": {
     "agentFinished": "Agent finished",
     "agentStarted": "Agent started processing",

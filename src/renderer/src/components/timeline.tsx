@@ -136,6 +136,7 @@ export function Timeline(): React.JSX.Element {
 }
 
 function TimelineEntry({ event }: { event: StoreTimelineEvent }): React.JSX.Element {
+  const { i18n } = useTranslation()
   const icon = getEventIcon(event.type, event.status)
   const color = getEventColor(event.type, event.status)
 
@@ -166,7 +167,7 @@ function TimelineEntry({ event }: { event: StoreTimelineEvent }): React.JSX.Elem
 
         <div className="mt-1 flex items-center gap-2 text-xs text-faint">
           <Clock size={10} />
-          <span>{formatTimestamp(event.timestamp)}</span>
+          <span>{formatTimestamp(event.timestamp, i18n.language)}</span>
           {event.duration !== undefined && (
             <>
               <span className="text-ghost">·</span>
@@ -228,9 +229,9 @@ function getEventColor(type: StoreTimelineEvent['type'], status?: string): strin
   }
 }
 
-function formatTimestamp(timestamp: number): string {
+function formatTimestamp(timestamp: number, language: string): string {
   const date = new Date(timestamp)
-  return date.toLocaleTimeString(undefined, {
+  return date.toLocaleTimeString(language, {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',

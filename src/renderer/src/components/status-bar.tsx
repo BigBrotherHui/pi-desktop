@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 
 export function StatusBar(): React.JSX.Element {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const piStatus = useAppStore((state) => state.piStatus)
   const piPid = useAppStore((state) => state.piPid)
   // Name the engine that is actually running; the two are not interchangeable
@@ -175,8 +175,8 @@ export function StatusBar(): React.JSX.Element {
           <div
             className="flex items-center gap-1 text-dim"
             title={t('statusBar.contextUsage', {
-              tokens: sessionStats.contextUsage.tokens?.toLocaleString() ?? '?',
-              contextWindow: sessionStats.contextUsage.contextWindow.toLocaleString(),
+              tokens: sessionStats.contextUsage.tokens?.toLocaleString(i18n.language) ?? '?',
+              contextWindow: sessionStats.contextUsage.contextWindow.toLocaleString(i18n.language),
             })}
           >
             <Layers size={10} />

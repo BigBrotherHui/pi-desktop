@@ -482,6 +482,7 @@ function AgentGrid({ run, onSelect }: { run: WorkflowRunDetail; onSelect: (agent
 }
 
 function HistoryEntry({ entry }: { entry: WorkflowHistoryEntry }): React.JSX.Element {
+  const { i18n } = useTranslation()
   const isCode = entry.kind === 'toolCall' || entry.kind === 'toolResult' || entry.kind === 'error'
   return (
     <div className={clsx('rounded-lg border p-2.5', entry.isError ? 'border-error/50 bg-error-bg/20' : 'border-border bg-card/40')}>
@@ -491,7 +492,7 @@ function HistoryEntry({ entry }: { entry: WorkflowHistoryEntry }): React.JSX.Ele
         <span>{entry.kind}</span>
         {entry.toolName && <span className="truncate normal-case text-accent-fg">{entry.toolName}</span>}
         {entry.path && <span className="truncate normal-case" title={entry.path}>{entry.path}</span>}
-        {entry.timestamp && <span className="ml-auto shrink-0 normal-case">{new Date(entry.timestamp).toLocaleTimeString()}</span>}
+        {entry.timestamp && <span className="ml-auto shrink-0 normal-case">{new Date(entry.timestamp).toLocaleTimeString(i18n.language)}</span>}
       </div>
       {entry.text && (isCode ? (
         <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded bg-app/70 p-2 font-jetbrains text-[11px] leading-relaxed text-secondary">{entry.text}</pre>

@@ -76,8 +76,8 @@ function formatHour(h: number): string {
   return `${hr} ${period}`
 }
 
-function formatShortDate(dateKey: string): string {
-  return new Date(`${dateKey}T00:00:00`).toLocaleDateString(undefined, {
+function formatShortDate(dateKey: string, language: string): string {
+  return new Date(`${dateKey}T00:00:00`).toLocaleDateString(language, {
     month: 'short',
     day: 'numeric',
   })
@@ -90,7 +90,7 @@ interface TokenBucket {
 }
 
 /** Bucket a day slice into ≤ MAX_BARS bars, trimming leading token-free days. */
-function bucketTokens(days: ActivityStatsDay[]): TokenBucket[] {
+function bucketTokens(days: ActivityStatsDay[], language: string): TokenBucket[] {
   let start = 0
   while (start < days.length && days[start].tokens === 0) start += 1
   const span = days.slice(start)
@@ -105,7 +105,7 @@ function bucketTokens(days: ActivityStatsDay[]): TokenBucket[] {
       total += d.tokens
       for (const [model, t] of Object.entries(d.tokensByModel)) byModel[model] = (byModel[model] ?? 0) + t
     }
-    buckets.push({ label: formatShortDate(chunk[0].date), total, byModel })
+    buckets.push({ label: formatShortDate(chunk[0].date, language), total, byModel })
   }
   return buckets
 }
@@ -160,8 +160,8 @@ function TokenChart({
   orderedModels: string[] // largest-first; stacking order (top → bottom)
   modelColor: Map<string, string>
 }): React.JSX.Element {
-  const { t } = useTranslation()
-  const buckets = useMemo(() => bucketTokens(days), [days])
+  const { t, i18n } = useTranslation()
+  const buckets = useMemo(() => bucketTokens(days, i18n.language), [days, i18n.language])
 
   if (buckets.length === 0) {
     return <div className="py-10 text-center text-xs text-faint">{t('stats.tokenChart.empty')}</div>
@@ -271,7 +271,7 @@ function ModelLegend({
  * stays uncluttered.
  */
 export function StatsPanel(): React.JSX.Element | null {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [data, setData] = useState<ActivityStatsResult | null>(null)
   const [tab, setTab] = useState<Tab>('overview')
   const [range, setRange] = useState<ActivityRangeKey>('365')
@@ -340,10 +340,10 @@ export function StatsPanel(): React.JSX.Element | null {
       {tab === 'overview' ? (
         <>
           <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <StatCard label={t('stats.overview.sessionsLabel')} value={stats.sessions.toLocaleString()} />
-            <StatCard label={t('stats.overview.messagesLabel')} value={stats.messages.toLocaleString()} />
+            <StatCard label={t('stats.overview.sessionsLabel')} value={stats.sessions.toLocaleString(i18n.language)} />
+            <StatCard label={t('stats.overview.messagesLabel')} value={stats.messages.toLocaleString(i18n.language)} />
             <StatCard label={t('stats.overview.totalTokensLabel')} value={formatCompact(stats.totalTokens)} />
-            <StatCard label={t('stats.overview.activeDaysLabel')} value={stats.activeDays.toLocaleString()} />
+            <StatCard label={t('stats.overview.activeDaysLabel')} value={stats.activeDays.toLocaleString(i18n.language)} />
             <StatCard label={t('stats.overview.currentStreakLabel')} value={`${stats.currentStreak}d`} />
             <StatCard label={t('stats.overview.longestStreakLabel')} value={`${stats.longestStreak}d`} />
             <StatCard label={t('stats.overview.peakHourLabel')} value={stats.peakHour === null ? '—' : formatHour(stats.peakHour)} />
