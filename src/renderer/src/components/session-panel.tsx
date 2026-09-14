@@ -236,7 +236,7 @@ export function SessionPanel(): React.JSX.Element {
               // Current Only always shows its sessions. All Sessions keeps the
               // persisted collapse preference and expands search matches.
               const isExpanded = projectScoped || searchQuery.trim() !== '' || !collapsedGroups.has(projectPath)
-              const projectName = sessions[0]?.projectName ?? 'Unknown'
+              const projectName = sessions[0]?.projectName ?? t('sessions.unknownProject')
               const latestSession = sessions[0]
               const isCurrentProject = !!activeWorkspace && pathsEqual(projectPath, activeWorkspace.path)
 

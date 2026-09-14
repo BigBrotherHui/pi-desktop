@@ -69,11 +69,9 @@ function formatCompact(n: number): string {
   return String(n)
 }
 
-/** 23 → "11 PM", 0 → "12 AM". */
-function formatHour(h: number): string {
-  const period = h < 12 ? 'AM' : 'PM'
-  const hr = h % 12 === 0 ? 12 : h % 12
-  return `${hr} ${period}`
+/** 23 → "11 PM", 0 → "12 AM" (in `language`'s hour convention). */
+function formatHour(h: number, language: string): string {
+  return new Intl.DateTimeFormat(language, { hour: 'numeric' }).format(new Date(2000, 0, 1, h))
 }
 
 function formatShortDate(dateKey: string, language: string): string {
@@ -346,7 +344,7 @@ export function StatsPanel(): React.JSX.Element | null {
             <StatCard label={t('stats.overview.activeDaysLabel')} value={stats.activeDays.toLocaleString(i18n.language)} />
             <StatCard label={t('stats.overview.currentStreakLabel')} value={`${stats.currentStreak}d`} />
             <StatCard label={t('stats.overview.longestStreakLabel')} value={`${stats.longestStreak}d`} />
-            <StatCard label={t('stats.overview.peakHourLabel')} value={stats.peakHour === null ? '—' : formatHour(stats.peakHour)} />
+            <StatCard label={t('stats.overview.peakHourLabel')} value={stats.peakHour === null ? '—' : formatHour(stats.peakHour, i18n.language)} />
             <StatCard label={t('stats.overview.favoriteModelLabel')} value={favoriteModel} />
           </div>
           <Heatmap days={rangedDays} />

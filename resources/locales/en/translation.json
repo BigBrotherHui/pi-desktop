@@ -961,7 +961,8 @@
       "minutes_one": "{{count}}m ago",
       "minutes_other": "{{count}}m ago"
     },
-    "title": "Sessions"
+    "title": "Sessions",
+    "unknownProject": "Unknown"
   },
   "settings": {
     "actions": {
