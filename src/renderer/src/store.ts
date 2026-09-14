@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { applyThemeSettings, rememberBootTheme, setUserThemes, watchSystemTheme } from './utils/theme'
+import { applyLanguageSetting } from './i18n'
 import { buildPlanningPrompt } from './utils/planning-prompt'
 import { parseAgentMessage, type DisplayAttachment, type DisplayMessage } from './message-parsing'
 import type { PiCommand } from '../../shared/pi-command'
@@ -1905,6 +1906,9 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
 
       // Apply font size
       document.documentElement.style.fontSize = `${settings.fontSize}px`
+
+      // Settings reload after each save, so this also applies a changed language.
+      await applyLanguageSetting(settings.language)
     } catch {
       // Silent failure
     }

@@ -1,5 +1,10 @@
 {
   "language": {
     "nativeName": "English"
+  },
+  "settings": {
+    "language": {
+      "system": "System default ({{language}})"
+    }
   }
 }

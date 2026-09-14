@@ -1,6 +1,9 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { I18nextProvider } from 'react-i18next'
 import { App } from './app'
+import { i18n } from '../../shared/i18n'
+import { applyBootLanguage } from './i18n'
 import '@fontsource-variable/inter'
 import '@fontsource-variable/jetbrains-mono'
 import './index.css'
@@ -10,6 +13,9 @@ import './index.css'
 // eagerly so glyphs render in OpenMoji from the first paint.
 void document.fonts?.load('16px "OpenMoji Color"').catch(() => {})
 
+// Before the first render, so the first frame is already in the saved language.
+applyBootLanguage()
+
 const rootElement = document.getElementById('root')
 
 if (!rootElement) {
@@ -18,6 +24,8 @@ if (!rootElement) {
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <App />
+    <I18nextProvider i18n={i18n}>
+      <App />
+    </I18nextProvider>
   </React.StrictMode>
 )
