@@ -7,13 +7,15 @@ import { join } from 'path'
 import { assertTrustedSender, isString } from './validation'
 import { runPiCli } from './run-pi-cli'
 import { activeEngineKind } from './active-engine'
-import { parseOmpNpmPlugins, parseOmpPluginList, type OmpNpmPlugin } from '../omp-plugin-list'
+import { parseOmpPluginList, type OmpNpmPlugin } from '../omp-plugin-list'
 import {
   explainOmpFailure,
   findPackageUpdates,
-  ompRegistryQuery,
+  ompNpmTargets,
+  OmpPluginListError,
   ompUpdateInstallSpec,
   piRegistryQuery,
+  type OmpNpmTarget,
   type OmpRegistryQuery,
   type UpdateCandidate,
 } from '../package-updates'
@@ -105,12 +107,6 @@ interface PiPackageScope {
   npmRoot: string
 }
 
-/** An OMP npm plugin and its registry lookup (null when it can't be updated from npm). */
-interface OmpNpmTarget {
-  plugin: OmpNpmPlugin
-  query: OmpRegistryQuery | null
-}
-
 function homeDir(): string {
   return process.env.HOME ?? process.env.USERPROFILE ?? ''
 }
@@ -186,16 +182,23 @@ async function piUpdateCandidates(cwd: string): Promise<UpdateCandidate[]> {
  */
 async function readOmpNpmTargets(cwd: string): Promise<OmpNpmTarget[]> {
   const result = await runPiCli(OMP_PLUGIN_LIST_ARGS, cwd, LIST_TIMEOUT_MS, 'omp')
-  if (!result.success) return []
   const manifest = await readJsonObject(join(ompPluginsDir(), 'package.json'))
-  const dependencies = (manifest?.dependencies ?? {}) as Record<string, unknown>
-  return parseOmpNpmPlugins(result.output).map((plugin) => {
-    const dependencySpec = dependencies[plugin.name]
-    return {
-      plugin,
-      query: typeof dependencySpec === 'string' ? ompRegistryQuery(plugin.name, dependencySpec) : null,
-    }
-  })
+  return ompNpmTargets(result, (manifest?.dependencies ?? {}) as Record<string, unknown>)
+}
+
+/** Run an OMP mutation that needs the npm plugin list; a failed list is the result. */
+async function withOmpNpmTargets(
+  cwd: string,
+  mutate: (targets: OmpNpmTarget[]) => Promise<CliResult>
+): Promise<CliResult> {
+  let targets: OmpNpmTarget[]
+  try {
+    targets = await readOmpNpmTargets(cwd)
+  } catch (error) {
+    if (!(error instanceof OmpPluginListError)) throw error
+    return { success: false, output: t('errors.packages.listFailed', { detail: error.detail }) }
+  }
+  return mutate(targets)
 }
 
 function ompUpdateCandidates(targets: OmpNpmTarget[]): UpdateCandidate[] {
@@ -240,24 +243,27 @@ async function updateOmpNpmPlugin(plugin: OmpNpmPlugin, query: OmpRegistryQuery,
 }
 
 async function updateOmpPlugin(spec: string, cwd: string): Promise<CliResult> {
-  const target = (await readOmpNpmTargets(cwd)).find(({ plugin }) => plugin.name === spec)
-  // Not an npm plugin: marketplace ids (`name@marketplace`) have a native upgrade.
-  if (!target) return runOmpMutation(['plugin', 'upgrade', spec], cwd, UPDATE_TIMEOUT_MS)
-  if (!target.query) {
-    return { success: false, output: t('errors.packages.pinnedOrNotFromNpm', { spec }) }
-  }
-  return updateOmpNpmPlugin(target.plugin, target.query, cwd)
+  return withOmpNpmTargets(cwd, async (targets) => {
+    const target = targets.find(({ plugin }) => plugin.name === spec)
+    // Not an npm plugin: marketplace ids (`name@marketplace`) have a native upgrade.
+    if (!target) return runOmpMutation(['plugin', 'upgrade', spec], cwd, UPDATE_TIMEOUT_MS)
+    if (!target.query) {
+      return { success: false, output: t('errors.packages.pinnedOrNotFromNpm', { spec }) }
+    }
+    return updateOmpNpmPlugin(target.plugin, target.query, cwd)
+  })
 }
 
 async function updateAllOmpPlugins(cwd: string): Promise<CliResult> {
-  const targets = await readOmpNpmTargets(cwd)
-  const outdated = new Set((await findPackageUpdates(ompUpdateCandidates(targets))).map((update) => update.source))
-  const results = [await runOmpMutation(OMP_MARKETPLACE_UPGRADE_ARGS, cwd, UPDATE_ALL_TIMEOUT_MS)]
-  // Sequential: every npm plugin shares one bun project and lockfile.
-  for (const { plugin, query } of targets) {
-    if (query && outdated.has(plugin.name)) results.push(await updateOmpNpmPlugin(plugin, query, cwd))
-  }
-  return combineResults(results)
+  return withOmpNpmTargets(cwd, async (targets) => {
+    const outdated = new Set((await findPackageUpdates(ompUpdateCandidates(targets))).map((update) => update.source))
+    const results = [await runOmpMutation(OMP_MARKETPLACE_UPGRADE_ARGS, cwd, UPDATE_ALL_TIMEOUT_MS)]
+    // Sequential: every npm plugin shares one bun project and lockfile.
+    for (const { plugin, query } of targets) {
+      if (query && outdated.has(plugin.name)) results.push(await updateOmpNpmPlugin(plugin, query, cwd))
+    }
+    return combineResults(results)
+  })
 }
 
 async function readPackagesFromSettings(settingsPath: string): Promise<InstalledPackage[]> {

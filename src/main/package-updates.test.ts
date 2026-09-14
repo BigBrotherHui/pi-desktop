@@ -3,6 +3,8 @@ import { test } from 'node:test'
 import {
   explainOmpFailure,
   fetchRegistryVersion,
+  OmpPluginListError,
+  ompNpmTargets,
   findPackageUpdates,
   ompRegistryQuery,
   ompUpdateInstallSpec,
@@ -128,4 +130,20 @@ test('explainOmpFailure replaces the missing-bun error and keeps others', () => 
   const missingBun = '✘ Failed to install npm:pi-ask-user@latest: Error: Executable not found in $PATH: "bun"'
   assert.equal(explainOmpFailure(missingBun), t('errors.packages.missingBun'))
   assert.equal(explainOmpFailure('Plugin "x" is not installed'), 'Plugin "x" is not installed')
+})
+
+const OMP_LIST_JSON = JSON.stringify({ npm: [{ name: 'pi-ask-user', version: '0.14.0', enabled: true }] })
+
+test('ompNpmTargets pairs each npm plugin with its store lookup', () => {
+  const targets = ompNpmTargets({ success: true, output: OMP_LIST_JSON }, { 'pi-ask-user': 'npm:pi-ask-user@^0.14.0' })
+  assert.equal(targets.length, 1)
+  assert.equal(targets[0].plugin.name, 'pi-ask-user')
+  assert.deepEqual(targets[0].query, { name: 'pi-ask-user', tag: 'latest', specPrefix: 'npm:' })
+})
+
+test('ompNpmTargets reports a failed plugin list instead of an empty one', () => {
+  assert.throws(
+    () => ompNpmTargets({ success: false, output: 'omp: timed out' }, {}),
+    (error: unknown) => error instanceof OmpPluginListError && error.detail === 'omp: timed out'
+  )
 })

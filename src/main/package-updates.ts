@@ -1,6 +1,6 @@
 import type { PackageUpdate } from '../shared/ipc-contracts'
 import { isNewerVersion } from '../shared/version-compare'
-import type { OmpNpmPlugin } from './omp-plugin-list'
+import { parseOmpNpmPlugins, type OmpNpmPlugin } from './omp-plugin-list'
 import { t } from '../shared/i18n'
 
 /**
@@ -50,6 +50,40 @@ export interface UpdateCandidate {
 }
 
 export type RegistryVersionLookup = (query: RegistryQuery) => Promise<string | null>
+
+/** An installed OMP npm plugin and its registry lookup (null when pinned). */
+export interface OmpNpmTarget {
+  plugin: OmpNpmPlugin
+  query: OmpRegistryQuery | null
+}
+
+/** `omp plugin list --json` did not run, so the npm plugins are unknown. */
+export class OmpPluginListError extends Error {
+  constructor(readonly detail: string) {
+    super(`omp plugin list failed: ${detail}`)
+    this.name = 'OmpPluginListError'
+  }
+}
+
+/**
+ * OMP's npm plugins with their registry lookups. The lookup comes from the
+ * plugin store's `dependencies`, which record how each plugin was installed.
+ * A failed list is an error, never an empty list: callers would otherwise
+ * treat every npm plugin as a marketplace one or report no updates.
+ */
+export function ompNpmTargets(
+  list: { success: boolean; output: string },
+  dependencies: Record<string, unknown>
+): OmpNpmTarget[] {
+  if (!list.success) throw new OmpPluginListError(list.output.trim())
+  return parseOmpNpmPlugins(list.output).map((plugin) => {
+    const dependencySpec = dependencies[plugin.name]
+    return {
+      plugin,
+      query: typeof dependencySpec === 'string' ? ompRegistryQuery(plugin.name, dependencySpec) : null,
+    }
+  })
+}
 
 /** Split `name@version` (scoped or not) into its name and version parts. */
 function splitNameAndVersion(spec: string): { name: string; version: string } {

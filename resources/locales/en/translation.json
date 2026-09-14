@@ -507,6 +507,7 @@
     },
     "packages": {
       "invalidSpec": "Invalid package specification",
+      "listFailed": "Could not read the OMP plugin list: {{detail}}",
       "missingBun": "OMP needs bun to install or update npm plugins. Install bun from https://bun.sh, then try again.",
       "pinnedOrNotFromNpm": "{{spec}} is pinned or was not installed from npm, so it cannot be updated here."
     },
