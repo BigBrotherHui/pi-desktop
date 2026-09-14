@@ -27,7 +27,7 @@ Still in alpha, so expect rough edges.
 - Terminal with ANSI colors
 - Package browser connected to pi.dev/packages, with instant local search
 - Session tags, model switching, live-preview settings, themes (7 built-ins plus System, and custom themes you can create in-app, import, export, or install from a URL)
-- Translatable interface: pick the language in Settings (English ships today; see [Translations](CONTRIBUTING.md#translations) to add one)
+- [Translatable interface](#languages): pick the language in Settings (English ships today)
 
 ## Review rail
 
@@ -116,6 +116,14 @@ Two optional top-level objects let you pin exact values instead of relying on de
 User theme files live in the app's user-data directory under `themes/` (on Linux, `~/.config/pi-desktop/themes/`).
 
 There's also a community gallery at [pi-desktop-themes](https://github.com/FaqFirebase/pi-desktop-themes): copy any theme's raw URL into **Install from URL**, or submit your own with a pull request.
+
+## Languages
+
+Pick the interface language in **Settings → Appearance → Language**. **System default** follows your operating system's language list and falls back to English. The change applies when you click **Save Settings**, with no restart.
+
+English is the only bundled language today. Each language is one JSON file in `resources/locales/<code>/translation.json`; see [Translations](CONTRIBUTING.md#translations) to add one.
+
+Only the app's own text is translated. Chat replies, file contents, and names of models, packages, and sessions stay as they are. Logs and the copied Diagnostics report stay in English, so bug reports stay readable.
 
 ## Multi-Agent Council Planning
 

@@ -41,6 +41,8 @@ Project is currently in **Alpha**. APIs, IPC contracts, on-disk config formats, 
 - Product names ("Pi Desktop", "Pi", "OMP") are never translation keys — they come from `agentEngineLabel()`, `councilAgentLabel()`, or a named constant, never from a language file
 - `npm run lint` runs `i18next-cli lint` and `i18next-cli extract --ci --dry-run`, so hard-coded text and stale keys fail CI
 - Code never decides behavior from a translated display string; it reads underlying values (failure codes, `kind`/`ToolKind` enums, error types) instead
+- `t` from `useTranslation()` changes identity on every language switch. List it in the deps of a `useMemo`/`useCallback` that builds text, but never in the deps of a `useEffect` that does I/O or resets state (a re-run once discarded unsaved editor edits): keep the outcome as data and translate it at render (`utils/preview-load-error.ts`)
+- `i18next-cli extract` finds keys only in `t('literal.key')` calls on an identifier named `t`, or through a key map declared in the same file. A translator passed to a helper must be a parameter named `t`; a key map imported from another file is invisible, and `removeUnusedKeys` deletes its keys. Share labels through a helper that calls `t` directly (`utils/process-status-label.ts`)
 
 ## Project Structure
 
@@ -60,6 +62,8 @@ src/
 │   ├── folder-drop.ts            # Pure helpers for drag-drop folder → workspace
 │   ├── untrusted-data.ts         # Wrap file/agent text as a labeled untrusted-data block
 │   ├── agent-engine-label.ts     # Display names for the Pi/OMP engines (every surface reads this one map)
+│   ├── product-name.ts           # "Pi Desktop" display name (a named constant, never a translation key)
+│   ├── i18n/                     # i18next instance, t/tEnglish, bundled languages, OS-language resolver, pseudo-language, locale checks
 │   ├── pi-command.ts             # Slash-command filtering
 │   ├── fork-point.ts             # Fork/branch message helpers
 │   ├── session-lineage.ts        # Cross-session lineage tree
@@ -69,6 +73,7 @@ src/
 │   └── theme/                    # Theme-file format, resolver, syntax defaults, tokens
 ├── main/
 │   ├── index.ts                  # App lifecycle, window creation, hardening
+│   ├── i18n.ts                   # Main-process language: OS language list, pseudo-language gate, apply the setting
 │   ├── ipc-handlers.ts           # IPC composition root (creates context, calls ipc/ modules)
 │   ├── ipc/                      # Domain-specific IPC handler modules (pi, session, files, ...)
 │   ├── app-log.ts                # Main-process log: ring buffer + JSONL file in the GUI data dir
@@ -130,6 +135,7 @@ src/
         ├── store.ts              # Zustand state management
         ├── hooks.ts              # Event subscriptions, lifecycle
         ├── global.d.ts           # Renderer ambient types
+        ├── i18n.ts               # Boot language, language picker options, apply the language setting
         ├── message-parsing.ts    # Pi messages -> display messages
         ├── message-grouping.ts   # Tool-name labels and message grouping
         ├── theme/engine.ts       # Apply a resolved theme to the document
@@ -148,6 +154,8 @@ src/
         │   ├── format-relative-time.ts # Relative-time labels capped at days
         │   ├── relative-time.tsx # Shared ticking "now" for relative labels
         │   ├── stale-guard.ts    # Last-write-wins guard for overlapping loads
+        │   ├── preview-load-error.ts # Preview load/save failure kept as data, translated at render
+        │   ├── process-status-label.ts # Translated agent process status (status popover, Diagnostics)
         │   └── workflow-runs.ts  # Session id used to scope workflow runs
         └── components/
             ├── sidebar.tsx        # Workspace switcher, nav, sessions grouped by folder, inline rename

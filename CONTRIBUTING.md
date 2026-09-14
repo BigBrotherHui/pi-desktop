@@ -156,6 +156,14 @@ To try a language, pick it in Settings > Appearance > Language.
 
 When you add interface text in code, use a key with `t()` and run `npx i18next-cli extract` to add the key to every language file. Then write the English text in `resources/locales/en/translation.json`.
 
+To find text that is not translated, start the app with the test language enabled:
+
+```bash
+PI_DESKTOP_PSEUDO_LANGUAGE=1 npm run dev
+```
+
+Pick the bracketed entry (`[Éñĝļîšĥ ~~~]`) in Settings > Appearance > Language and save. Every translated string then shows accented letters inside brackets, longer than English. Plain English text on screen was not translated, unless it is data such as file names, model names, or chat content.
+
 ## Testing
 
 Before submitting a pull request:
