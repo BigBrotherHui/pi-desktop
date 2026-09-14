@@ -22,10 +22,15 @@ export function isPermissionMode(value: unknown): value is PermissionMode {
 }
 
 /**
- * Explicit key maps so `i18next-cli` can resolve every literal key (the
- * lookup value has a union type it cannot trace through a template literal).
- * Components build `t(PERMISSION_MODE_LABEL_KEYS[option.value])` with their
- * own `useTranslation()` hook's `t` so the text re-renders on language change.
+ * Explicit key maps, exported so other components (`permission-selector.tsx`,
+ * `composer-permission-menu.tsx`) can look up the same literal keys with
+ * their own `useTranslation()` hook's `t` — calling `getPermissionModeLabel`
+ * below instead would bake in this module's shared, non-reactive `t` and the
+ * label would not update on a language change. (A template-literal key on a
+ * directly union-typed parameter, as used here, is resolved by
+ * `i18next-cli`'s extractor without trouble — verified against
+ * `permissionMode.${mode}.label`; the map exists for the multi-component
+ * reactivity reason above, not an extraction limitation.)
  */
 export const PERMISSION_MODE_LABEL_KEYS = {
   'plan-readonly': 'permissionMode.plan-readonly.label',

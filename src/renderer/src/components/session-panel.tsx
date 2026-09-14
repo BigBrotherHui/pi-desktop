@@ -358,7 +358,7 @@ function formatRelativeTime(timestamp: number, t: Translate, language: string): 
   const hours = Math.floor(minutes / 60)
   const days = Math.floor(hours / 24)
 
-  if (seconds < 60) return t('sessions.time.justNow')
+  if (seconds < 60) return t('time.justNow')
   if (minutes < 60) return t('sessions.time.minutes', { count: minutes })
   if (hours < 24) return t('sessions.time.hours', { count: hours })
   if (days < 7) return t('sessions.time.days', { count: days })

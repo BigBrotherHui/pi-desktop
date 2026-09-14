@@ -318,7 +318,7 @@ function createApplicationMenu(): void {
       label: t('menu.file'),
       submenu: [
         {
-          label: t('menu.newSession'),
+          label: t('common.newSession'),
           accelerator: 'CmdOrCtrl+N',
           click: () => {
             const focusedWindow = BrowserWindow.getFocusedWindow()

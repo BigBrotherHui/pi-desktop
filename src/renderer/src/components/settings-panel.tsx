@@ -675,7 +675,7 @@ export function SettingsPanel(): React.JSX.Element {
         <div className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Settings size={20} className="text-muted" />
-            <h1 className="text-lg font-semibold text-primary">{t('settings.title')}</h1>
+            <h1 className="text-lg font-semibold text-primary">{t('common.settings')}</h1>
           </div>
         </div>
 

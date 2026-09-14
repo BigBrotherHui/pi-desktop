@@ -13,9 +13,12 @@ import type { IpcContext } from './context'
 import { t } from '../../shared/i18n'
 
 // An explicit map, not a template-literal key built from the notification
-// kind: the i18next-cli extractor cannot resolve a t() call built that way
-// against the union type, so it would report the individual notification
-// keys below as unused.
+// kind: `kind`'s type is the indexed-access type
+// `WorkspaceActivityNotification['kind']`, and the extractor's static
+// analysis cannot trace a template literal through that (verified: a
+// directly union-typed parameter, as in permission-mode.ts's
+// `getPermissionModeLabel`, extracts fine — an indexed-access type does
+// not), so it would report the individual notification keys below as unused.
 const NOTIFICATION_KEYS = {
   completed: 'notifications.completed',
   failed: 'notifications.failed',

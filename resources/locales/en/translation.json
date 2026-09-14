@@ -141,8 +141,7 @@
     "commands": "Commands",
     "extensions": "Extensions",
     "other": "Other",
-    "prompts": "Prompts",
-    "skills": "Skills"
+    "prompts": "Prompts"
   },
   "commands": {
     "clone": {
@@ -507,7 +506,7 @@
       "cwdMissing": "Pi working directory does not exist or is not a directory:\n  {{cwd}}",
       "exitedBeforeReady": "Pi exited with code {{code}} before becoming ready.",
       "failedToCreateManager": "Failed to create Pi manager",
-      "installHint": "Install Pi with:\n  npm install -g @earendil-works/pi-coding-agent\nor install OMP with:\n  bun install -g @oh-my-pi/pi-coding-agent",
+      "installHint": "Install Pi with:\n  {{npmCommand}}\nor install OMP with:\n  {{bunCommand}}",
       "nodeNotFound": "Node binary not found at resolved path:\n  {{node}}\n\nPi's .js entry point requires Node. Install Node from https://nodejs.org or set the NODE env var to your Node binary path.",
       "noManagerForWorkspace": "No Pi manager for workspace",
       "notFound": "Pi binary not found. Searched the login shell PATH, npm's global prefix, node version managers (nvm, fnm, volta, asdf, mise, nodenv, n) and common install locations.\n\n{{installHint}}\n\nAlready installed? Set the full path to Pi's cli.js in {{settingsHint}}.",
@@ -583,8 +582,7 @@
       "saveFailed": "Failed to save file",
       "saveTitle": "Save file",
       "scriptsDisabledNotice": "Scripts are disabled for this untrusted workspace's preview.",
-      "sourceViewTitle": "Source",
-      "trustWorkspaceButton": "Trust workspace"
+      "sourceViewTitle": "Source"
     },
     "search": {
       "contentPlaceholder": "Search file contents...",
@@ -655,7 +653,6 @@
     "file": "File",
     "forceReload": "Force Reload",
     "minimize": "Minimize",
-    "newSession": "New Session",
     "newWorkspace": "New Workspace...",
     "openProject": "Open Project...",
     "redo": "Redo",
@@ -957,7 +954,6 @@
       "days_other": "{{count}}d ago",
       "hours_one": "{{count}}h ago",
       "hours_other": "{{count}}h ago",
-      "justNow": "just now",
       "minutes_one": "{{count}}m ago",
       "minutes_other": "{{count}}m ago"
     },
@@ -1103,7 +1099,6 @@
       "description": "Import, export, or install a theme from a URL",
       "label": "Theme Actions"
     },
-    "title": "Settings",
     "uiFontSize": {
       "description": "Chat, panels, and sidebar — not the terminal or code editor",
       "label": "UI Font Size"
@@ -1175,8 +1170,7 @@
       "diagnostics": "Diagnostics",
       "notes": "Notes",
       "packages": "Packages",
-      "sectionLabel": "Tools",
-      "skills": "Skills"
+      "sectionLabel": "Tools"
     },
     "workflowRunsForSession": "Workflow runs for this session",
     "workspaceMenu": {
@@ -1293,9 +1287,6 @@
     "skillCommandsSection": {
       "title": "Skill Commands"
     },
-    "skillsSection": {
-      "title": "Skills"
-    },
     "trigger": {
       "title": "System status"
     },
@@ -1349,7 +1340,6 @@
       "stillWorkingTitle": "Pi is still working",
       "switchAnywayLabel": "Switch anyway",
       "switchMessage": "Pi has not finished responding in this session. Opening another session stops it: whatever Pi already wrote to the session is kept, but the rest of the response — including any tool calls still running — is discarded.",
-      "trustWorkspaceConfirmLabel": "Trust workspace",
       "trustWorkspaceMessage": "This workspace defines permission rules (.pi-desktop/permission-rules.json) with allow rules that would let Pi skip confirmation prompts. They are ignored until you trust this workspace; its deny rules always apply. Only trust workspaces from a source you trust.",
       "trustWorkspaceTitle": "Trust this workspace?",
       "workspaceMessage": "Pi has not finished responding in this session. It keeps working after you switch: the response is saved to the session and restored when you come back, and any prompt Pi raises while you are away is held and shown on your return.",

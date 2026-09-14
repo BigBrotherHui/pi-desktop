@@ -1,8 +1,13 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readdirSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { checkLocale, type LocaleTree } from './locale-checks'
 import { BUNDLED_LANGUAGES, LANGUAGE_RESOURCES } from './resources'
 import { SOURCE_LANGUAGE } from './languages'
+
+const LOCALES_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'resources', 'locales')
 
 const ENGLISH: LocaleTree = {
   language: { nativeName: 'English' },
@@ -13,6 +18,14 @@ const ENGLISH: LocaleTree = {
 test('the bundled English file passes', () => {
   const english = LANGUAGE_RESOURCES.en.translation as LocaleTree
   assert.deepEqual(checkLocale(SOURCE_LANGUAGE, english, english), [])
+})
+
+test('every locale folder is imported into BUNDLED_LANGUAGES', () => {
+  const folders = readdirSync(LOCALES_DIR, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort()
+  assert.deepEqual([...BUNDLED_LANGUAGES].sort(), folders)
 })
 
 test('every bundled language passes', () => {

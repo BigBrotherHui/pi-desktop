@@ -743,7 +743,7 @@ export function Sidebar(): React.JSX.Element {
           <SidebarItem
             compact
             icon={<Sparkles size={13} />}
-            label={t('sidebar.tools.skills')}
+            label={t('common.skills')}
             active={toolViewShowing('skills')}
             onClick={() => openToolView('skills')}
           />

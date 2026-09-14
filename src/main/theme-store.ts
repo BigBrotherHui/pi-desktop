@@ -7,7 +7,7 @@ import {
 } from '../shared/theme/theme-file'
 import { BUILTIN_THEME_IDS } from '../shared/theme/builtin-ids'
 import type { GalleryTheme } from '../shared/ipc-contracts'
-import { t } from '../shared/i18n'
+import { t, tEnglish } from '../shared/i18n'
 
 const THEME_FILE_EXT = '.json'
 const VALID_THEME_ID = /^[a-z0-9-]+$/
@@ -24,7 +24,9 @@ export async function listUserThemes(dir: string): Promise<UserThemeList> {
   for (const entry of (await readdir(dir)).filter((f) => f.endsWith(THEME_FILE_EXT)).sort()) {
     const id = entry.slice(0, -THEME_FILE_EXT.length)
     try {
-      const file = validateThemeFile(JSON.parse(await readFile(join(dir, entry), 'utf8')))
+      // These warnings only ever reach console.warn (renderer store.ts), never
+      // the UI, so validation errors are rendered in fixed English (ruling R15).
+      const file = validateThemeFile(JSON.parse(await readFile(join(dir, entry), 'utf8')), tEnglish)
       // Theme files are untrusted input (imported from disk or installed
       // from arbitrary URLs). saveUserTheme refuses to *create* a file whose
       // id collides with a built-in, but a colliding file can still land in

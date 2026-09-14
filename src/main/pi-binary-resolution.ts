@@ -15,6 +15,10 @@ import { i18n, type Translate } from '../shared/i18n'
 
 export const PI_PACKAGE = '@earendil-works/pi-coding-agent'
 export const PI_CLI_REL = join('node_modules', PI_PACKAGE, 'dist', 'cli.js')
+export const OMP_PACKAGE = '@oh-my-pi/pi-coding-agent'
+/** The commands shown in `errors.pi.installHint`, as `{{npmCommand}}`/`{{bunCommand}}` placeholders. */
+export const PI_NPM_INSTALL_COMMAND = `npm install -g ${PI_PACKAGE}`
+export const OMP_BUN_INSTALL_COMMAND = `bun install -g ${OMP_PACKAGE}`
 export const PI_FALLBACK_BINARY_POSIX = 'pi'
 export const PI_FALLBACK_BINARY_WINDOWS = 'pi.cmd'
 export const OMP_FALLBACK_BINARY_POSIX = 'omp'
@@ -623,7 +627,10 @@ export function resolvePiBinary(
  */
 export function describePiResolutionFailure(resolution: PiResolution, t: Translate = i18n.t): string {
   const settingsHint = t('errors.pi.settingsHint')
-  const installHint = t('errors.pi.installHint')
+  const installHint = t('errors.pi.installHint', {
+    npmCommand: PI_NPM_INSTALL_COMMAND,
+    bunCommand: OMP_BUN_INSTALL_COMMAND,
+  })
   if (resolution.rejectedOverride) {
     return t('errors.pi.configuredPathMissing', {
       settingsHint,

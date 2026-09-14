@@ -48,7 +48,7 @@ export type CommandGroupId = (typeof GROUP_SOURCES)[number] | typeof OTHER_GROUP
 function groupLabel(id: CommandGroupId, t: Translate): string {
   switch (id) {
     case 'skill':
-      return t('commandGroups.skills')
+      return t('common.skills')
     case 'prompt':
       return t('commandGroups.prompts')
     case BUILTIN_SOURCE:

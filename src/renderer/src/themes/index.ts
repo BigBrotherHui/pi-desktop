@@ -27,9 +27,13 @@ function isBuiltinThemeId(id: string): id is BuiltinThemeId {
   return (SHARED_BUILTIN_THEME_IDS as readonly string[]).includes(id)
 }
 
-// A template-literal key (`themes.builtin.${id}`) can't be resolved by the
-// extractor's static analysis, so it would delete these as unused. An
-// explicit key per id keeps them extractable and typo-checked by tsc.
+// `id` here is a plain `string` narrowed to `BuiltinThemeId` only inside the
+// `isBuiltinThemeId` type-guard call below, not a directly union-typed
+// parameter — the extractor's static analysis cannot follow that narrowing
+// through a template literal (`themes.builtin.${id}`) and deletes the keys
+// as unused (verified: a direct union-typed parameter, as in
+// permission-mode.ts's `getPermissionModeLabel`, extracts fine). An explicit
+// key per id keeps them extractable and typo-checked by tsc.
 const BUILTIN_THEME_NAME_KEYS = {
   dark: 'themes.builtin.dark',
   light: 'themes.builtin.light',

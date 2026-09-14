@@ -728,7 +728,7 @@ export function FilePreview(): React.JSX.Element | null {
                   onClick={() => void handleTrustWorkspace()}
                   className="shrink-0 rounded-md border border-border-strong bg-surface px-2 py-1 text-primary transition-colors hover:border-border-strong-hover"
                 >
-                  {t('files.preview.trustWorkspaceButton')}
+                  {t('permissionRules.trustWorkspaceButton')}
                 </button>
               </div>
             )}

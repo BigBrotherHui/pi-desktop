@@ -2406,7 +2406,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
         const trust = await get().requestConfirm({
           title: t('store.confirm.trustWorkspaceTitle'),
           message: t('store.confirm.trustWorkspaceMessage'),
-          confirmLabel: t('store.confirm.trustWorkspaceConfirmLabel'),
+          confirmLabel: t('permissionRules.trustWorkspaceButton'),
           cancelLabel: t('store.confirm.keepUntrustedLabel'),
         })
         if (trust) {

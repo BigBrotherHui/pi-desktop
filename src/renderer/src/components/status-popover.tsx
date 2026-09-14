@@ -316,7 +316,7 @@ export function StatusPopover(): React.JSX.Element {
 
             {/* Skills */}
             {skills.length > 0 && (
-              <StatusSection title={t('status.skillsSection.title')} icon={<Puzzle size={13} />} count={skills.length}>
+              <StatusSection title={t('common.skills')} icon={<Puzzle size={13} />} count={skills.length}>
                 {skills.slice(0, 8).map((skill) => (
                   <div key={skill.path} className="flex items-center gap-2 py-0.5">
                     <Puzzle size={10} className="text-special shrink-0" />

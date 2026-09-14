@@ -1,5 +1,5 @@
 import { SEED_NAMES, TOKEN_NAMES, type SeedName, type TokenName } from './tokens'
-import { t } from '../i18n'
+import { t as defaultT, type Translate } from '../i18n'
 
 export const THEME_SCHEMA_V1 = 'pi-theme/v1'
 export const MAX_THEME_NAME_LENGTH = 64
@@ -44,7 +44,7 @@ function isColorValue(value: unknown): value is string {
 }
 
 function requireColorMap(
-  data: unknown, allowedKeys: readonly string[], label: string, requireAll: boolean,
+  data: unknown, allowedKeys: readonly string[], label: string, requireAll: boolean, t: Translate,
 ): Record<string, string> {
   if (typeof data !== 'object' || data === null || Array.isArray(data)) {
     throw new ThemeValidationError(t('errors.theme.mustBeObject', { label }))
@@ -69,7 +69,13 @@ function requireColorMap(
   return validated
 }
 
-export function validateThemeFile(data: unknown): ThemeFile {
+/**
+ * `t` defaults to the interface language for the interactive import/export
+ * paths (theme-handlers.ts) that show this error to the user. A caller whose
+ * result only reaches a log (for example `listUserThemes`'s startup scan,
+ * which feeds `console.warn`) passes `tEnglish` so the message stays English.
+ */
+export function validateThemeFile(data: unknown, t: Translate = defaultT): ThemeFile {
   if (typeof data !== 'object' || data === null || Array.isArray(data)) {
     throw new ThemeValidationError(t('errors.theme.mustBeJsonObject'))
   }
@@ -86,15 +92,15 @@ export function validateThemeFile(data: unknown): ThemeFile {
   if (raw.kind !== 'dark' && raw.kind !== 'light') {
     throw new ThemeValidationError(t('errors.theme.kindInvalid'))
   }
-  const author = validateOptionalText(raw.author, 'author', MAX_THEME_AUTHOR_LENGTH)
-  const description = validateOptionalText(raw.description, 'description', MAX_THEME_DESCRIPTION_LENGTH)
-  const seeds = requireColorMap(raw.seeds, SEED_NAMES, 'seeds', true)
+  const author = validateOptionalText(raw.author, 'author', MAX_THEME_AUTHOR_LENGTH, t)
+  const description = validateOptionalText(raw.description, 'description', MAX_THEME_DESCRIPTION_LENGTH, t)
+  const seeds = requireColorMap(raw.seeds, SEED_NAMES, 'seeds', true, t)
   const overrides = raw.overrides === undefined
     ? undefined
-    : requireColorMap(raw.overrides, TOKEN_NAMES, 'overrides', false)
+    : requireColorMap(raw.overrides, TOKEN_NAMES, 'overrides', false, t)
   const syntax = raw.syntax === undefined
     ? undefined
-    : requireColorMap(raw.syntax, SYNTAX_KEYS, 'syntax', false)
+    : requireColorMap(raw.syntax, SYNTAX_KEYS, 'syntax', false, t)
   return {
     $schema: THEME_SCHEMA_V1,
     name: raw.name.trim(),
@@ -110,7 +116,7 @@ export function validateThemeFile(data: unknown): ThemeFile {
 // Optional display-text fields: absent is fine; if present they must be
 // non-empty strings within the given cap (empty means "omit it instead").
 function validateOptionalText(
-  value: unknown, label: string, maxLength: number,
+  value: unknown, label: string, maxLength: number, t: Translate,
 ): string | undefined {
   if (value === undefined) return undefined
   if (typeof value !== 'string' || value.trim().length === 0 || value.length > maxLength) {
