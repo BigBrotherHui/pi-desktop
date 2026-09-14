@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { mkdtemp, writeFile, mkdir, readFile } from 'fs/promises'
+import { mkdtemp, writeFile, mkdir, readFile, symlink } from 'fs/promises'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import {
@@ -8,6 +8,7 @@ import {
   describeGitError,
   FileService,
   isBenignGitError,
+  isIgnoredDirName,
   isPathInsideWorkspace,
 } from './file-service'
 import type { FileChangeEvent } from '../shared/ipc-contracts'
@@ -113,8 +114,61 @@ async function testWatcherIgnoresHeavyDirs(): Promise<void> {
   assert.equal(events.length, 0, 'changes under node_modules must not emit events')
 }
 
+async function testWatcherDoesNotFollowSymlinks(): Promise<void> {
+  const dir = await mkdtemp(join(tmpdir(), 'pi-fs-symlink-'))
+  const target = await mkdtemp(join(tmpdir(), 'pi-fs-symlink-target-'))
+  await symlink(target, join(dir, 'alias'), 'dir')
+  const service = new FileService(dir)
+  const { promise, onChange } = waitForChange(1500)
+
+  service.startWatching(onChange)
+  await new Promise((r) => setTimeout(r, 300))
+  await writeFile(join(target, 'inside-target.txt'), 'x')
+
+  const events = await promise
+  service.stopWatching()
+
+  const reported = events.map((event) => event.relativePath)
+  assert.ok(
+    reported.every((path) => !path.includes('inside-target.txt')),
+    `files behind a symlinked directory must not be reported, got: ${reported.join(', ')}`
+  )
+}
+
 test('watcher emits a debounced change event', testWatcherEmitsOnChange)
 test('watcher ignores heavy dirs like node_modules', testWatcherIgnoresHeavyDirs)
+test('watcher does not descend into symlinked directories', testWatcherDoesNotFollowSymlinks)
+
+// ─── Ignored directory names ──────────────────────────────────────────────
+
+test('isIgnoredDirName ignores build artifacts on every platform', () => {
+  for (const platform of ['linux', 'darwin', 'win32'] as const) {
+    assert.equal(isIgnoredDirName('node_modules', platform), true)
+    assert.equal(isIgnoredDirName('src', platform), false)
+  }
+})
+
+test('isIgnoredDirName ignores home-directory tooling stores on every platform', () => {
+  for (const platform of ['linux', 'darwin', 'win32'] as const) {
+    assert.equal(isIgnoredDirName('.npm', platform), true)
+    assert.equal(isIgnoredDirName('.cargo', platform), true)
+    assert.equal(isIgnoredDirName('.codex', platform), true)
+    assert.equal(isIgnoredDirName('.local', platform), true)
+  }
+})
+
+test('isIgnoredDirName ignores the macOS Library folder only on darwin', () => {
+  assert.equal(isIgnoredDirName('Library', 'darwin'), true)
+  assert.equal(isIgnoredDirName('Library', 'linux'), false)
+  assert.equal(isIgnoredDirName('Library', 'win32'), false)
+})
+
+test('isIgnoredDirName ignores Windows profile folders only on win32', () => {
+  assert.equal(isIgnoredDirName('AppData', 'win32'), true)
+  assert.equal(isIgnoredDirName('ntuser.dat', 'win32'), true)
+  assert.equal(isIgnoredDirName('AppData', 'linux'), false)
+  assert.equal(isIgnoredDirName('AppData', 'darwin'), false)
+})
 
 // ─── Git error classification ─────────────────────────────────────────────
 

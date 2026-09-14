@@ -43,6 +43,7 @@ body:
       label: Operating system
       options:
         - Linux (AppImage)
+        - macOS (.dmg / .zip)
         - Windows (portable .exe)
         - Built from source
         - Other
