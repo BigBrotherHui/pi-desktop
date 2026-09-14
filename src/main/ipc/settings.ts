@@ -6,7 +6,7 @@ import type { AppSettings } from '../../shared/ipc-contracts'
 import { IPC_CHANNELS } from '../../shared/ipc-contracts'
 import { DEFAULT_SETTINGS } from '../../shared/default-settings'
 import { availableLanguages } from '../../shared/i18n'
-import { normalizeLanguageSetting } from '../../shared/i18n/resolve'
+import { normalizeStoredSettings } from '../../shared/app-settings'
 import { applyLanguageSetting, getI18nEnvironment, isPseudoLanguageEnabled } from '../i18n'
 import { applyRunOnStartup } from '../startup-launch'
 import { setTrayEnabled } from '../tray-manager'
@@ -31,12 +31,7 @@ export async function loadAppSettings(workspaceManager: WorkspaceManager): Promi
     const settingsPath = getSettingsPath()
     if (existsSync(settingsPath)) {
       const data = await readFile(settingsPath, 'utf-8')
-      const merged = { ...DEFAULT_SETTINGS, ...JSON.parse(data) }
-      if (merged.piEngine !== 'auto' && merged.piEngine !== 'pi' && merged.piEngine !== 'omp') {
-        merged.piEngine = 'auto'
-      }
-      merged.language = normalizeLanguageSetting(merged.language, availableLanguages(isPseudoLanguageEnabled()))
-      return merged
+      return normalizeStoredSettings(JSON.parse(data), availableLanguages(isPseudoLanguageEnabled()))
     }
   } catch {
     // Fall through to defaults

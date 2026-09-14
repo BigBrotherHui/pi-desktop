@@ -13,13 +13,7 @@ export const PERMISSION_MODE_OPTIONS: Array<{
   { value: 'trusted', tone: 'trusted' },
 ]
 
-const PERMISSION_MODE_VALUES = new Set<PermissionMode>(
-  PERMISSION_MODE_OPTIONS.map((option) => option.value)
-)
-
-export function isPermissionMode(value: unknown): value is PermissionMode {
-  return typeof value === 'string' && PERMISSION_MODE_VALUES.has(value as PermissionMode)
-}
+export { isPermissionMode } from '../../../shared/permission-mode'
 
 /**
  * Explicit key maps, exported so other components (`permission-selector.tsx`,
