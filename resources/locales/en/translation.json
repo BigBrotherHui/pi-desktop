@@ -1,9 +1,11 @@
 {
   "activity": {
     "completed": "Finished in the background",
+    "completedInAnotherWorkspace": "Finished in the background in another workspace",
     "failed": "Stopped with an error",
-    "inAnotherWorkspace": "{{label}} in another workspace",
-    "working": "Pi is working"
+    "failedInAnotherWorkspace": "Stopped with an error in another workspace",
+    "working": "Pi is working",
+    "workingInAnotherWorkspace": "Pi is working in another workspace"
   },
   "app": {
     "dropFolder": {
@@ -57,9 +59,12 @@
     "cancel": "Cancel",
     "copied": "Copied",
     "copy": "Copy",
+    "cut": "Cut",
     "delete": "Delete",
     "dismiss": "Dismiss",
+    "paste": "Paste",
     "remove": "Remove",
+    "selectAll": "Select All",
     "showSidebar": "Show sidebar"
   },
   "contextMenu": {
@@ -71,16 +76,20 @@
     "copyLink": "Copy Link",
     "copyMessage": "Copy Message",
     "copySelection": "Copy Selection",
-    "cut": "Cut",
     "deleteSessionConfirmMessage": "Delete session \"{{name}}\"?\n\nWill use the system 'trash' CLI if installed (recoverable); otherwise the .jsonl session file is permanently removed.",
     "deleteSessionConfirmTitle": "Delete session",
     "deleteSessionLabel": "Delete…",
     "openLink": "Open Link",
     "openSession": "Open Session",
-    "paste": "Paste",
     "rename": "Rename…",
     "searchSelection": "Search Selection",
-    "selectAll": "Select All",
+    "shortcuts": {
+      "copy": "Ctrl+C",
+      "copyCodeBlock": "Ctrl+Shift+C",
+      "cut": "Ctrl+X",
+      "paste": "Ctrl+V",
+      "selectAll": "Ctrl+A"
+    },
     "unarchive": "Unarchive",
     "workflowRuns": "Workflow Runs"
   },
@@ -246,8 +255,6 @@
   "menu": {
     "actualSize": "Actual Size",
     "close": "Close Window",
-    "copy": "Copy",
-    "cut": "Cut",
     "edit": "Edit",
     "file": "File",
     "forceReload": "Force Reload",
@@ -255,10 +262,8 @@
     "newSession": "New Session",
     "newWorkspace": "New Workspace...",
     "openProject": "Open Project...",
-    "paste": "Paste",
     "redo": "Redo",
     "reload": "Reload",
-    "selectAll": "Select All",
     "toggleDevTools": "Toggle Developer Tools",
     "toggleFullScreen": "Toggle Full Screen",
     "undo": "Undo",
@@ -506,7 +511,8 @@
       "tabClosedWorktreePreserved": "Tab closed, but its uncommitted worktree was preserved at {{path}}",
       "tabFromLastCommit": "This tab starts from the last commit. Uncommitted files remain in the source tab.",
       "taskLaunchError": "Task launch error: {{detail}}",
-      "truncatedHistory": "Showing the latest {{shown}} of {{total}} messages for performance. Older turns are still on disk in the session file.",
+      "truncatedHistory_one": "Showing the latest {{count}} of {{total}} message for performance. Older turns are still on disk in the session file.",
+      "truncatedHistory_other": "Showing the latest {{count}} of {{total}} messages for performance. Older turns are still on disk in the session file.",
       "unarchiveError": "Unarchive error: {{detail}}",
       "unknownError": "Unknown error",
       "updatedAllPackages": "Updated packages. Restart Pi to load them.",

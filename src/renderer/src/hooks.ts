@@ -427,7 +427,7 @@ export interface BuiltinCommand {
  * GUI (e.g. /name, /tree) are excluded.
  */
 export function useCommandCatalog(): { builtins: BuiltinCommand[]; allCommands: PiCommand[] } {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const commands = useAppStore((s) => s.commands)
   const compactContext = useAppStore((s) => s.compactContext)
   const cloneBranch = useAppStore((s) => s.cloneBranch)
@@ -449,7 +449,7 @@ export function useCommandCatalog(): { builtins: BuiltinCommand[]; allCommands: 
       { name: 'fork', description: t('commands.fork.description'), run: () => setCurrentView('timeline') },
       { name: 'settings', description: t('commands.settings.description'), run: () => setCurrentView('settings') },
     ],
-    [compactContext, cloneBranch, createNewSession, setTaskLauncherOpen, setCurrentView, piEngine, t, i18n.language]
+    [compactContext, cloneBranch, createNewSession, setTaskLauncherOpen, setCurrentView, piEngine, t]
   )
 
   const allCommands = useMemo<PiCommand[]>(

@@ -1596,7 +1596,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
             loaded.unshift({
               id: generateId(),
               role: 'system',
-              content: t('store.messages.truncatedHistory', { shown: shippedCount, total }),
+              content: t('store.messages.truncatedHistory', { count: shippedCount, total }),
               timestamp: Date.now(),
             })
           }

@@ -197,7 +197,7 @@ export function buildDefaultContextMenu(): ContextMenuItem[] {
       id: 'copy',
       label: t('common.copy'),
       icon: <Copy size={14} />,
-      shortcut: 'Ctrl+C',
+      shortcut: t('contextMenu.shortcuts.copy'),
       disabled: !hasSelection,
       action: () => {
         if (hasSelection) {
@@ -207,9 +207,9 @@ export function buildDefaultContextMenu(): ContextMenuItem[] {
     },
     {
       id: 'cut',
-      label: t('contextMenu.cut'),
+      label: t('common.cut'),
       icon: <Scissors size={14} />,
-      shortcut: 'Ctrl+X',
+      shortcut: t('contextMenu.shortcuts.cut'),
       disabled: !hasSelection,
       action: () => {
         if (hasSelection) {
@@ -221,9 +221,9 @@ export function buildDefaultContextMenu(): ContextMenuItem[] {
     },
     {
       id: 'paste',
-      label: t('contextMenu.paste'),
+      label: t('common.paste'),
       icon: <ClipboardPaste size={14} />,
-      shortcut: 'Ctrl+V',
+      shortcut: t('contextMenu.shortcuts.paste'),
       action: async () => {
         try {
           const text = await navigator.clipboard.readText()
@@ -253,9 +253,9 @@ export function buildDefaultContextMenu(): ContextMenuItem[] {
     },
     {
       id: 'select-all',
-      label: t('contextMenu.selectAll'),
+      label: t('common.selectAll'),
       icon: <TextSelect size={14} />,
-      shortcut: 'Ctrl+A',
+      shortcut: t('contextMenu.shortcuts.selectAll'),
       action: () => {
         document.execCommand('selectAll')
       },
@@ -280,7 +280,7 @@ export function buildCodeBlockContextMenu(code: string): ContextMenuItem[] {
       id: 'copy-code',
       label: t('contextMenu.copyCodeBlock'),
       icon: <Copy size={14} />,
-      shortcut: 'Ctrl+Shift+C',
+      shortcut: t('contextMenu.shortcuts.copyCodeBlock'),
       action: () => navigator.clipboard.writeText(code),
     },
     {
