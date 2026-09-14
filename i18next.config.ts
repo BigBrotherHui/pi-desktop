@@ -38,7 +38,6 @@ const NOT_YET_TRANSLATED = [
   'src/renderer/src/components/resize-handle.tsx',
   'src/renderer/src/components/review-rail.tsx',
   'src/renderer/src/components/session-panel.tsx',
-  'src/renderer/src/components/settings-panel.tsx',
   'src/renderer/src/components/sidebar.tsx',
   'src/renderer/src/components/skills-panel.tsx',
   'src/renderer/src/components/stats-panel.tsx',

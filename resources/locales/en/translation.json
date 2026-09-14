@@ -1,10 +1,162 @@
 {
+  "common": {
+    "cancel": "Cancel",
+    "claude": "Claude",
+    "codex": "Codex",
+    "delete": "Delete",
+    "omp": "OMP",
+    "pi": "Pi"
+  },
   "language": {
     "nativeName": "English"
   },
   "settings": {
+    "actions": {
+      "reset": "Reset to Defaults",
+      "save": "Save Settings",
+      "saved": "Saved!"
+    },
+    "agentInstallation": {
+      "autoDetectOption": "Auto-detect (Pi first, then OMP)",
+      "chooseExecutableTitle": "Choose executable or install directory",
+      "customPathOption": "Custom path…",
+      "description": "Auto-detect Pi and OMP, choose an installed engine, or use a custom executable/path.",
+      "detectedCount_one": "{{count}} installed engine detected",
+      "detectedCount_other": "{{count}} installed engines detected",
+      "engineAriaLabel": "Agent engine",
+      "engineAutoOption": "Auto",
+      "installedOption": "{{engine}} — {{path}}",
+      "label": "Agent Installation",
+      "noneDetected": "No Pi or OMP installation detected yet",
+      "ompNotFoundOption": "OMP (not found)",
+      "pathPlaceholder": "Path to executable, cli.js, or install directory",
+      "rescanTitle": "Rescan installed agents",
+      "scanningStatus": "Scanning common install locations and PATH…",
+      "selectDialogTitle": "Select Agent Executable or Directory"
+    },
+    "autoScroll": {
+      "description": "Automatically scroll to new messages",
+      "label": "Auto Scroll"
+    },
+    "codeEditorFontSize": {
+      "description": "Font size for the code editor / file viewer",
+      "label": "Code Editor Font Size"
+    },
+    "consensusMode": {
+      "arbiterOption": "Arbiter merge (fast)",
+      "debateOption": "One debate round (slower, ~2x cost)",
+      "description": "How council members reach agreement",
+      "label": "Consensus mode"
+    },
+    "councilEnabled": {
+      "confirmButton": "Enable",
+      "confirmMessage": "Each run spawns Claude and Codex in addition to {{engine}}. This can significantly increase token usage and credit/API costs. Only enable this if you are comfortable with the extra spend.",
+      "confirmTitle": "Enable council planning?",
+      "description": "Spawns Claude/Codex alongside Pi to plan tasks. Increases token usage and credit/API costs.",
+      "label": "Enable council planning"
+    },
+    "councilMembers": {
+      "description": "Which agents participate in council planning",
+      "label": "Members",
+      "notDetected": "(not detected)"
+    },
+    "councilTimeout": {
+      "description": "How long to wait for each agent ({{min}}-{{max}})",
+      "label": "Per-member timeout (seconds)"
+    },
+    "customTheme": {
+      "createButton": "Create theme",
+      "description": "Fork the current theme or edit one you created",
+      "editButton": "Edit theme",
+      "label": "Custom Theme"
+    },
+    "darkTheme": {
+      "description": "Used when the system is in dark mode",
+      "label": "Dark Theme"
+    },
+    "desktopNotifications": {
+      "description": "Notify when Pi finishes, fails, or waits for approval in a workspace you are not looking at",
+      "label": "Desktop Notifications"
+    },
     "language": {
+      "description": "Language of menus, buttons, and messages",
+      "label": "Language",
+      "labelWithEnglish": "{{label}} ({{english}})",
       "system": "System default ({{language}})"
+    },
+    "lightTheme": {
+      "description": "Used when the system is in light mode",
+      "label": "Light Theme"
+    },
+    "minimizeToTrayOnClose": {
+      "description": "Keep Pi Desktop running in the system tray when you close the window instead of quitting (Windows and Linux)",
+      "label": "Minimize to Tray on Close"
+    },
+    "openToHomeOnLaunch": {
+      "description": "On: full Home launcher (stats, recents, open folder). Off: open Chat with the empty-session center prompt and project picker.",
+      "label": "Open to Home Screen on Launch"
+    },
+    "permissionMode": {
+      "description": "Default safety mode for Pi actions",
+      "label": "Permission Mode"
+    },
+    "permissionRules": {
+      "description": "Fine-grained per-tool overrides for the mode above",
+      "exportFailed": "Export failed",
+      "globalScopeTab": "Global",
+      "importFailed": "Import failed",
+      "label": "Permission Rules",
+      "removeWorkspaceConfirmLabel": "Remove",
+      "removeWorkspaceConfirmMessage": "Delete this workspace's .pi-desktop/permission-rules.json? Global permission rules will apply again.",
+      "removeWorkspaceConfirmTitle": "Remove workspace rules",
+      "saveError": "Settings saved, but {{scope}} permission rules were not saved: {{error}}",
+      "scopeTabListAriaLabel": "Permission rules scope",
+      "workspaceScopeTab": "This workspace"
+    },
+    "resumeLastSession": {
+      "description": "When opening a workspace, continue its most recent session instead of starting a new one",
+      "label": "Resume Last Session"
+    },
+    "runOnStartup": {
+      "description": "Automatically start Pi Desktop when you log in to your computer (takes effect in installed builds)",
+      "label": "Run on Startup"
+    },
+    "sections": {
+      "agentConfiguration": "Agent Configuration",
+      "appearance": "Appearance",
+      "behavior": "Behavior",
+      "customModels": "Custom Models",
+      "multiAgentCouncilPlanning": "Multi-Agent Council Planning"
+    },
+    "showThinking": {
+      "description": "Display model thinking blocks in responses",
+      "label": "Show Thinking"
+    },
+    "terminalFontSize": {
+      "description": "Font size for the terminal panel",
+      "label": "Terminal Font Size"
+    },
+    "theme": {
+      "deleteConfirmMessage": "Delete theme \"{{themeName}}\"? This cannot be undone.",
+      "deleteConfirmTitle": "Delete theme",
+      "description": "Application color scheme",
+      "editNotFoundError": "Could not find the current theme to edit",
+      "exportNotFoundError": "Could not find the current theme to export",
+      "label": "Theme",
+      "systemOption": "System"
+    },
+    "themeActions": {
+      "browseGalleryButton": "Browse gallery",
+      "description": "Import, export, or install a theme from a URL",
+      "exportButton": "Export",
+      "importButton": "Import",
+      "installButton": "Install",
+      "label": "Theme Actions"
+    },
+    "title": "Settings",
+    "uiFontSize": {
+      "description": "Chat, panels, and sidebar — not the terminal or code editor",
+      "label": "UI Font Size"
     }
   }
 }
