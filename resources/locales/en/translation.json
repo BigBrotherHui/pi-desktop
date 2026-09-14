@@ -232,6 +232,31 @@
     "unarchive": "Unarchive",
     "workflowRuns": "Workflow Runs"
   },
+  "council": {
+    "consensusPlan": {
+      "heading": "Consensus plan",
+      "implementButton": "Implement this",
+      "reviseButton": "Revise",
+      "reviseInputPlaceholder": "Request changes to the plan…"
+    },
+    "header": "Council planning — {{phase}}",
+    "phase": {
+      "awaitingApproval": "awaiting-approval",
+      "consulting": "consulting",
+      "detecting": "detecting",
+      "merging": "merging",
+      "refused": "refused"
+    },
+    "status": {
+      "contributed": "contributed",
+      "errored": "errored",
+      "merging": "merging…",
+      "readyForReview": "ready for review",
+      "streaming": "streaming…",
+      "timedOut": "timed out",
+      "working": "working…"
+    }
+  },
   "customModels": {
     "addModelButton": "Add model",
     "addProviderButton": "Add provider",
@@ -1037,6 +1062,41 @@
     "runButton": "Run",
     "selectPrompt": "Select a skill to view its SKILL.md"
   },
+  "stats": {
+    "heatmap": {
+      "dayTooltip_one": "{{date}} — {{count}} messages",
+      "dayTooltip_other": "{{date}} — {{count}} messages"
+    },
+    "modelLegend": {
+      "empty": "No model usage in this range.",
+      "tokenBreakdown": "{{input}} in · {{output}} out"
+    },
+    "overview": {
+      "activeDaysLabel": "Active days",
+      "currentStreakLabel": "Current streak",
+      "favoriteModelLabel": "Favorite model",
+      "longestStreakLabel": "Longest streak",
+      "messagesLabel": "Messages",
+      "peakHourLabel": "Peak hour",
+      "sessionsLabel": "Sessions",
+      "totalTokensLabel": "Total tokens"
+    },
+    "ranges": {
+      "oneYear": "1y",
+      "sevenDays": "7d",
+      "sixMonths": "6mo",
+      "thirtyDays": "30d",
+      "threeMonths": "3mo"
+    },
+    "tabs": {
+      "models": "models",
+      "overview": "overview"
+    },
+    "tokenChart": {
+      "barTooltip": "{{label}} — {{tokens}} tokens",
+      "empty": "No token usage in this range."
+    }
+  },
   "status": {
     "agentSection": {
       "title": "{{agent}} Agent"
@@ -1290,11 +1350,22 @@
     "agentStarted": "Agent started processing",
     "assistantResponseComplete": "Assistant response complete",
     "assistantResponseFailed": "Assistant response failed",
+    "branchesHeading": "Branches",
+    "clearButton": "Clear",
+    "cloneBranchButton": "Clone branch",
+    "cloneBranchTitle": "Clone the current branch into a new session",
     "compactionComplete": "Compaction complete",
     "compactionStarted": "Compaction started",
+    "emptyHint": "Agent events will appear here in real-time",
+    "emptyTitle": "No activity yet",
     "externalPromptReceived": "External prompt received",
+    "forkButton": "Fork",
+    "forkFromTitle": "Fork a new session from this message",
+    "heading": "Agent Timeline",
+    "noForkMessages": "No earlier messages to fork from.",
     "retryAttempt": "Retry attempt {{attempt}}",
     "retryComplete": "Retry complete",
+    "sessionTreeHeading": "Session tree",
     "tool": "Tool: {{tool}}"
   },
   "tools": {
@@ -1374,6 +1445,119 @@
     "stillRunningTitle": "Pi Desktop is still running",
     "unavailableBody": "This desktop has no system tray, so Pi Desktop will close normally instead of minimizing to the tray.",
     "unavailableTitle": "System tray unavailable"
+  },
+  "workflows": {
+    "agentGrid": {
+      "noTranscriptCaptured": "No transcript captured",
+      "openTranscript": "Open transcript"
+    },
+    "card": {
+      "activeCount_one": "· {{count}} active",
+      "activeCount_other": "· {{count}} active",
+      "agentsProgress": "{{done}}/{{total}} agents"
+    },
+    "control": {
+      "abortAriaLabel": "Abort run",
+      "abortButtonLabel": "Abort",
+      "dispatchFailed": "The control command could not be sent to {{agent}}.",
+      "extensionMissing": "The workflows extension is not loaded in this workspace’s {{agent}} process.",
+      "notPermittedResume": "This run cannot be resumed in its current state.",
+      "notPermittedStop": "This run can no longer be aborted in its current state.",
+      "notRunning": "{{agent}} is not running for this workspace, so the run cannot be controlled from here.",
+      "pausedFallback": "Paused",
+      "resumeAriaLabel": "Resume run",
+      "resumeButtonLabel": "Resume",
+      "resumeRequested": "Resume requested — restarting the run in its workspace…",
+      "resumeTitle": "Resume the workflow in its workspace",
+      "stopRequested": "Abort requested — stopping the run in its workspace…",
+      "stopTitle": "Stop the workflow in its workspace",
+      "timeout": "{{agent}} did not respond. The run may have changed state — refresh to see the latest.",
+      "unavailable": "The workflow control is unavailable for this workspace right now.",
+      "unreachable": "Could not reach the workflow control path for this workspace."
+    },
+    "detail": {
+      "backAriaLabel": "All workflow runs",
+      "refreshAriaLabel": "Refresh run",
+      "statAgents": "agents",
+      "statCostTime": "cost/time",
+      "statTokens": "tokens",
+      "stepsHeading": "Steps"
+    },
+    "panel": {
+      "activeCount_one": "{{count}} active",
+      "activeCount_other": "{{count}} active",
+      "closeAriaLabel": "Close workflow runs",
+      "loading": "Loading workflow…",
+      "maximizeAriaLabel": "Maximize workflow navigator",
+      "noRunsForProject": "No runs for this project",
+      "noRunsForSession": "No runs for this session",
+      "noRunsProjectDetail": "No workflow runs recorded for {{name}}. Runs from other projects appear in the global list.",
+      "noRunsSessionDetail": "No workflow runs recorded for this session. Runs from older sessions appear in the global list.",
+      "noRunsYet": "No runs yet",
+      "recordedCount_one": "{{count}} recorded",
+      "recordedCount_other": "{{count}} recorded",
+      "refreshAriaLabel": "Refresh workflow runs",
+      "restoreAriaLabel": "Restore workflow navigator",
+      "runCommandHint": "Run <cmd>/workflows run …</cmd> in chat.",
+      "stepTranscriptTitle": "Step transcript",
+      "thisProjectFallback": "this project",
+      "workflowDetailTitle": "Workflow detail"
+    },
+    "phaseStepper": {
+      "agentsProgress": "{{done}}/{{total}} agents"
+    },
+    "result": {
+      "characterCount_one": "{{count}} character",
+      "characterCount_other": "{{count}} characters",
+      "detailCount_one": "{{count}} detail",
+      "detailCount_other": "{{count}} details",
+      "emptyObject": "The workflow returned an empty object.",
+      "emptyShape": "empty",
+      "emptyValue": "Empty",
+      "fieldCount_one": "{{count}} field",
+      "fieldCount_other": "{{count}} fields",
+      "itemCount_one": "{{count}} item",
+      "itemCount_other": "{{count}} items",
+      "itemTitle": "Item {{index}}",
+      "markdownReport": "Markdown report",
+      "moreItems_one": "+ {{count}} more items",
+      "moreItems_other": "+ {{count}} more items",
+      "nestedHidden": "Nested details hidden",
+      "no": "No",
+      "noAdditionalDetails": "No additional details.",
+      "noDetails": "No details",
+      "noItems": "No items",
+      "none": "None",
+      "outputLabel": "Output",
+      "outputTitle": "Workflow output",
+      "sectionCount_one": "{{count}} section",
+      "sectionCount_other": "{{count}} sections",
+      "yes": "Yes"
+    },
+    "status": {
+      "aborted": "stopped"
+    },
+    "tabs": {
+      "logs": "Logs",
+      "overview": "Overview",
+      "results": "Results",
+      "script": "Script"
+    },
+    "transcript": {
+      "backAriaLabel": "Back to run",
+      "defaultPhaseLabel": "workflow step",
+      "enableFullTranscriptsButton": "Enable full transcripts for future runs",
+      "historyNotice": "Showing the workflow’s captured history. Future runs can retain every raw {{agent}} message and tool result.",
+      "noTranscriptMessage": "No transcript was persisted for this step.",
+      "persistenceEnabled": "Enabled globally. Reload {{agent}} before the next workflow run.",
+      "settingsUpdateFailed": "Could not update workflow settings.",
+      "sourceCapturedHistory": "captured workflow history",
+      "sourceFullSession": "full session transcript",
+      "sourceNone": "no transcript",
+      "stepPromptLabel": "Step prompt",
+      "stepResultLabel": "Step result",
+      "subtitle": "{{phase}} · {{source}}"
+    }
   },
   "workspaceTabs": {
     "closeSessionTab": "Close session tab",

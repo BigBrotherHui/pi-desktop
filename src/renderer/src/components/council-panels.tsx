@@ -1,18 +1,22 @@
 import React from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import { useAppStore } from '../store'
+import { useTranslation } from 'react-i18next'
+import { useAppStore, type CouncilPhase } from '../store'
+import { councilAgentLabel, type ConsultantStatus } from '../../../shared/council-config'
 
-const STATUS_LABEL: Record<string, string> = {
-  contributed: 'contributed',
-  'timed-out': 'timed out',
-  errored: 'errored',
-}
+const COUNCIL_PHASE_KEYS = {
+  detecting: 'council.phase.detecting',
+  consulting: 'council.phase.consulting',
+  merging: 'council.phase.merging',
+  'awaiting-approval': 'council.phase.awaitingApproval',
+  refused: 'council.phase.refused',
+} as const satisfies Record<CouncilPhase, string>
 
-const AGENT_LABEL: Record<string, string> = {
-  pi: 'Pi',
-  claude: 'Claude',
-  codex: 'Codex',
-}
+const COUNCIL_STATUS_KEYS = {
+  contributed: 'council.status.contributed',
+  'timed-out': 'council.status.timedOut',
+  errored: 'council.status.errored',
+} as const satisfies Record<ConsultantStatus, string>
 
 function formatElapsed(seconds: number): string {
   const m = Math.floor(seconds / 60)
@@ -21,6 +25,7 @@ function formatElapsed(seconds: number): string {
 }
 
 export function CouncilPanels(): React.JSX.Element | null {
+  const { t } = useTranslation()
   const run = useAppStore((s) => s.councilRun)
   const approve = useAppStore((s) => s.approveCouncilPlan)
   const revise = useAppStore((s) => s.reviseCouncilPlan)
@@ -64,11 +69,11 @@ export function CouncilPanels(): React.JSX.Element | null {
         className="flex w-full items-center gap-1 text-xs font-medium uppercase tracking-wide text-muted hover:text-primary"
       >
         {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
-        <span>Council planning — {run.phase}</span>
+        <span>{t('council.header', { phase: t(COUNCIL_PHASE_KEYS[run.phase]) })}</span>
         {consulting && startedAt ? <span className="text-dim">({formatElapsed(elapsed)})</span> : null}
         {collapsed && run.results.length > 0 ? (
           <span className="ml-2 normal-case text-dim">
-            {run.results.map((r) => `${AGENT_LABEL[r.id] ?? r.id} ${r.status === 'contributed' ? '✓' : '✕'}`).join(' · ')}
+            {run.results.map((r) => `${councilAgentLabel(r.id)} ${r.status === 'contributed' ? '✓' : '✕'}`).join(' · ')}
           </span>
         ) : null}
       </button>
@@ -85,8 +90,8 @@ export function CouncilPanels(): React.JSX.Element | null {
                 return (
                   <div key={id} className="rounded border border-border bg-app p-2">
                     <div className="mb-1 flex items-center justify-between">
-                      <span className="text-sm text-primary">{AGENT_LABEL[id] ?? id}</span>
-                      <span className="text-xs text-accent-fg">{text ? 'streaming…' : 'working…'}</span>
+                      <span className="text-sm text-primary">{councilAgentLabel(id)}</span>
+                      <span className="text-xs text-accent-fg">{text ? t('council.status.streaming') : t('council.status.working')}</span>
                     </div>
                     <pre className="max-h-40 overflow-auto whitespace-pre-wrap text-xs text-muted">
                       {text}
@@ -102,11 +107,11 @@ export function CouncilPanels(): React.JSX.Element | null {
               {run.results.map((r) => (
                 <div key={r.id} className="rounded border border-border bg-app p-2">
                   <div className="mb-1 flex items-center justify-between">
-                    <span className="text-sm text-primary">{AGENT_LABEL[r.id] ?? r.id}</span>
+                    <span className="text-sm text-primary">{councilAgentLabel(r.id)}</span>
                     <span
                       className={`text-xs ${r.status === 'contributed' ? 'text-success' : 'text-warning'}`}
                     >
-                      {STATUS_LABEL[r.status]}
+                      {t(COUNCIL_STATUS_KEYS[r.status])}
                     </span>
                   </div>
                   <pre className="max-h-40 overflow-auto whitespace-pre-wrap text-xs text-muted">
@@ -126,9 +131,9 @@ export function CouncilPanels(): React.JSX.Element | null {
       {(run.phase === 'merging' || awaiting) && (
         <div className="mt-2 rounded border border-border bg-app p-2">
           <div className="mb-1 flex items-center justify-between">
-            <span className="text-sm text-primary">Consensus plan</span>
+            <span className="text-sm text-primary">{t('council.consensusPlan.heading')}</span>
             <span className="text-xs text-accent-fg">
-              {run.phase === 'merging' ? (run.consensus ? 'merging…' : 'working…') : 'ready for review'}
+              {run.phase === 'merging' ? (run.consensus ? t('council.status.merging') : t('council.status.working')) : t('council.status.readyForReview')}
             </span>
           </div>
           <pre className="max-h-80 overflow-auto whitespace-pre-wrap text-xs text-secondary">
@@ -151,7 +156,7 @@ export function CouncilPanels(): React.JSX.Element | null {
                   setReviseText('')
                 }
               }}
-              placeholder="Request changes to the plan…"
+              placeholder={t('council.consensusPlan.reviseInputPlaceholder')}
               disabled={isStreaming}
               className="flex-1 rounded-md border border-border-strong bg-surface px-3 py-1.5 text-sm text-primary placeholder:text-faint focus:border-focus focus:outline-none disabled:opacity-50"
             />
@@ -163,7 +168,7 @@ export function CouncilPanels(): React.JSX.Element | null {
                 setReviseText('')
               }}
             >
-              Revise
+              {t('council.consensusPlan.reviseButton')}
             </button>
           </div>
           <div className="flex justify-end gap-2">
@@ -171,14 +176,14 @@ export function CouncilPanels(): React.JSX.Element | null {
               className="rounded px-3 py-1 text-sm text-secondary hover:bg-surface-hover"
               onClick={cancel}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               disabled={isStreaming}
               className="rounded bg-accent px-3 py-1 text-sm text-white hover:bg-accent-hover disabled:opacity-50"
               onClick={() => void approve()}
             >
-              Implement this
+              {t('council.consensusPlan.implementButton')}
             </button>
           </div>
         </div>

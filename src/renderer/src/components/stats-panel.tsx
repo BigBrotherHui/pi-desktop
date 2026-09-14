@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { clsx } from 'clsx'
+import { useTranslation } from 'react-i18next'
 import type {
   ActivityStatsResult,
   ActivityRangeKey,
@@ -10,13 +11,20 @@ import { buildWeeks, intensityLevel, type IntensityLevel } from '../utils/heatma
 
 type Tab = 'overview' | 'models'
 
-const RANGE_LABELS: { key: ActivityRangeKey; label: string }[] = [
-  { key: '365', label: '1y' },
-  { key: '180', label: '6mo' },
-  { key: '90', label: '3mo' },
-  { key: '30', label: '30d' },
-  { key: '7', label: '7d' },
-]
+const STATS_TAB_KEYS = {
+  overview: 'stats.tabs.overview',
+  models: 'stats.tabs.models',
+} as const satisfies Record<Tab, string>
+
+const RANGE_ORDER: ActivityRangeKey[] = ['365', '180', '90', '30', '7']
+
+const RANGE_LABEL_KEYS = {
+  '365': 'stats.ranges.oneYear',
+  '180': 'stats.ranges.sixMonths',
+  '90': 'stats.ranges.threeMonths',
+  '30': 'stats.ranges.thirtyDays',
+  '7': 'stats.ranges.sevenDays',
+} as const satisfies Record<ActivityRangeKey, string>
 
 const RANGE_DAYS: Record<ActivityRangeKey, number> = {
   '365': 365,
@@ -114,6 +122,7 @@ function StatCard({ label, value }: { label: string; value: string }): React.JSX
 }
 
 function Heatmap({ days }: { days: ActivityStatsDay[] }): React.JSX.Element {
+  const { t } = useTranslation()
   const { weeks, maxCount } = useMemo(() => {
     const asActivity = days.map((d) => ({ date: d.date, count: d.messages }))
     return {
@@ -129,7 +138,7 @@ function Heatmap({ days }: { days: ActivityStatsDay[] }): React.JSX.Element {
           {week.map((day, di) => (
             <div
               key={di}
-              title={day ? `${day.date} — ${day.count} messages` : undefined}
+              title={day ? t('stats.heatmap.dayTooltip', { date: day.date, count: day.count }) : undefined}
               className={clsx(
                 'h-3 w-3 rounded-sm',
                 day ? LEVEL_CLASSES[intensityLevel(day.count, maxCount)] : 'bg-transparent'
@@ -151,10 +160,11 @@ function TokenChart({
   orderedModels: string[] // largest-first; stacking order (top → bottom)
   modelColor: Map<string, string>
 }): React.JSX.Element {
+  const { t } = useTranslation()
   const buckets = useMemo(() => bucketTokens(days), [days])
 
   if (buckets.length === 0) {
-    return <div className="py-10 text-center text-xs text-faint">No token usage in this range.</div>
+    return <div className="py-10 text-center text-xs text-faint">{t('stats.tokenChart.empty')}</div>
   }
 
   const max = buckets.reduce((m, b) => Math.max(m, b.total), 0)
@@ -186,7 +196,7 @@ function TokenChart({
             {buckets.map((b, i) => (
               <div
                 key={i}
-                title={`${b.label} — ${formatCompact(b.total)} tokens`}
+                title={t('stats.tokenChart.barTooltip', { label: b.label, tokens: formatCompact(b.total) })}
                 className="flex min-w-[2px] flex-1 flex-col overflow-hidden rounded-sm"
                 style={{ height: max > 0 ? `${Math.max((b.total / max) * 100, b.total > 0 ? 2 : 0)}%` : '0%' }}
               >
@@ -225,9 +235,10 @@ function ModelLegend({
   models: ActivityModelUsage[]
   modelColor: Map<string, string>
 }): React.JSX.Element {
+  const { t } = useTranslation()
   const grandTotal = models.reduce((s, m) => s + m.input + m.output, 0)
   if (models.length === 0) {
-    return <div className="py-4 text-center text-xs text-faint">No model usage in this range.</div>
+    return <div className="py-4 text-center text-xs text-faint">{t('stats.modelLegend.empty')}</div>
   }
   return (
     <div className="space-y-1.5">
@@ -244,7 +255,7 @@ function ModelLegend({
             />
             <span className="min-w-0 flex-1 truncate text-secondary">{modelLabel(m)}</span>
             <span className="shrink-0 tabular-nums text-dim">
-              {formatCompact(m.input)} in · {formatCompact(m.output)} out
+              {t('stats.modelLegend.tokenBreakdown', { input: formatCompact(m.input), output: formatCompact(m.output) })}
             </span>
             <span className="w-12 shrink-0 text-right tabular-nums text-muted">{pct.toFixed(1)}%</span>
           </div>
@@ -260,6 +271,7 @@ function ModelLegend({
  * stays uncluttered.
  */
 export function StatsPanel(): React.JSX.Element | null {
+  const { t } = useTranslation()
   const [data, setData] = useState<ActivityStatsResult | null>(null)
   const [tab, setTab] = useState<Tab>('overview')
   const [range, setRange] = useState<ActivityRangeKey>('365')
@@ -296,21 +308,21 @@ export function StatsPanel(): React.JSX.Element | null {
       {/* Tabs + range toggle */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex gap-1">
-          {(['overview', 'models'] as Tab[]).map((t) => (
+          {(['overview', 'models'] as Tab[]).map((tabId) => (
             <button
-              key={t}
-              onClick={() => setTab(t)}
+              key={tabId}
+              onClick={() => setTab(tabId)}
               className={clsx(
                 'rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors',
-                tab === t ? 'bg-elevated text-primary' : 'text-dim hover:text-secondary'
+                tab === tabId ? 'bg-elevated text-primary' : 'text-dim hover:text-secondary'
               )}
             >
-              {t}
+              {t(STATS_TAB_KEYS[tabId])}
             </button>
           ))}
         </div>
         <div className="flex gap-0.5 rounded-md bg-card/60 p-0.5">
-          {RANGE_LABELS.map(({ key, label }) => (
+          {RANGE_ORDER.map((key) => (
             <button
               key={key}
               onClick={() => setRange(key)}
@@ -319,7 +331,7 @@ export function StatsPanel(): React.JSX.Element | null {
                 range === key ? 'bg-elevated text-primary' : 'text-dim hover:text-secondary'
               )}
             >
-              {label}
+              {t(RANGE_LABEL_KEYS[key])}
             </button>
           ))}
         </div>
@@ -328,14 +340,14 @@ export function StatsPanel(): React.JSX.Element | null {
       {tab === 'overview' ? (
         <>
           <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <StatCard label="Sessions" value={stats.sessions.toLocaleString()} />
-            <StatCard label="Messages" value={stats.messages.toLocaleString()} />
-            <StatCard label="Total tokens" value={formatCompact(stats.totalTokens)} />
-            <StatCard label="Active days" value={stats.activeDays.toLocaleString()} />
-            <StatCard label="Current streak" value={`${stats.currentStreak}d`} />
-            <StatCard label="Longest streak" value={`${stats.longestStreak}d`} />
-            <StatCard label="Peak hour" value={stats.peakHour === null ? '—' : formatHour(stats.peakHour)} />
-            <StatCard label="Favorite model" value={favoriteModel} />
+            <StatCard label={t('stats.overview.sessionsLabel')} value={stats.sessions.toLocaleString()} />
+            <StatCard label={t('stats.overview.messagesLabel')} value={stats.messages.toLocaleString()} />
+            <StatCard label={t('stats.overview.totalTokensLabel')} value={formatCompact(stats.totalTokens)} />
+            <StatCard label={t('stats.overview.activeDaysLabel')} value={stats.activeDays.toLocaleString()} />
+            <StatCard label={t('stats.overview.currentStreakLabel')} value={`${stats.currentStreak}d`} />
+            <StatCard label={t('stats.overview.longestStreakLabel')} value={`${stats.longestStreak}d`} />
+            <StatCard label={t('stats.overview.peakHourLabel')} value={stats.peakHour === null ? '—' : formatHour(stats.peakHour)} />
+            <StatCard label={t('stats.overview.favoriteModelLabel')} value={favoriteModel} />
           </div>
           <Heatmap days={rangedDays} />
         </>

@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../store'
 import { getSessionTitle } from '../utils/session-title'
 import type { TimelineEvent as StoreTimelineEvent } from '../../../shared/ipc-contracts'
@@ -21,6 +22,7 @@ import {
 import type { LineageNode } from '../../../shared/session-lineage'
 
 export function Timeline(): React.JSX.Element {
+  const { t } = useTranslation()
   const timelineEvents = useAppStore((state) => state.timelineEvents)
   const clearTimeline = useAppStore((state) => state.clearTimeline)
   const forkMessages = useAppStore((state) => state.forkMessages)
@@ -45,21 +47,21 @@ export function Timeline(): React.JSX.Element {
         <div className="mb-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <GitFork size={15} className="text-muted" />
-            <h3 className="text-sm font-medium text-primary">Branches</h3>
+            <h3 className="text-sm font-medium text-primary">{t('timeline.branchesHeading')}</h3>
           </div>
           {piEngine !== 'omp' && (
             <button
               onClick={() => cloneBranch()}
               className="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted hover:bg-surface-hover hover:text-primary transition-colors"
-              title="Clone the current branch into a new session"
+              title={t('timeline.cloneBranchTitle')}
             >
               <Copy size={12} />
-              Clone branch
+              {t('timeline.cloneBranchButton')}
             </button>
           )}
         </div>
         {forkMessages.length === 0 ? (
-          <p className="text-xs text-faint">No earlier messages to fork from.</p>
+          <p className="text-xs text-faint">{t('timeline.noForkMessages')}</p>
         ) : (
           <div className="space-y-1">
             {forkMessages.map((fp) => (
@@ -71,10 +73,10 @@ export function Timeline(): React.JSX.Element {
                 <button
                   onClick={() => forkFrom(fp.entryId)}
                   className="flex shrink-0 items-center gap-1 rounded px-2 py-0.5 text-[11px] text-dim opacity-0 transition-opacity group-hover:opacity-100 hover:bg-elevated hover:text-primary"
-                  title="Fork a new session from this message"
+                  title={t('timeline.forkFromTitle')}
                 >
                   <GitFork size={11} />
-                  Fork
+                  {t('timeline.forkButton')}
                 </button>
               </div>
             ))}
@@ -83,7 +85,7 @@ export function Timeline(): React.JSX.Element {
         {lineage.length > 0 && (
           <div className="mt-3 border-t border-border pt-2">
             <div className="mb-1 text-[10px] uppercase tracking-wide text-faint">
-              Session tree
+              {t('timeline.sessionTreeHeading')}
             </div>
             <LineageTree nodes={lineage} currentPath={currentSessionFile} onSwitch={switchSession} />
           </div>
@@ -93,7 +95,7 @@ export function Timeline(): React.JSX.Element {
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
           <Activity size={16} className="text-muted" />
-          <h2 className="text-sm font-medium text-primary">Agent Timeline</h2>
+          <h2 className="text-sm font-medium text-primary">{t('timeline.heading')}</h2>
           <span className="rounded-full bg-card px-2 py-0.5 text-xs text-dim">
             {timelineEvents.length}
           </span>
@@ -103,7 +105,7 @@ export function Timeline(): React.JSX.Element {
           className="flex items-center gap-1 rounded px-2 py-1 text-xs text-dim hover:bg-surface-hover hover:text-secondary transition-colors"
         >
           <Trash2 size={12} />
-          Clear
+          {t('timeline.clearButton')}
         </button>
       </div>
 
@@ -112,8 +114,8 @@ export function Timeline(): React.JSX.Element {
         {timelineEvents.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-dim">
             <Activity size={32} className="mb-3 text-faint" />
-            <p className="text-sm">No activity yet</p>
-            <p className="mt-1 text-xs text-faint">Agent events will appear here in real-time</p>
+            <p className="text-sm">{t('timeline.emptyTitle')}</p>
+            <p className="mt-1 text-xs text-faint">{t('timeline.emptyHint')}</p>
           </div>
         ) : (
           <div className="relative">

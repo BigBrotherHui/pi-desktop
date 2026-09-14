@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { clsx } from 'clsx'
+import { Trans, useTranslation } from 'react-i18next'
+import type { Translate } from '../../../shared/i18n'
 import {
   AlertTriangle,
   ArrowLeft,
@@ -53,8 +55,20 @@ function formatDuration(ms: number | undefined): string {
   return `${Math.floor(ms / 60_000)}m ${Math.floor((ms % 60_000) / 1000)}s`
 }
 
-function statusLabel(status: WorkflowRunStatus): string {
-  return status === 'aborted' ? 'stopped' : status
+// Same wording as mission-control.tsx's WORKFLOW_STATUS_KEYS, except
+// 'aborted' — this navigator has always shown it as "stopped".
+const WORKFLOW_STATUS_KEYS = {
+  pending: 'missionControl.workflowStatus.pending',
+  running: 'missionControl.workflowStatus.running',
+  paused: 'missionControl.workflowStatus.paused',
+  completed: 'missionControl.workflowStatus.completed',
+  failed: 'missionControl.workflowStatus.failed',
+  aborted: 'workflows.status.aborted',
+  unknown: 'missionControl.workflowStatus.unknown',
+} as const satisfies Record<WorkflowRunStatus, string>
+
+function statusLabel(status: WorkflowRunStatus, t: Translate): string {
+  return t(WORKFLOW_STATUS_KEYS[status])
 }
 
 function statusClass(status: WorkflowRunStatus): string {
@@ -89,6 +103,7 @@ function AgentCounts({ run }: { run: WorkflowRunSummary }): { done: number; runn
 }
 
 function RunCard({ run, onOpen }: { run: WorkflowRunSummary; onOpen: () => void }): React.JSX.Element {
+  const { t } = useTranslation()
   const counts = AgentCounts({ run })
   const tokenText = formatTokens(run.tokenUsage?.total)
   const costText = formatCost(run.tokenUsage?.cost)
@@ -106,7 +121,7 @@ function RunCard({ run, onOpen }: { run: WorkflowRunSummary; onOpen: () => void 
           <div className="flex items-center gap-2">
             <span className="truncate text-sm font-medium text-primary">{run.workflowName}</span>
             <span className={clsx('shrink-0 text-[10px] uppercase tracking-wide', statusClass(run.status))}>
-              {statusLabel(run.status)}
+              {statusLabel(run.status, t)}
             </span>
           </div>
           <div className="mt-1 flex min-w-0 items-center gap-2 text-[11px] text-dim">
@@ -114,8 +129,8 @@ function RunCard({ run, onOpen }: { run: WorkflowRunSummary; onOpen: () => void 
               <GitBranch size={11} className="shrink-0 text-faint" />
               {run.workspaceName}
             </span>
-            <span className="shrink-0 tabular-nums">{counts.done}/{counts.total} agents</span>
-            {counts.running > 0 && <span className="shrink-0 text-accent-fg">· {counts.running} active</span>}
+            <span className="shrink-0 tabular-nums">{t('workflows.card.agentsProgress', { done: counts.done, total: counts.total })}</span>
+            {counts.running > 0 && <span className="shrink-0 text-accent-fg">{t('workflows.card.activeCount', { count: counts.running })}</span>}
           </div>
           <div className="mt-2 h-1 overflow-hidden rounded-full bg-card">
             <div
@@ -137,6 +152,7 @@ function RunCard({ run, onOpen }: { run: WorkflowRunSummary; onOpen: () => void 
 }
 
 function CopyButton({ text }: { text: string }): React.JSX.Element {
+  const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
   return (
     <button
@@ -148,8 +164,8 @@ function CopyButton({ text }: { text: string }): React.JSX.Element {
         })
       }}
       className="rounded p-1.5 text-faint hover:bg-highlight hover:text-primary"
-      title="Copy"
-      aria-label="Copy"
+      title={t('common.copy')}
+      aria-label={t('common.copy')}
     >
       {copied ? <Check size={13} className="text-success" /> : <Copy size={13} />}
     </button>
@@ -172,16 +188,17 @@ function isLongResultText(value: string): boolean {
 }
 
 function ResultScalar({ value }: { value: unknown }): React.JSX.Element {
+  const { t } = useTranslation()
   if (typeof value === 'string') {
     return isLongResultText(value) ? (
       <div className="text-xs leading-relaxed text-secondary"><MarkdownRenderer content={value} /></div>
     ) : (
-      <span className="inline-flex max-w-full rounded-md bg-card px-2 py-1 text-xs text-secondary">{value || 'Empty'}</span>
+      <span className="inline-flex max-w-full rounded-md bg-card px-2 py-1 text-xs text-secondary">{value || t('workflows.result.emptyValue')}</span>
     )
   }
 
   if (value === null || value === undefined) {
-    return <span className="text-xs italic text-faint">None</span>
+    return <span className="text-xs italic text-faint">{t('workflows.result.none')}</span>
   }
 
   return (
@@ -191,19 +208,19 @@ function ResultScalar({ value }: { value: unknown }): React.JSX.Element {
         ? value ? 'bg-success-bg text-success' : 'bg-card text-muted'
         : 'bg-card text-secondary'
     )}>
-      {typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value)}
+      {typeof value === 'boolean' ? (value ? t('workflows.result.yes') : t('workflows.result.no')) : String(value)}
     </span>
   )
 }
 
 const resultIdentityKeys = ['title', 'name', 'label', 'id', 'key', 'slug']
 
-function resultItemTitle(item: ResultRecord, index: number): string {
+function resultItemTitle(item: ResultRecord, index: number, t: Translate): string {
   for (const key of resultIdentityKeys) {
     const value = item[key]
     if (typeof value === 'string' && value.trim()) return value
   }
-  return `Item ${index + 1}`
+  return t('workflows.result.itemTitle', { index: index + 1 })
 }
 
 function resultItemFields(item: ResultRecord): Array<[string, unknown]> {
@@ -211,6 +228,7 @@ function resultItemFields(item: ResultRecord): Array<[string, unknown]> {
 }
 
 function ResultField({ label, value, depth }: { label: string; value: unknown; depth: number }): React.JSX.Element {
+  const { t } = useTranslation()
   if (typeof value === 'string' && isLongResultText(value)) {
     return (
       <div className="space-y-1.5">
@@ -233,7 +251,7 @@ function ResultField({ label, value, depth }: { label: string; value: unknown; d
     <details className="rounded-lg border border-border/70 bg-card/20">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-xs text-secondary marker:hidden">
         <span className="font-medium text-primary">{resultLabel(label)}</span>
-        <span className="text-[10px] text-faint">{resultShape(value)}</span>
+        <span className="text-[10px] text-faint">{resultShape(value, t)}</span>
       </summary>
       <div className="border-t border-border/70 px-3 py-2">
         <ResultValue value={value} depth={depth + 1} />
@@ -243,6 +261,7 @@ function ResultField({ label, value, depth }: { label: string; value: unknown; d
 }
 
 function ResultObjectList({ items, depth = 0 }: { items: ResultRecord[]; depth?: number }): React.JSX.Element {
+  const { t } = useTranslation()
   const [openItems, setOpenItems] = useState<Record<number, boolean>>((): Record<number, boolean> => depth === 0 ? { 0: true } : {})
   const shown = items.slice(0, 40)
   return (
@@ -263,16 +282,16 @@ function ResultObjectList({ items, depth = 0 }: { items: ResultRecord[]; depth?:
               <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-accent-bg/40 text-[10px] font-semibold tabular-nums text-accent-fg">
                 {String(index + 1).padStart(2, '0')}
               </span>
-              <span className="min-w-0 flex-1 truncate text-xs font-medium text-primary" title={resultItemTitle(item, index)}>
-                {resultItemTitle(item, index)}
+              <span className="min-w-0 flex-1 truncate text-xs font-medium text-primary" title={resultItemTitle(item, index, t)}>
+                {resultItemTitle(item, index, t)}
               </span>
               <span className="shrink-0 text-[10px] text-faint">
-                {fields.length ? `${fields.length} detail${fields.length === 1 ? '' : 's'}` : 'No details'}
+                {fields.length ? t('workflows.result.detailCount', { count: fields.length }) : t('workflows.result.noDetails')}
               </span>
             </summary>
             <div className="border-t border-border/70 px-3 pb-3 pt-2.5">
               {fields.length === 0 ? (
-                <div className="text-xs italic text-faint">No additional details.</div>
+                <div className="text-xs italic text-faint">{t('workflows.result.noAdditionalDetails')}</div>
               ) : (
                 <div className="space-y-2">
                   {fields.map(([key, value]) => (
@@ -284,17 +303,18 @@ function ResultObjectList({ items, depth = 0 }: { items: ResultRecord[]; depth?:
           </details>
         )
       })}
-      {items.length > shown.length && <div className="px-1 text-xs italic text-dim">+ {items.length - shown.length} more items</div>}
+      {items.length > shown.length && <div className="px-1 text-xs italic text-dim">{t('workflows.result.moreItems', { count: items.length - shown.length })}</div>}
     </div>
   )
 }
 
 function ResultValue({ value, depth = 0 }: { value: unknown; depth?: number }): React.JSX.Element {
-  if (depth >= 6) return <span className="text-xs italic text-faint">Nested details hidden</span>
+  const { t } = useTranslation()
+  if (depth >= 6) return <span className="text-xs italic text-faint">{t('workflows.result.nestedHidden')}</span>
   if (!Array.isArray(value) && !isResultRecord(value)) return <ResultScalar value={value} />
 
   if (Array.isArray(value)) {
-    if (value.length === 0) return <span className="text-xs italic text-faint">No items</span>
+    if (value.length === 0) return <span className="text-xs italic text-faint">{t('workflows.result.noItems')}</span>
     if (value.every(isResultRecord)) return <ResultObjectList items={value} depth={depth} />
     const shown = value.slice(0, 40)
     return (
@@ -302,18 +322,18 @@ function ResultValue({ value, depth = 0 }: { value: unknown; depth?: number }): 
         {shown.map((item, index) => (
           isResultRecord(item) || Array.isArray(item) ? (
             <details key={index} className="w-full rounded-lg border border-border/70 bg-card/20">
-              <summary className="cursor-pointer list-none px-3 py-2 text-xs text-secondary marker:hidden">Item {index + 1}</summary>
+              <summary className="cursor-pointer list-none px-3 py-2 text-xs text-secondary marker:hidden">{t('workflows.result.itemTitle', { index: index + 1 })}</summary>
               <div className="border-t border-border/70 px-3 py-2"><ResultValue value={item} depth={depth + 1} /></div>
             </details>
           ) : <ResultScalar key={index} value={item} />
         ))}
-        {value.length > shown.length && <div className="w-full px-1 text-xs italic text-dim">+ {value.length - shown.length} more items</div>}
+        {value.length > shown.length && <div className="w-full px-1 text-xs italic text-dim">{t('workflows.result.moreItems', { count: value.length - shown.length })}</div>}
       </div>
     )
   }
 
   const entries = Object.entries(value)
-  if (entries.length === 0) return <span className="text-xs italic text-faint">No details</span>
+  if (entries.length === 0) return <span className="text-xs italic text-faint">{t('workflows.result.noDetails')}</span>
   return (
     <div className="space-y-2">
       {entries.map(([key, item]) => <ResultField key={key} label={key} value={item} depth={depth} />)}
@@ -321,24 +341,24 @@ function ResultValue({ value, depth = 0 }: { value: unknown; depth?: number }): 
   )
 }
 
-function resultShape(value: unknown): string {
-  if (Array.isArray(value)) return `${value.length} item${value.length === 1 ? '' : 's'}`
+function resultShape(value: unknown, t: Translate): string {
+  if (Array.isArray(value)) return t('workflows.result.itemCount', { count: value.length })
   if (isResultRecord(value)) {
-    const count = Object.keys(value).length
-    return `${count} field${count === 1 ? '' : 's'}`
+    return t('workflows.result.fieldCount', { count: Object.keys(value).length })
   }
-  if (typeof value === 'string') return `${value.length} character${value.length === 1 ? '' : 's'}`
-  if (value === null || value === undefined) return 'empty'
+  if (typeof value === 'string') return t('workflows.result.characterCount', { count: value.length })
+  if (value === null || value === undefined) return t('workflows.result.emptyShape')
   return typeof value
 }
 
 function ResultSection({ label, value }: { label: string; value: unknown }): React.JSX.Element {
+  const { t } = useTranslation()
   const isMarkdown = typeof value === 'string' && isLongResultText(value)
   return (
     <section className="border-b border-border/70 pb-4 last:border-0 last:pb-0">
       <div className="mb-2 flex items-center justify-between gap-3 px-1">
         <h3 className="text-xs font-semibold text-primary">{resultLabel(label)}</h3>
-        <span className="shrink-0 text-[10px] text-faint">{resultShape(value)}</span>
+        <span className="shrink-0 text-[10px] text-faint">{resultShape(value, t)}</span>
       </div>
       {isMarkdown ? (
         <div className="rounded-lg bg-card/20 px-3 py-3 text-xs leading-relaxed text-secondary">
@@ -352,6 +372,7 @@ function ResultSection({ label, value }: { label: string; value: unknown }): Rea
 }
 
 function WorkflowResult({ text }: { text: string }): React.JSX.Element {
+  const { t } = useTranslation()
   let value: unknown
   try {
     value = JSON.parse(text)
@@ -360,8 +381,8 @@ function WorkflowResult({ text }: { text: string }): React.JSX.Element {
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
           <div>
-            <div className="text-xs font-semibold text-primary">Workflow output</div>
-            <div className="mt-0.5 text-[11px] text-dim">Markdown report</div>
+            <div className="text-xs font-semibold text-primary">{t('workflows.result.outputTitle')}</div>
+            <div className="mt-0.5 text-[11px] text-dim">{t('workflows.result.markdownReport')}</div>
           </div>
           <CopyButton text={text} />
         </div>
@@ -379,9 +400,9 @@ function WorkflowResult({ text }: { text: string }): React.JSX.Element {
             <FileText size={14} />
           </div>
           <div className="min-w-0">
-            <h3 className="text-xs font-semibold text-primary">Workflow output</h3>
+            <h3 className="text-xs font-semibold text-primary">{t('workflows.result.outputTitle')}</h3>
             <p className="text-[11px] text-dim">
-              {entries ? `${entries.length} section${entries.length === 1 ? '' : 's'}` : resultShape(value)}
+              {entries ? t('workflows.result.sectionCount', { count: entries.length }) : resultShape(value, t)}
             </p>
           </div>
         </div>
@@ -390,18 +411,19 @@ function WorkflowResult({ text }: { text: string }): React.JSX.Element {
 
       {entries ? (
         entries.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border px-3 py-8 text-center text-xs text-dim">The workflow returned an empty object.</div>
+          <div className="rounded-lg border border-dashed border-border px-3 py-8 text-center text-xs text-dim">{t('workflows.result.emptyObject')}</div>
         ) : (
           <div className="space-y-5">
             {entries.map(([key, item]) => <ResultSection key={key} label={key} value={item} />)}
           </div>
         )
-      ) : <ResultSection label="Output" value={value} />}
+      ) : <ResultSection label={t('workflows.result.outputLabel')} value={value} />}
     </div>
   )
 }
 
 function PhaseStepper({ run }: { run: WorkflowRunDetail }): React.JSX.Element | null {
+  const { t } = useTranslation()
   if (run.phases.length === 0) return null
   const terminal = isTerminalRun(run.status)
   return (
@@ -420,7 +442,7 @@ function PhaseStepper({ run }: { run: WorkflowRunDetail }): React.JSX.Element | 
             {/* The active border stays on terminal runs — it marks where the run halted —
                 but the name must read as stopped, not in-flight. */}
             <div className={clsx('mt-1 truncate text-xs font-medium', active ? (terminal ? 'text-secondary' : 'text-accent-fg') : 'text-secondary')} title={phase}>{phase}</div>
-            <div className="mt-0.5 text-[10px] text-faint">{done}/{agents.length || '—'} agents</div>
+            <div className="mt-0.5 text-[10px] text-faint">{t('workflows.phaseStepper.agentsProgress', { done, total: agents.length || '—' })}</div>
           </div>
         )
       })}
@@ -429,6 +451,7 @@ function PhaseStepper({ run }: { run: WorkflowRunDetail }): React.JSX.Element | 
 }
 
 function AgentGrid({ run, onSelect }: { run: WorkflowRunDetail; onSelect: (agent: WorkflowAgentDetail) => void }): React.JSX.Element {
+  const { t } = useTranslation()
   return (
     <div className="grid gap-2 sm:grid-cols-2">
       {run.agents.map((agent) => (
@@ -450,7 +473,7 @@ function AgentGrid({ run, onSelect }: { run: WorkflowRunDetail; onSelect: (agent
           </div>
           {agent.error && <div className="mt-1 truncate text-[10px] text-error" title={agent.error}>{agent.error}</div>}
           <div className="mt-1.5 text-[10px] text-accent-fg">
-            {agent.hasHistory ? 'Open transcript' : 'No transcript captured'}
+            {agent.hasHistory ? t('workflows.agentGrid.openTranscript') : t('workflows.agentGrid.noTranscriptCaptured')}
           </div>
         </button>
       ))}
@@ -480,24 +503,37 @@ function HistoryEntry({ entry }: { entry: WorkflowHistoryEntry }): React.JSX.Ele
   )
 }
 
+const TRANSCRIPT_SOURCE_KEYS = {
+  'persisted-session': 'workflows.transcript.sourceFullSession',
+  'run-history': 'workflows.transcript.sourceCapturedHistory',
+  none: 'workflows.transcript.sourceNone',
+} as const satisfies Record<WorkflowAgentDetail['transcriptSource'], string>
+
 function AgentTranscript({ agent, onBack }: { agent: WorkflowAgentDetail; onBack: () => void }): React.JSX.Element {
+  const { t } = useTranslation()
+  const engineLabel = useAppStore((state) => agentEngineLabel(state.piEngine) ?? DEFAULT_AGENT_ENGINE_LABEL)
   const [persistenceMessage, setPersistenceMessage] = useState<string | null>(null)
   const transcriptText = agent.history.map((entry) => `${entry.role} · ${entry.kind}\n${entry.text}`).join('\n\n')
   const enablePersistence = async (): Promise<void> => {
     try {
       await window.piDesktop.workflows.setPersistAgentSessions(true)
-      setPersistenceMessage('Enabled globally. Reload Pi before the next workflow run.')
+      setPersistenceMessage(t('workflows.transcript.persistenceEnabled', { agent: engineLabel }))
     } catch (error) {
-      setPersistenceMessage(error instanceof Error ? error.message : 'Could not update workflow settings.')
+      setPersistenceMessage(error instanceof Error ? error.message : t('workflows.transcript.settingsUpdateFailed'))
     }
   }
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
-        <button type="button" onClick={onBack} className="rounded p-1.5 text-muted hover:bg-highlight hover:text-primary" title="Back to run" aria-label="Back to run"><ArrowLeft size={15} /></button>
+        <button type="button" onClick={onBack} className="rounded p-1.5 text-muted hover:bg-highlight hover:text-primary" title={t('workflows.transcript.backAriaLabel')} aria-label={t('workflows.transcript.backAriaLabel')}><ArrowLeft size={15} /></button>
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium text-primary">{agent.label}</div>
-          <div className="text-[10px] text-dim">{agent.phase ?? 'workflow step'} · {agent.transcriptSource === 'persisted-session' ? 'full session transcript' : agent.transcriptSource === 'run-history' ? 'captured workflow history' : 'no transcript'}</div>
+          <div className="text-[10px] text-dim">
+            {t('workflows.transcript.subtitle', {
+              phase: agent.phase ?? t('workflows.transcript.defaultPhaseLabel'),
+              source: t(TRANSCRIPT_SOURCE_KEYS[agent.transcriptSource]),
+            })}
+          </div>
         </div>
         {transcriptText && <CopyButton text={transcriptText} />}
       </div>
@@ -505,24 +541,24 @@ function AgentTranscript({ agent, onBack }: { agent: WorkflowAgentDetail; onBack
         <div className="flex shrink-0 items-start gap-2 border-b border-warning/30 bg-warning-bg/20 px-3 py-2 text-[11px] text-warning">
           <AlertTriangle size={14} className="mt-0.5 shrink-0" />
           <div className="min-w-0 flex-1">
-            <div>Showing the workflow&apos;s captured history. Future runs can retain every raw Pi message and tool result.</div>
-            {persistenceMessage ? <div className="mt-1 text-success">{persistenceMessage}</div> : <button type="button" onClick={() => void enablePersistence()} className="mt-1 rounded border border-warning/50 px-2 py-1 text-[10px] text-warning hover:bg-warning-bg/30">Enable full transcripts for future runs</button>}
+            <div>{t('workflows.transcript.historyNotice', { agent: engineLabel })}</div>
+            {persistenceMessage ? <div className="mt-1 text-success">{persistenceMessage}</div> : <button type="button" onClick={() => void enablePersistence()} className="mt-1 rounded border border-warning/50 px-2 py-1 text-[10px] text-warning hover:bg-warning-bg/30">{t('workflows.transcript.enableFullTranscriptsButton')}</button>}
           </div>
         </div>
       )}
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
         {agent.prompt && (
           <div className="rounded-lg border border-accent-bg/40 bg-accent-bg/10 p-2.5">
-            <div className="mb-1 text-[10px] uppercase tracking-wide text-accent-fg">Step prompt</div>
+            <div className="mb-1 text-[10px] uppercase tracking-wide text-accent-fg">{t('workflows.transcript.stepPromptLabel')}</div>
             <div className="whitespace-pre-wrap text-xs leading-relaxed text-secondary">{agent.prompt}</div>
           </div>
         )}
         {agent.history.length === 0 ? (
-          <div className="py-8 text-center text-xs text-dim">No transcript was persisted for this step.</div>
+          <div className="py-8 text-center text-xs text-dim">{t('workflows.transcript.noTranscriptMessage')}</div>
         ) : agent.history.map((entry, index) => <HistoryEntry key={`${entry.id ?? 'entry'}-${index}`} entry={entry} />)}
         {agent.resultText && (
           <div className="rounded-lg border border-success/40 bg-success-bg/15 p-2.5">
-            <div className="mb-2 text-[10px] uppercase tracking-wide text-success">Step result</div>
+            <div className="mb-2 text-[10px] uppercase tracking-wide text-success">{t('workflows.transcript.stepResultLabel')}</div>
             <WorkflowResult text={agent.resultText} />
           </div>
         )}
@@ -536,24 +572,25 @@ type DetailTab = 'overview' | 'script' | 'logs' | 'result'
 function controlFailureText(
   action: WorkflowControlAction,
   reason: WorkflowControlReason | undefined,
-  agent: string
+  agent: string,
+  t: Translate
 ): string {
   switch (reason) {
     case 'no-pi':
     case 'pi-not-running':
-      return `${agent} is not running for this workspace, so the run cannot be controlled from here.`
+      return t('workflows.control.notRunning', { agent })
     case 'extension-missing':
-      return `The workflows extension is not loaded in this workspace\u2019s ${agent} process.`
+      return t('workflows.control.extensionMissing', { agent })
     case 'status-not-permitted':
       return action === 'stop'
-        ? 'This run can no longer be aborted in its current state.'
-        : 'This run cannot be resumed in its current state.'
+        ? t('workflows.control.notPermittedStop')
+        : t('workflows.control.notPermittedResume')
     case 'timeout':
-      return `${agent} did not respond. The run may have changed state — refresh to see the latest.`
+      return t('workflows.control.timeout', { agent })
     case 'dispatch-failed':
-      return `The control command could not be sent to ${agent}.`
+      return t('workflows.control.dispatchFailed', { agent })
     default:
-      return 'The workflow control is unavailable for this workspace right now.'
+      return t('workflows.control.unavailable')
   }
 }
 
@@ -563,6 +600,7 @@ function RunDetail({ run, onBack, onRefresh, onSelectAgent }: {
   onRefresh: () => void
   onSelectAgent: (agent: WorkflowAgentDetail) => void
 }): React.JSX.Element {
+  const { t } = useTranslation()
   const [tab, setTab] = useState<DetailTab>('overview')
   const [controlBusy, setControlBusy] = useState<WorkflowControlAction | null>(null)
   const [controlFeedback, setControlFeedback] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
@@ -592,18 +630,18 @@ function RunDetail({ run, onBack, onRefresh, onSelectAgent }: {
       if (result.ok) {
         setControlFeedback({
           kind: 'ok',
-          text: action === 'stop' ? 'Abort requested — stopping the run in its workspace…' : 'Resume requested — restarting the run in its workspace…',
+          text: action === 'stop' ? t('workflows.control.stopRequested') : t('workflows.control.resumeRequested'),
         })
         feedbackTimer.current = window.setTimeout(clearFeedback, 4000)
         // The extension writes the transition to disk; refresh a beat later so
         // the status flip is visible even before the next poll tick.
         window.setTimeout(() => void onRefresh(), 1200)
       } else {
-        setControlFeedback({ kind: 'error', text: controlFailureText(action, result.reason, engineLabel) })
+        setControlFeedback({ kind: 'error', text: controlFailureText(action, result.reason, engineLabel, t) })
         feedbackTimer.current = window.setTimeout(clearFeedback, 6000)
       }
     } catch {
-      setControlFeedback({ kind: 'error', text: 'Could not reach the workflow control path for this workspace.' })
+      setControlFeedback({ kind: 'error', text: t('workflows.control.unreachable') })
       feedbackTimer.current = window.setTimeout(clearFeedback, 6000)
     } finally {
       setControlBusy(null)
@@ -613,21 +651,21 @@ function RunDetail({ run, onBack, onRefresh, onSelectAgent }: {
   const abortable = canAbortRun(run.status)
   const resumable = canResumeRun(run.status)
   const tabs: Array<{ id: DetailTab; label: string; icon: React.JSX.Element; visible: boolean }> = [
-    { id: 'overview', label: 'Overview', icon: <WorkflowIcon size={12} />, visible: true },
-    { id: 'script', label: 'Script', icon: <Code2 size={12} />, visible: !!run.script },
-    { id: 'logs', label: 'Logs', icon: <ScrollText size={12} />, visible: run.logs.length > 0 },
-    { id: 'result', label: 'Results', icon: <FileText size={12} />, visible: !!run.resultText },
+    { id: 'overview', label: t('workflows.tabs.overview'), icon: <WorkflowIcon size={12} />, visible: true },
+    { id: 'script', label: t('workflows.tabs.script'), icon: <Code2 size={12} />, visible: !!run.script },
+    { id: 'logs', label: t('workflows.tabs.logs'), icon: <ScrollText size={12} />, visible: run.logs.length > 0 },
+    { id: 'result', label: t('workflows.tabs.results'), icon: <FileText size={12} />, visible: !!run.resultText },
   ]
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <header className="shrink-0 border-b border-border px-3 py-2.5">
         <div className="flex items-start gap-2">
-          <button type="button" onClick={onBack} className="rounded p-1.5 text-muted hover:bg-highlight hover:text-primary" title="All workflow runs" aria-label="All workflow runs"><ArrowLeft size={15} /></button>
+          <button type="button" onClick={onBack} className="rounded p-1.5 text-muted hover:bg-highlight hover:text-primary" title={t('workflows.detail.backAriaLabel')} aria-label={t('workflows.detail.backAriaLabel')}><ArrowLeft size={15} /></button>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <RunStatus status={run.status} />
               <span className="truncate text-sm font-semibold text-primary">{run.workflowName}</span>
-              <span className={clsx('text-[10px] uppercase tracking-wide', statusClass(run.status))}>{statusLabel(run.status)}</span>
+              <span className={clsx('text-[10px] uppercase tracking-wide', statusClass(run.status))}>{statusLabel(run.status, t)}</span>
             </div>
             <div className="mt-1 flex items-center gap-1.5 truncate text-[10px] text-dim" title={run.cwd}><GitBranch size={11} className="shrink-0" />{run.workspaceName} · {run.cwd}</div>
           </div>
@@ -639,10 +677,10 @@ function RunDetail({ run, onBack, onRefresh, onSelectAgent }: {
                   onClick={() => void runControl('stop')}
                   disabled={controlBusy !== null}
                   className="flex items-center gap-1 rounded border border-error/40 px-2 py-1 text-[10px] text-error hover:bg-error-bg/30 disabled:cursor-not-allowed disabled:opacity-50"
-                  title="Stop the workflow in its workspace"
-                  aria-label="Abort run"
+                  title={t('workflows.control.stopTitle')}
+                  aria-label={t('workflows.control.abortAriaLabel')}
                 >
-                  {controlBusy === 'stop' ? <Loader2 size={11} className="animate-spin" /> : <Square size={11} />}Abort
+                  {controlBusy === 'stop' ? <Loader2 size={11} className="animate-spin" /> : <Square size={11} />}{t('workflows.control.abortButtonLabel')}
                 </button>
               )}
               {resumable && (
@@ -651,33 +689,33 @@ function RunDetail({ run, onBack, onRefresh, onSelectAgent }: {
                   onClick={() => void runControl('resume')}
                   disabled={controlBusy !== null}
                   className="flex items-center gap-1 rounded border border-success/40 px-2 py-1 text-[10px] text-success hover:bg-success-bg/30 disabled:cursor-not-allowed disabled:opacity-50"
-                  title="Resume the workflow in its workspace"
-                  aria-label="Resume run"
+                  title={t('workflows.control.resumeTitle')}
+                  aria-label={t('workflows.control.resumeAriaLabel')}
                 >
-                  {controlBusy === 'resume' ? <Loader2 size={11} className="animate-spin" /> : <Play size={11} />}Resume
+                  {controlBusy === 'resume' ? <Loader2 size={11} className="animate-spin" /> : <Play size={11} />}{t('workflows.control.resumeButtonLabel')}
                 </button>
               )}
             </div>
           )}
-          <button type="button" onClick={onRefresh} className="rounded p-1.5 text-muted hover:bg-highlight hover:text-primary" title="Refresh run" aria-label="Refresh run"><RefreshCw size={13} /></button>
+          <button type="button" onClick={onRefresh} className="rounded p-1.5 text-muted hover:bg-highlight hover:text-primary" title={t('workflows.detail.refreshAriaLabel')} aria-label={t('workflows.detail.refreshAriaLabel')}><RefreshCw size={13} /></button>
         </div>
-        {(run.pauseReason || run.resetHint) && <div className="mt-2 rounded border border-warning/40 bg-warning-bg/20 px-2 py-1.5 text-[11px] text-warning">{run.pauseReason ?? 'Paused'}{run.resetHint ? ` · ${run.resetHint}` : ''}</div>}
+        {(run.pauseReason || run.resetHint) && <div className="mt-2 rounded border border-warning/40 bg-warning-bg/20 px-2 py-1.5 text-[11px] text-warning">{run.pauseReason ?? t('workflows.control.pausedFallback')}{run.resetHint ? ` · ${run.resetHint}` : ''}</div>}
         {controlFeedback && (
           <div className={clsx('mt-2 rounded border px-2 py-1.5 text-[11px]', controlFeedback.kind === 'ok' ? 'border-success/40 bg-success-bg/20 text-success' : 'border-error/40 bg-error-bg/20 text-error')} role="status">
             {controlFeedback.text}
           </div>
         )}
         <div className="mt-2 grid grid-cols-3 gap-1.5 text-center">
-          <div className="rounded bg-card/60 px-1.5 py-1.5"><div className="text-sm tabular-nums text-primary">{counts.done}/{counts.total}</div><div className="text-[9px] uppercase text-faint">agents</div></div>
-          <div className="rounded bg-card/60 px-1.5 py-1.5"><div className="text-sm tabular-nums text-primary">{formatTokens(run.tokenUsage?.total) || '—'}</div><div className="text-[9px] uppercase text-faint">tokens</div></div>
-          <div className="rounded bg-card/60 px-1.5 py-1.5"><div className="text-sm tabular-nums text-primary">{formatCost(run.tokenUsage?.cost) || formatDuration(run.durationMs) || '—'}</div><div className="text-[9px] uppercase text-faint">cost/time</div></div>
+          <div className="rounded bg-card/60 px-1.5 py-1.5"><div className="text-sm tabular-nums text-primary">{counts.done}/{counts.total}</div><div className="text-[9px] uppercase text-faint">{t('workflows.detail.statAgents')}</div></div>
+          <div className="rounded bg-card/60 px-1.5 py-1.5"><div className="text-sm tabular-nums text-primary">{formatTokens(run.tokenUsage?.total) || '—'}</div><div className="text-[9px] uppercase text-faint">{t('workflows.detail.statTokens')}</div></div>
+          <div className="rounded bg-card/60 px-1.5 py-1.5"><div className="text-sm tabular-nums text-primary">{formatCost(run.tokenUsage?.cost) || formatDuration(run.durationMs) || '—'}</div><div className="text-[9px] uppercase text-faint">{t('workflows.detail.statCostTime')}</div></div>
         </div>
         <div className="mt-2 flex gap-1 overflow-x-auto">
           {tabs.filter((item) => item.visible).map((item) => <button key={item.id} type="button" onClick={() => setTab(item.id)} className={clsx('flex shrink-0 items-center gap-1 rounded px-2 py-1 text-[10px]', tab === item.id ? 'bg-accent-bg/30 text-accent-fg' : 'text-muted hover:bg-highlight hover:text-primary')}>{item.icon}{item.label}</button>)}
         </div>
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
-        {tab === 'overview' && <div className="space-y-3"><PhaseStepper run={run} /><div><div className="mb-1.5 flex items-center gap-2 text-[10px] uppercase tracking-wide text-faint"><WorkflowIcon size={12} /> Steps</div><AgentGrid run={run} onSelect={onSelectAgent} /></div></div>}
+        {tab === 'overview' && <div className="space-y-3"><PhaseStepper run={run} /><div><div className="mb-1.5 flex items-center gap-2 text-[10px] uppercase tracking-wide text-faint"><WorkflowIcon size={12} /> {t('workflows.detail.stepsHeading')}</div><AgentGrid run={run} onSelect={onSelectAgent} /></div></div>}
         {tab === 'script' && run.script && <div className="relative"><div className="absolute right-1 top-1"><CopyButton text={run.script} /></div><pre className="overflow-auto whitespace-pre-wrap break-words rounded-lg border border-border bg-app/70 p-3 pr-10 font-jetbrains text-[11px] leading-relaxed text-secondary">{run.script}</pre></div>}
         {tab === 'logs' && <pre className="whitespace-pre-wrap break-words rounded-lg border border-border bg-app/70 p-3 font-jetbrains text-[11px] leading-relaxed text-secondary">{run.logs.join('\n')}</pre>}
         {tab === 'result' && run.resultText && <WorkflowResult text={run.resultText} />}
@@ -687,6 +725,7 @@ function RunDetail({ run, onBack, onRefresh, onSelectAgent }: {
 }
 
 export function WorkflowNavigator({ embedded = false }: { embedded?: boolean }): React.JSX.Element | null {
+  const { t } = useTranslation()
   const open = useAppStore((state) => state.workflowPanelOpen)
   const setOpen = useAppStore((state) => state.setWorkflowPanelOpen)
   const filterSessionId = useAppStore((state) => state.workflowPanelFilter)
@@ -794,6 +833,25 @@ export function WorkflowNavigator({ embedded = false }: { embedded?: boolean }):
 
   if (!open) return null
 
+  const panelTitle = selectedAgent
+    ? t('workflows.panel.stepTranscriptTitle')
+    : detail
+      ? t('workflows.panel.workflowDetailTitle')
+      : t('common.workflowRuns')
+  const panelSubtitle = selectedAgent
+    ? selectedAgent.label
+    : detail
+      ? `${detail.workflowName} · ${detail.workspaceName}`
+      : activeCount > 0
+        ? t('workflows.panel.activeCount', { count: activeCount })
+        : visibleRuns.length
+          ? t('workflows.panel.recordedCount', { count: visibleRuns.length })
+          : filterSessionId
+            ? t('workflows.panel.noRunsForSession')
+            : workspaceScopeId
+              ? t('workflows.panel.noRunsForProject')
+              : t('workflows.panel.noRunsYet')
+
   return (
     <section
       ref={panelRef}
@@ -806,18 +864,37 @@ export function WorkflowNavigator({ embedded = false }: { embedded?: boolean }):
           ? 'inset-4 rounded-xl'
           : 'right-4 top-14 max-h-[calc(100vh-7rem)] w-[30rem] max-w-[calc(100vw-2rem)] rounded-xl')
       )}
-      aria-label="Workflow runs"
+      aria-label={t('common.workflowRuns')}
     >
       <header className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2.5">
         <WorkflowIcon size={16} className="text-accent-fg" />
-        <div className="min-w-0 flex-1"><div className="text-sm font-medium text-primary">{selectedAgent ? 'Step transcript' : detail ? 'Workflow detail' : 'Workflow runs'}</div><div className="text-[11px] text-dim">{selectedAgent ? selectedAgent.label : detail ? `${detail.workflowName} · ${detail.workspaceName}` : activeCount > 0 ? `${activeCount} active` : visibleRuns.length ? `${visibleRuns.length} recorded` : filterSessionId ? 'No runs for this session' : workspaceScopeId ? 'No runs for this project' : 'No runs yet'}</div></div>
-        {!detail && <button type="button" onClick={() => void refresh()} className="rounded p-1.5 text-muted hover:bg-highlight hover:text-primary" title="Refresh workflow runs" aria-label="Refresh workflow runs"><RefreshCw size={14} /></button>}
-        {!embedded && <button type="button" onClick={() => setMaximized((value) => !value)} className="rounded p-1.5 text-muted hover:bg-highlight hover:text-primary" title={maximized ? 'Restore workflow navigator' : 'Maximize workflow navigator'} aria-label={maximized ? 'Restore workflow navigator' : 'Maximize workflow navigator'} aria-pressed={maximized}>{maximized ? <Minimize2 size={15} /> : <Maximize2 size={15} />}</button>}
-        <button type="button" onClick={() => { setMaximized(false); setOpen(false) }} className="rounded p-1.5 text-muted hover:bg-highlight hover:text-primary" title="Close workflow runs" aria-label="Close workflow runs"><X size={16} /></button>
+        <div className="min-w-0 flex-1"><div className="text-sm font-medium text-primary">{panelTitle}</div><div className="text-[11px] text-dim">{panelSubtitle}</div></div>
+        {!detail && <button type="button" onClick={() => void refresh()} className="rounded p-1.5 text-muted hover:bg-highlight hover:text-primary" title={t('workflows.panel.refreshAriaLabel')} aria-label={t('workflows.panel.refreshAriaLabel')}><RefreshCw size={14} /></button>}
+        {!embedded && <button type="button" onClick={() => setMaximized((value) => !value)} className="rounded p-1.5 text-muted hover:bg-highlight hover:text-primary" title={maximized ? t('workflows.panel.restoreAriaLabel') : t('workflows.panel.maximizeAriaLabel')} aria-label={maximized ? t('workflows.panel.restoreAriaLabel') : t('workflows.panel.maximizeAriaLabel')} aria-pressed={maximized}>{maximized ? <Minimize2 size={15} /> : <Maximize2 size={15} />}</button>}
+        <button type="button" onClick={() => { setMaximized(false); setOpen(false) }} className="rounded p-1.5 text-muted hover:bg-highlight hover:text-primary" title={t('workflows.panel.closeAriaLabel')} aria-label={t('workflows.panel.closeAriaLabel')}><X size={16} /></button>
       </header>
       {selectedAgent && <AgentTranscript agent={selectedAgent} onBack={() => setSelectedAgent(null)} />}
       {!selectedAgent && detail && <RunDetail run={detail} onBack={() => setDetail(null)} onRefresh={() => void refreshDetail()} onSelectAgent={setSelectedAgent} />}
-      {!selectedAgent && !detail && <div className="min-h-0 flex-1 overflow-y-auto">{loading ? <div className="flex items-center justify-center gap-2 px-5 py-10 text-xs text-dim"><Loader2 size={14} className="animate-spin" />Loading workflow…</div> : visibleRuns.length === 0 ? <div className="px-5 py-10 text-center text-sm text-dim">{filterSessionId ? <><WorkflowIcon size={26} className="mx-auto mb-2 text-faint" />No workflow runs recorded for this session. Runs from older sessions appear in the global list.</> : workspaceScopeId ? <><WorkflowIcon size={26} className="mx-auto mb-2 text-faint" />No workflow runs recorded for {scopeWorkspace?.name ?? 'this project'}. Runs from other projects appear in the global list.</> : <><WorkflowIcon size={26} className="mx-auto mb-2 text-faint" />Run <span className="font-jetbrains text-xs text-secondary">/workflows run …</span> in chat.</>}</div> : visibleRuns.map((run) => <RunCard key={`${run.workspaceId}:${run.runId}`} run={run} onOpen={() => void loadRun(run)} />)}</div>}
+      {!selectedAgent && !detail && (
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="flex items-center justify-center gap-2 px-5 py-10 text-xs text-dim"><Loader2 size={14} className="animate-spin" />{t('workflows.panel.loading')}</div>
+          ) : visibleRuns.length === 0 ? (
+            <div className="px-5 py-10 text-center text-sm text-dim">
+              {filterSessionId ? (
+                <><WorkflowIcon size={26} className="mx-auto mb-2 text-faint" />{t('workflows.panel.noRunsSessionDetail')}</>
+              ) : workspaceScopeId ? (
+                <><WorkflowIcon size={26} className="mx-auto mb-2 text-faint" />{t('workflows.panel.noRunsProjectDetail', { name: scopeWorkspace?.name ?? t('workflows.panel.thisProjectFallback') })}</>
+              ) : (
+                <>
+                  <WorkflowIcon size={26} className="mx-auto mb-2 text-faint" />
+                  <Trans i18nKey="workflows.panel.runCommandHint" components={{ cmd: <span className="font-jetbrains text-xs text-secondary" /> }} />
+                </>
+              )}
+            </div>
+          ) : visibleRuns.map((run) => <RunCard key={`${run.workspaceId}:${run.runId}`} run={run} onOpen={() => void loadRun(run)} />)}
+        </div>
+      )}
     </section>
   )
 }
