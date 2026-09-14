@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../store'
 import { createDebouncedBuffer } from '../utils/debounced-buffer'
 import { createStaleGuard } from '../utils/stale-guard'
+import { toPreviewLoadError, type PreviewLoadError } from '../utils/preview-load-error'
 import type { FileTreeNode, GitFileStatus, FileSearchResult } from '../../../shared/ipc-contracts'
 import { CodeEditor } from './code-editor'
 import { MarkdownRenderer } from './markdown-renderer'
@@ -462,6 +463,8 @@ export function FileSearch({ isOpen, onClose }: FileSearchProps): React.JSX.Elem
 // switches flush or discard the buffer instead of racing this timer.
 const EDITOR_INPUT_DEBOUNCE_MS = 150
 
+type FilePreviewError = PreviewLoadError<'readFailed' | 'saveFailed'>
+
 export function FilePreview(): React.JSX.Element | null {
   const { t } = useTranslation()
   const target = useAppStore((state) => state.previewTarget)
@@ -470,7 +473,7 @@ export function FilePreview(): React.JSX.Element | null {
   const [savedContent, setSavedContent] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<FilePreviewError | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [viewMode, setViewMode] = useState<'source' | 'preview'>('preview')
   // Bumped after a save so the HTML <webview> remounts and reloads from disk.
@@ -521,7 +524,7 @@ export function FilePreview(): React.JSX.Element | null {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : t('files.preview.readFailed'))
+          setError(toPreviewLoadError(err, 'readFailed'))
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -533,7 +536,7 @@ export function FilePreview(): React.JSX.Element | null {
     return () => {
       cancelled = true
     }
-  }, [path, isPdf, editBuffer, t])
+  }, [path, isPdf, editBuffer])
 
   // Default to the rendered preview for markdown/HTML, source otherwise.
   useEffect(() => {
@@ -598,7 +601,7 @@ export function FilePreview(): React.JSX.Element | null {
       setReloadKey((k) => k + 1)
       setTimeout(() => setSaveSuccess(false), 2000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('files.preview.saveFailed'))
+      setError(toPreviewLoadError(err, 'saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -701,7 +704,13 @@ export function FilePreview(): React.JSX.Element | null {
             <Loader2 size={20} className="animate-spin text-dim" />
           </div>
         ) : error ? (
-          <div className="p-4 text-xs text-error">{error}</div>
+          <div className="p-4 text-xs text-error">
+            {error.kind === 'message'
+              ? error.text
+              : error.kind === 'readFailed'
+                ? t('files.preview.readFailed')
+                : t('files.preview.saveFailed')}
+          </div>
         ) : content === null ? null : viewMode === 'preview' && isMarkdown ? (
           <div className="markdown-body text-sm p-4">
             <MarkdownRenderer content={content} />

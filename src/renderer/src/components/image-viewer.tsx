@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../store'
 import { Image as ImageIcon, Loader2, X } from 'lucide-react'
+import { toPreviewLoadError, type PreviewLoadError } from '../utils/preview-load-error'
+
+type ImageViewerError = PreviewLoadError<'unsupportedFile' | 'readFailed'>
 
 /**
  * Read-only image preview pane, opened when a chat filename link points at an
@@ -14,7 +17,7 @@ export function ImageViewer(): React.JSX.Element | null {
   const image = target?.kind === 'image' ? target : null
   const [dataUrl, setDataUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<ImageViewerError | null>(null)
 
   useEffect(() => {
     if (!image) {
@@ -37,10 +40,12 @@ export function ImageViewer(): React.JSX.Element | null {
           // SVG is read as text; render it directly from its markup.
           setDataUrl(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(result.content)}`)
         } else {
-          setError(t('imageViewer.unsupportedFile'))
+          setError({ kind: 'unsupportedFile' })
         }
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : t('imageViewer.readFailed'))
+        if (!cancelled) {
+          setError(toPreviewLoadError(err, 'readFailed'))
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -49,7 +54,7 @@ export function ImageViewer(): React.JSX.Element | null {
     return () => {
       cancelled = true
     }
-  }, [image, t])
+  }, [image])
 
   if (!image) return null
 
@@ -75,7 +80,13 @@ export function ImageViewer(): React.JSX.Element | null {
         {loading ? (
           <Loader2 size={20} className="animate-spin text-dim" />
         ) : error ? (
-          <div className="text-xs text-error">{error}</div>
+          <div className="text-xs text-error">
+            {error.kind === 'message'
+              ? error.text
+              : error.kind === 'unsupportedFile'
+                ? t('imageViewer.unsupportedFile')
+                : t('imageViewer.readFailed')}
+          </div>
         ) : dataUrl ? (
           <img
             src={dataUrl}
