@@ -100,6 +100,23 @@ const IGNORED_DIRS = new Set([
 ])
 
 /**
+ * Package caches and tool state that live under a home-directory workspace.
+ * Each holds thousands of directories, so watching them exhausts file
+ * descriptors long before `WATCH_DEPTH` bounds the walk.
+ */
+const HOME_TOOLING_IGNORED = new Set([
+  '.npm', '.pnpm-store', '.yarn', '.bun', '.nvm', '.cargo', '.rustup',
+  '.gradle', '.m2', '.local', '.docker', '.codex', '.gemini', '.Trash',
+])
+
+/**
+ * macOS keeps application state in `~/Library`, the largest tree in a home
+ * directory. Only applied on darwin so a project folder named `Library`
+ * elsewhere is still watched.
+ */
+const DARWIN_HOME_IGNORED = new Set(['Library'])
+
+/**
  * Windows user-profile folders that appear under a home-directory workspace.
  * Watching them hits junctions / protected reparse points (EPERM noise).
  * Only applied on win32 so other platforms are unaffected.
@@ -120,6 +137,18 @@ const WIN32_PROFILE_IGNORED = new Set([
   'my pictures',
   'my videos',
 ])
+
+/**
+ * True when a directory name should be skipped by the watcher, the tree view,
+ * and file search. Platform-specific sets only apply on their own platform.
+ */
+export function isIgnoredDirName(name: string, platform: NodeJS.Platform = process.platform): boolean {
+  if (IGNORED_DIRS.has(name) || HOME_TOOLING_IGNORED.has(name)) return true
+  if (platform === 'darwin') return DARWIN_HOME_IGNORED.has(name)
+  if (platform !== 'win32') return false
+  const lower = name.toLowerCase()
+  return WIN32_PROFILE_IGNORED.has(lower) || lower.startsWith('ntuser.')
+}
 
 /** Log each watch error path at most once to avoid console floods. */
 const watchErrorLogged = new Set<string>()
@@ -453,9 +482,10 @@ export class FileService {
     this.watcher = watch(this.workspacePath, {
       ignored: (path) => this.isIgnoredPath(path),
       ignoreInitial: true,
-      // Home-directory workspaces on Windows contain junctions into protected
-      // trees; following them floods EPERM. POSIX trees rarely need this.
-      followSymlinks: process.platform !== 'win32',
+      // Ignores are decided by the link name, not its target, so a followed
+      // symlink can fan out into an unbounded tree (Windows junctions into
+      // protected folders, POSIX links into package stores). Never follow.
+      followSymlinks: false,
       depth: WATCH_DEPTH,
       awaitWriteFinish: { stabilityThreshold: WATCH_DEBOUNCE_MS, pollInterval: 50 },
       persistent: true,
@@ -518,14 +548,7 @@ export class FileService {
   private isIgnoredPath(absolutePath: string): boolean {
     const rel = relative(this.workspacePath, absolutePath)
     if (!rel || rel.startsWith('..')) return false
-    return rel.split(/[\\/]/).some((segment) => {
-      if (IGNORED_DIRS.has(segment)) return true
-      // Windows profile noise only — do not broaden ignore sets on other OSes.
-      if (process.platform !== 'win32') return false
-      const lower = segment.toLowerCase()
-      if (WIN32_PROFILE_IGNORED.has(lower)) return true
-      return lower.startsWith('ntuser.')
-    })
+    return rel.split(/[\\/]/).some((segment) => isIgnoredDirName(segment))
   }
 
   /**
@@ -556,7 +579,7 @@ export class FileService {
 
           // Sort: directories first, then files, both alphabetical
           const sorted = items
-            .filter((item) => !IGNORED_DIRS.has(item.name) && !item.name.startsWith('.git'))
+            .filter((item) => !isIgnoredDirName(item.name) && !item.name.startsWith('.git'))
             .sort((a, b) => {
               if (a.isDirectory() && !b.isDirectory()) return -1
               if (!a.isDirectory() && b.isDirectory()) return 1
@@ -589,7 +612,7 @@ export class FileService {
       const items = await readdir(dir, { withFileTypes: true })
 
       for (const item of items) {
-        if (IGNORED_DIRS.has(item.name) || item.name.startsWith('.git')) continue
+        if (isIgnoredDirName(item.name) || item.name.startsWith('.git')) continue
 
         const fullPath = join(dir, item.name)
         const relPath = relBase ? `${relBase}/${item.name}` : item.name
