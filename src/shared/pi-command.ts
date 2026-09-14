@@ -1,3 +1,5 @@
+import { t } from './i18n'
+
 /** A command exposed by Pi via the RPC `get_commands` request. */
 export interface PiCommand {
   name: string
@@ -30,12 +32,21 @@ export function commandDisplayName(cmd: PiCommand): string {
   return cmd.name
 }
 
-const GROUPS: Array<{ source: string; label: string }> = [
-  { source: 'skill', label: 'Skills' },
-  { source: 'prompt', label: 'Prompts' },
-  { source: BUILTIN_SOURCE, label: 'Commands' },
-  { source: 'extension', label: 'Extensions' },
+const GROUPS: Array<{ source: string }> = [
+  { source: 'skill' },
+  { source: 'prompt' },
+  { source: BUILTIN_SOURCE },
+  { source: 'extension' },
 ]
+
+/** The display label for one command group, in the interface language. */
+function groupLabel(source: string): string {
+  if (source === 'skill') return t('commandGroups.skills')
+  if (source === 'prompt') return t('commandGroups.prompts')
+  if (source === BUILTIN_SOURCE) return t('commandGroups.commands')
+  if (source === 'extension') return t('commandGroups.extensions')
+  return t('commandGroups.other')
+}
 
 export interface CommandGroup {
   label: string
@@ -82,10 +93,10 @@ export function groupCommands(results: PiCommand[]): {
 } {
   const known = new Set(GROUPS.map((g) => g.source))
   const grouped = GROUPS.map((g) => ({
-    label: g.label,
+    label: groupLabel(g.source),
     items: results.filter((r) => r.source === g.source),
   })).filter((g) => g.items.length > 0)
   const other = results.filter((r) => !known.has(r.source))
-  if (other.length > 0) grouped.push({ label: 'Other', items: other })
+  if (other.length > 0) grouped.push({ label: t('commandGroups.other'), items: other })
   return { grouped, flat: grouped.flatMap((g) => g.items) }
 }

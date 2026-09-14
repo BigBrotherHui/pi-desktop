@@ -16,9 +16,12 @@ import { IPC_CHANNELS } from '../../shared/ipc-contracts'
 import { readFile, writeFile, stat } from 'fs/promises'
 import { join } from 'path'
 import { isString } from './validation'
+import { t } from '../../shared/i18n'
 
 const THEMES_DIR_NAME = 'themes'
-const THEME_FILE_FILTER: Electron.FileFilter = { name: 'Theme', extensions: ['json'] }
+function themeFileFilter(): Electron.FileFilter {
+  return { name: t('dialogs.theme.fileFilterName'), extensions: ['json'] }
+}
 
 function themesDir(): string {
   return join(getGuiDataDir(), THEMES_DIR_NAME)
@@ -69,9 +72,9 @@ export function registerThemeHandlers(): void {
     }
     const defaultName = `${themeIdFromName(theme.name) || 'theme'}.json`
     const result = await dialog.showSaveDialog({
-      title: 'Export Theme',
+      title: t('dialogs.theme.exportTitle'),
       defaultPath: defaultName,
-      filters: [THEME_FILE_FILTER],
+      filters: [themeFileFilter()],
     })
     if (result.canceled || !result.filePath) return { ok: false, canceled: true }
     try {
@@ -81,23 +84,23 @@ export function registerThemeHandlers(): void {
       console.error('Failed to write exported theme file:', error)
       return {
         ok: false,
-        error: error instanceof Error ? error.message : `Could not write theme to ${result.filePath}`,
+        error: error instanceof Error ? error.message : t('errors.theme.exportWriteFailed', { path: result.filePath }),
       }
     }
   })
 
   ipcMain.handle(IPC_CHANNELS.THEMES_IMPORT, async (): Promise<ThemeImportResult> => {
     const result = await dialog.showOpenDialog({
-      title: 'Import Theme',
+      title: t('dialogs.theme.importTitle'),
       properties: ['openFile'],
-      filters: [THEME_FILE_FILTER],
+      filters: [themeFileFilter()],
     })
     if (result.canceled || result.filePaths.length === 0) return { ok: false, canceled: true }
     try {
       const filePath = result.filePaths[0]
       const { size } = await stat(filePath)
       if (size > MAX_THEME_FILE_BYTES) {
-        return { ok: false, error: `theme file too large (limit ${MAX_THEME_FILE_BYTES} bytes)` }
+        return { ok: false, error: t('errors.theme.fileTooLarge', { limit: MAX_THEME_FILE_BYTES }) }
       }
       const file = validateThemeFile(JSON.parse(await readFile(filePath, 'utf8')))
       const { id } = await saveUserTheme(themesDir(), file)

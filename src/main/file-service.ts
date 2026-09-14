@@ -6,10 +6,16 @@ import { promisify } from 'util'
 import { describeWriteError } from './fs-errors'
 import { appLog } from './app-log'
 import type { FileChangeEvent } from '../shared/ipc-contracts'
+import { t } from '../shared/i18n'
 
 const execFileAsync = promisify(execFile)
 
 const PARENT_ESCAPE = '..'
+
+const WORKSPACE_ESCAPE_KEYS = {
+  read: 'errors.fileService.refusedRead',
+  write: 'errors.fileService.refusedWrite',
+} as const satisfies Record<'read' | 'write', string>
 
 const NOT_GIT_REPO_RE = /not a git repository/i
 // Bare repos: rev-parse succeeds but status/diff refuse to run.
@@ -33,7 +39,7 @@ export function describeGitError(operation: string, err: unknown): string {
   const { stderr, message } = (err ?? {}) as { stderr?: unknown; message?: unknown }
   const stderrLine = typeof stderr === 'string' ? stderr.trim().split('\n')[0] : ''
   const reason = stderrLine || (typeof message === 'string' ? message : String(err))
-  return `git ${operation} failed: ${reason}`
+  return t('errors.git.subcommandFailed', { operation, reason })
 }
 
 // One log entry per workspace+operation per run — git status is polled every
@@ -415,7 +421,7 @@ export class FileService {
    */
   private async resolveInsideWorkspace(filePath: string, action: 'read' | 'write'): Promise<string> {
     if (!isPathInsideWorkspace(this.workspacePath, filePath)) {
-      throw new Error(`Refusing to ${action} outside the active workspace`)
+      throw new Error(t(WORKSPACE_ESCAPE_KEYS[action]))
     }
     const fullPath = isAbsolute(filePath) ? filePath : join(this.workspacePath, filePath)
     const resolvedFile = resolve(fullPath)
@@ -424,7 +430,7 @@ export class FileService {
     const realWorkspace = await realpath(this.workspacePath)
     const realTarget = await realpathDeepest(resolvedFile)
     if (!isPathInsideWorkspace(realWorkspace, realTarget)) {
-      throw new Error(`Refusing to ${action} outside the active workspace`)
+      throw new Error(t(WORKSPACE_ESCAPE_KEYS[action]))
     }
     return resolvedFile
   }

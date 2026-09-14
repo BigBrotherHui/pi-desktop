@@ -24,6 +24,7 @@ import {
 import { escapeCmdSpawn } from './cmd-escape'
 import { appLog } from './app-log'
 import { getGuiDataPath } from './app-data-paths'
+import { t } from '../shared/i18n'
 
 /**
  * Manages a Pi RPC child process.
@@ -433,10 +434,7 @@ function toPiCli(resolution: PiResolution, kind: AgentEngineKind): PiCli {
   if (!resolution.found) {
     failureReason = describePiResolutionFailure(resolution)
   } else if (!nodeFound) {
-    failureReason =
-      `Node binary not found at resolved path:\n  ${node}\n\n` +
-      "Pi's .js entry point requires Node. Install Node from https://nodejs.org " +
-      'or set the NODE env var to your Node binary path.'
+    failureReason = t('errors.pi.nodeNotFound', { node })
   }
   return {
     kind,
@@ -654,7 +652,7 @@ interface PendingResponse {
 /** A Pi RPC command got no response in time. Callers check the class, not the text. */
 export class RpcTimeoutError extends Error {
   constructor(readonly commandType: string, timeoutMs: number) {
-    super(`Command ${commandType} timed out after ${timeoutMs}ms`)
+    super(t('errors.pi.commandTimedOut', { commandType, timeoutMs }))
     this.name = 'RpcTimeoutError'
   }
 }
@@ -746,7 +744,7 @@ export class PiRpcManager extends EventEmitter {
       return this.getStatus()
     }
     if (options.cwd && (!existsSync(options.cwd) || !statSync(options.cwd).isDirectory())) {
-      this.stderrBuffer = `Pi working directory does not exist or is not a directory:\n  ${options.cwd}`
+      this.stderrBuffer = t('errors.pi.cwdMissing', { cwd: options.cwd })
       this.setStatus('error')
       console.error('[Pi] Pre-flight failed:', this.stderrBuffer)
       appLog.error('pi', 'Pre-flight failed', this.stderrBuffer)
@@ -781,7 +779,7 @@ export class PiRpcManager extends EventEmitter {
       this.stderrBuffer =
         outcome === 'timeout'
           ? this.describeStartupTimeout(captured)
-          : captured || 'Pi crashed before becoming ready.'
+          : captured || t('errors.pi.crashedBeforeReady')
       return this.getStatus()
     }
 
@@ -795,22 +793,17 @@ export class PiRpcManager extends EventEmitter {
    * message misdiagnosed issue #58 for days).
    */
   private describeStartupTimeout(captured: string): string {
+    const seconds = this.startupSawOutput
+      ? this.startupTimeouts.engineBusyMs / MS_PER_SECOND
+      : this.startupTimeouts.silenceMs / MS_PER_SECOND
     if (this.startupSawOutput) {
-      return (
-        `Pi started but did not become ready within ${this.startupTimeouts.engineBusyMs / MS_PER_SECOND}s.\n\n` +
-        'Pi was alive and producing output, but never answered the readiness check. ' +
-        'Extension startup hooks run before Pi reads commands, and a hook that calls a ' +
-        'local model server can wait this long while the model loads or prefills a large prompt. ' +
-        'Check the engine and model-server logs, then retry.' +
-        (captured ? `\n\nPi stderr captured during startup:\n${captured}` : '')
-      )
+      return captured
+        ? t('errors.pi.startupTimeoutBusyWithStderr', { seconds, detail: captured })
+        : t('errors.pi.startupTimeoutBusy', { seconds })
     }
-    return (
-      `Pi produced no output within ${this.startupTimeouts.silenceMs / MS_PER_SECOND}s.\n\n` +
-      (captured
-        ? `Pi stderr captured during startup:\n${captured}`
-        : 'No output captured. Check the app log for the exact spawn command, and try running `pi --mode rpc` directly in a terminal.')
-    )
+    return captured
+      ? t('errors.pi.startupTimeoutSilentWithStderr', { seconds, detail: captured })
+      : t('errors.pi.startupTimeoutSilentNoOutput', { seconds })
   }
 
   /**
@@ -908,7 +901,7 @@ export class PiRpcManager extends EventEmitter {
       proc.on('error', (err) => {
         console.error('[Pi] Spawn error:', err.message)
         appLog.error('pi', 'Spawn error', err)
-        this.stderrBuffer += `Spawn error: ${err.message}\n`
+        this.stderrBuffer += t('errors.pi.spawnError', { detail: err.message })
         finish('crashed')
       })
 
@@ -918,12 +911,14 @@ export class PiRpcManager extends EventEmitter {
           // Exited after becoming ready → normal lifecycle stop.
           this.setStatus('stopped')
           this.emit('exit', { code, signal })
-          this.rejectAllPending('Pi process exited')
+          this.rejectAllPending(t('errors.pi.processExited'))
           return
         }
         // Exited before ready → a startup crash (doStart may retry once).
         if (code !== 0 && code !== null) {
-          this.stderrBuffer = (this.stderrBuffer || '') + `Pi exited with code ${code} before becoming ready.`
+          const priorStderr = this.stderrBuffer || ''
+          const exitMessage = t('errors.pi.exitedBeforeReady', { code })
+          this.stderrBuffer = `${priorStderr}${exitMessage}`
         }
         finish('crashed')
       })
@@ -1018,7 +1013,7 @@ export class PiRpcManager extends EventEmitter {
    */
   async sendCommand(command: Record<string, unknown>): Promise<PiResponseEvent | null> {
     if (!this.process?.stdin || this.status !== 'running') {
-      throw new Error('Pi process is not running')
+      throw new Error(t('errors.pi.processNotRunning'))
     }
 
     const id = `req-${this.nextRequestId++}`
@@ -1241,7 +1236,7 @@ export class PiRpcManager extends EventEmitter {
     this.abortStartup?.()
     for (const [, pending] of this.pendingResponses) {
       clearTimeout(pending.timer)
-      pending.reject(new Error('Pi process killed'))
+      pending.reject(new Error(t('errors.pi.processKilled')))
     }
     this.pendingResponses.clear()
 

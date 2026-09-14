@@ -1,6 +1,7 @@
 import { spawn } from 'child_process'
 import { mkdir } from 'fs/promises'
 import { basename, dirname, join, resolve } from 'path'
+import { t } from '../shared/i18n'
 
 /** Exit status Git uses for fatal errors, repository discovery included. */
 export const GIT_FATAL_EXIT_CODE = 128
@@ -15,7 +16,10 @@ export interface GitCommandResult {
 
 function describeGitFailure(args: readonly string[], stdout: string, stderr: string): string {
   const detail = (stderr || stdout).trim()
-  return `git ${args.join(' ')} failed${detail ? `: ${detail}` : ''}`
+  const command = args.join(' ')
+  return detail
+    ? t('errors.git.commandFailedWithDetail', { command, detail })
+    : t('errors.git.commandFailed', { command })
 }
 
 /**

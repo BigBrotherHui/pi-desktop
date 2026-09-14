@@ -1,5 +1,6 @@
 import { basename, join, posix as posixPath } from 'path'
 import { buildNpmPrefixCommand, escapeCmdSpawn } from './cmd-escape'
+import { t } from '../shared/i18n'
 
 /**
  * Locating the Pi CLI is the single most failure-prone step at startup, and the
@@ -614,9 +615,12 @@ export function resolvePiBinary(
   return finalize(deps, fallback, 'fallback', false, rejectedOverride, pathEnv)
 }
 
-const SETTINGS_HINT = 'Settings > Agent Configuration > Agent Installation'
-const INSTALL_HINT =
-  'Install Pi with:\n  npm install -g @earendil-works/pi-coding-agent\nor install OMP with:\n  bun install -g @oh-my-pi/pi-coding-agent'
+function settingsHint(): string {
+  return t('errors.pi.settingsHint')
+}
+function installHint(): string {
+  return t('errors.pi.installHint')
+}
 
 /**
  * Explain a failed resolution. A stale configured path is the headline when
@@ -625,15 +629,14 @@ const INSTALL_HINT =
  */
 export function describePiResolutionFailure(resolution: PiResolution): string {
   if (resolution.rejectedOverride) {
-    return (
-      `The Pi executable path set in ${SETTINGS_HINT} does not exist:\n  ${resolution.rejectedOverride}\n\n` +
-      'Point it at Pi\'s cli.js (or its install directory), or clear the field to auto-detect. ' +
-      `Auto-detection also found nothing.\n\n${INSTALL_HINT}`
-    )
+    return t('errors.pi.configuredPathMissing', {
+      settingsHint: settingsHint(),
+      path: resolution.rejectedOverride,
+      installHint: installHint(),
+    })
   }
-  return (
-    `Pi binary not found. Searched the login shell PATH, npm's global prefix, node version managers ` +
-    `(nvm, fnm, volta, asdf, mise, nodenv, n) and common install locations.\n\n${INSTALL_HINT}\n\n` +
-    `Already installed? Set the full path to Pi's cli.js in ${SETTINGS_HINT}.`
-  )
+  return t('errors.pi.notFound', {
+    installHint: installHint(),
+    settingsHint: settingsHint(),
+  })
 }

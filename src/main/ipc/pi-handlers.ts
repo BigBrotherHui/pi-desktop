@@ -6,6 +6,7 @@ import { validateStartOptions, applyResumePreference, applyPermissionModeToStart
 import { loadAppSettings } from './settings'
 import type { IpcContext } from './context'
 import { detectPiInstallations, getConfiguredEngineKind } from '../pi-rpc-manager'
+import { t } from '../../shared/i18n'
 
 export function registerPiHandlers(ctx: IpcContext): void {
   const { workspaceManager, getActivePi } = ctx
@@ -16,7 +17,7 @@ export function registerPiHandlers(ctx: IpcContext): void {
     const opts = validateStartOptions(options)
     const settings = await loadAppSettings(workspaceManager)
     const activeWs = workspaceManager.getActiveWorkspace()
-    if (!activeWs) throw new Error('No active workspace')
+    if (!activeWs) throw new Error(t('errors.workspace.noneActive'))
 
     // Validate cwd exists; fall back to home directory if not
     let cwd = activeWs.path
@@ -38,7 +39,7 @@ export function registerPiHandlers(ctx: IpcContext): void {
       applyPermissionModeToStartOptions(applyResumePreference(withDefaults, settings), settings)
     )
     const pi = workspaceManager.getPiManager(activeWs.id)
-    if (!pi) throw new Error('Failed to create Pi manager')
+    if (!pi) throw new Error(t('errors.pi.failedToCreateManager'))
 
     return pi.getStatus()
   })
@@ -55,10 +56,10 @@ export function registerPiHandlers(ctx: IpcContext): void {
     const opts = validateStartOptions(options)
     const settings = await loadAppSettings(workspaceManager)
     const activeWs = workspaceManager.getActiveWorkspace()
-    if (!activeWs) throw new Error('No active workspace')
+    if (!activeWs) throw new Error(t('errors.workspace.noneActive'))
 
     const pi = workspaceManager.getPiManager(activeWs.id)
-    if (!pi) throw new Error('No Pi manager for workspace')
+    if (!pi) throw new Error(t('errors.pi.noManagerForWorkspace'))
 
     // Restart the runtime, not just its process: the runtime owns the session
     // binding, and restartSessionRuntime re-applies it. Starting the manager

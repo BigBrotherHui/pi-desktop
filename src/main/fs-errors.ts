@@ -8,6 +8,8 @@
  * rewrite it into a message that tells the user exactly how to resolve it.
  */
 
+import { t } from '../shared/i18n'
+
 const IS_WINDOWS = process.platform === 'win32'
 
 // Codes Windows raises when a write is blocked by Controlled Folder Access
@@ -34,14 +36,7 @@ function errorCode(err: unknown): string | undefined {
 export function describeWriteError(err: unknown, filePath: string): Error {
   const code = errorCode(err)
   if (IS_WINDOWS && code !== undefined && BLOCKED_WRITE_CODES.has(code)) {
-    return new Error(
-      `Could not write "${filePath}" (${code}). On Windows this is usually ` +
-        'Controlled Folder Access (Ransomware protection) blocking the change. ' +
-        'Either allow Pi Desktop in Windows Security → Virus & threat ' +
-        'protection → Ransomware protection → "Allow an app through ' +
-        'Controlled folder access", or move this project out of Documents/Desktop ' +
-        'to an unprotected folder (for example C:\\dev).'
-    )
+    return new Error(t('errors.fs.blockedWrite', { path: filePath, code }))
   }
   return err instanceof Error ? err : new Error(String(err))
 }

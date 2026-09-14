@@ -1,6 +1,7 @@
 import type { PackageUpdate } from '../shared/ipc-contracts'
 import { isNewerVersion } from '../shared/version-compare'
 import type { OmpNpmPlugin } from './omp-plugin-list'
+import { t } from '../shared/i18n'
 
 /**
  * Update detection for installed packages.
@@ -26,8 +27,10 @@ const DIST_TAG_PATTERN = /^[A-Za-z][\w.-]*$/
 const FLOATING_RANGE_PATTERN = /^[\^~]\d/
 const OMP_MISSING_BUN_MARKER = 'Executable not found in $PATH: "bun"'
 
-export const OMP_MISSING_BUN_MESSAGE =
-  'OMP needs bun to install or update npm plugins. Install bun from https://bun.sh, then try again.'
+// Also exported as a value (evaluated once, in the interface language active at
+// import) for callers that need the text rather than a fresh translation on
+// every read; explainOmpFailure below always re-translates at call time.
+export const OMP_MISSING_BUN_MESSAGE = t('errors.packages.missingBun')
 
 /** A registry lookup: the package name and the dist-tag its update follows. */
 export interface RegistryQuery {
@@ -149,5 +152,5 @@ export function ompUpdateInstallSpec(query: OmpRegistryQuery, plugin: OmpNpmPlug
 
 /** Replace OMP's missing-bun failure with an actionable message. */
 export function explainOmpFailure(output: string): string {
-  return output.includes(OMP_MISSING_BUN_MARKER) ? OMP_MISSING_BUN_MESSAGE : output
+  return output.includes(OMP_MISSING_BUN_MARKER) ? t('errors.packages.missingBun') : output
 }

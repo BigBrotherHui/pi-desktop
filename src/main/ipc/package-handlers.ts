@@ -19,6 +19,7 @@ import {
 } from '../package-updates'
 import type { AgentEngineKind, InstalledPackage, PackageUpdate } from '../../shared/ipc-contracts'
 import type { IpcContext } from './context'
+import { t } from '../../shared/i18n'
 
 export function registerPackageHandlers(ctx: IpcContext): void {
   const { workspaceManager } = ctx
@@ -39,7 +40,7 @@ export function registerPackageHandlers(ctx: IpcContext): void {
   ipcMain.handle(IPC_CHANNELS.PACKAGE_INSTALL, async (event, packageSpec: unknown) => {
     assertTrustedSender(event)
     if (!isString(packageSpec)) throw new Error('packageSpec must be a string')
-    if (!isValidPackageSpec(packageSpec)) throw new Error('Invalid package specification')
+    if (!isValidPackageSpec(packageSpec)) throw new Error(t('errors.packages.invalidSpec'))
     const ws = workspaceManager.getActiveWorkspace()
     const cwd = ws?.path ?? process.cwd()
     return installPackage(packageSpec, cwd, activeEngine())
@@ -48,7 +49,7 @@ export function registerPackageHandlers(ctx: IpcContext): void {
   ipcMain.handle(IPC_CHANNELS.PACKAGE_REMOVE, async (event, packageSpec: unknown) => {
     assertTrustedSender(event)
     if (!isString(packageSpec)) throw new Error('packageSpec must be a string')
-    if (!isValidPackageSpec(packageSpec)) throw new Error('Invalid package specification')
+    if (!isValidPackageSpec(packageSpec)) throw new Error(t('errors.packages.invalidSpec'))
     const ws = workspaceManager.getActiveWorkspace()
     const cwd = ws?.path ?? process.cwd()
     return removePackage(packageSpec, cwd, activeEngine())
@@ -57,7 +58,7 @@ export function registerPackageHandlers(ctx: IpcContext): void {
   ipcMain.handle(IPC_CHANNELS.PACKAGE_UPDATE, async (event, packageSpec: unknown) => {
     assertTrustedSender(event)
     if (!isString(packageSpec)) throw new Error('packageSpec must be a string')
-    if (!isValidPackageSpec(packageSpec)) throw new Error('Invalid package specification')
+    if (!isValidPackageSpec(packageSpec)) throw new Error(t('errors.packages.invalidSpec'))
     const ws = workspaceManager.getActiveWorkspace()
     const cwd = ws?.path ?? process.cwd()
     return updatePackage(packageSpec, cwd, activeEngine())
@@ -243,7 +244,7 @@ async function updateOmpPlugin(spec: string, cwd: string): Promise<CliResult> {
   // Not an npm plugin: marketplace ids (`name@marketplace`) have a native upgrade.
   if (!target) return runOmpMutation(['plugin', 'upgrade', spec], cwd, UPDATE_TIMEOUT_MS)
   if (!target.query) {
-    return { success: false, output: `${spec} is pinned or was not installed from npm, so it cannot be updated here.` }
+    return { success: false, output: t('errors.packages.pinnedOrNotFromNpm', { spec }) }
   }
   return updateOmpNpmPlugin(target.plugin, target.query, cwd)
 }

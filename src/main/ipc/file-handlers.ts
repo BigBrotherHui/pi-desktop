@@ -4,6 +4,7 @@ import { readAttachment } from '../attachment-reader'
 import { isAuthorizedAttachmentPath } from '../path-authorization'
 import { assertTrustedSender, isString } from './validation'
 import type { IpcContext } from './context'
+import { t } from '../../shared/i18n'
 
 export function registerFileHandlers(ctx: IpcContext): void {
   const { workspaceManager, approvedAttachmentPaths } = ctx
@@ -12,28 +13,28 @@ export function registerFileHandlers(ctx: IpcContext): void {
 
   ipcMain.handle(IPC_CHANNELS.FILE_TREE, async (_event, maxDepth?: unknown) => {
     const fs = workspaceManager.getActiveFileService()
-    if (!fs) throw new Error('No active workspace')
+    if (!fs) throw new Error(t('errors.workspace.noneActive'))
     return fs.getFileTree(typeof maxDepth === 'number' ? maxDepth : 4)
   })
 
   ipcMain.handle(IPC_CHANNELS.FILE_SEARCH, async (_event, query: unknown) => {
     if (!isString(query)) throw new Error('query must be a string')
     const fs = workspaceManager.getActiveFileService()
-    if (!fs) throw new Error('No active workspace')
+    if (!fs) throw new Error(t('errors.workspace.noneActive'))
     return fs.searchFiles(query)
   })
 
   ipcMain.handle(IPC_CHANNELS.FILE_SEARCH_CONTENT, async (_event, query: unknown) => {
     if (!isString(query)) throw new Error('query must be a string')
     const fs = workspaceManager.getActiveFileService()
-    if (!fs) throw new Error('No active workspace')
+    if (!fs) throw new Error(t('errors.workspace.noneActive'))
     return fs.searchContent(query)
   })
 
   ipcMain.handle(IPC_CHANNELS.FILE_READ, async (_event, filePath: unknown) => {
     if (!isString(filePath)) throw new Error('filePath must be a string')
     const fs = workspaceManager.getActiveFileService()
-    if (!fs) throw new Error('No active workspace')
+    if (!fs) throw new Error(t('errors.workspace.noneActive'))
     return fs.readFileContent(filePath)
   })
 
@@ -43,7 +44,7 @@ export function registerFileHandlers(ctx: IpcContext): void {
     if (!isString(filePath)) throw new Error('filePath must be a string')
     const workspaceRoot = workspaceManager.getActiveWorkspace()?.path ?? null
     if (!isAuthorizedAttachmentPath(filePath, { workspaceRoot, approvedPaths: approvedAttachmentPaths })) {
-      throw new Error('Attachment path is not permitted')
+      throw new Error(t('errors.attachments.pathNotPermitted'))
     }
     return readAttachment(filePath)
   })
@@ -53,20 +54,20 @@ export function registerFileHandlers(ctx: IpcContext): void {
     if (!isString(filePath)) throw new Error('filePath must be a string')
     if (!isString(content)) throw new Error('content must be a string')
     const fs = workspaceManager.getActiveFileService()
-    if (!fs) throw new Error('No active workspace')
+    if (!fs) throw new Error(t('errors.workspace.noneActive'))
     await fs.writeFileContent(filePath, content)
     return { ok: true }
   })
 
   ipcMain.handle(IPC_CHANNELS.FILE_DIFF, async (_event, filePath?: unknown) => {
     const fs = workspaceManager.getActiveFileService()
-    if (!fs) throw new Error('No active workspace')
+    if (!fs) throw new Error(t('errors.workspace.noneActive'))
     return fs.getFileDiff(isString(filePath) ? filePath : undefined)
   })
 
   ipcMain.handle(IPC_CHANNELS.FILE_STAGED_DIFF, async (_event, filePath?: unknown) => {
     const fs = workspaceManager.getActiveFileService()
-    if (!fs) throw new Error('No active workspace')
+    if (!fs) throw new Error(t('errors.workspace.noneActive'))
     return fs.getStagedDiff(isString(filePath) ? filePath : undefined)
   })
 

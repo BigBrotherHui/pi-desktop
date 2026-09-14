@@ -1,4 +1,5 @@
 import { formatUntrustedBlock } from './untrusted-data'
+import { t } from './i18n'
 
 /**
  * Council member agents. All three can produce an initial plan; Pi is also
@@ -47,14 +48,14 @@ const MIN_COUNCIL_MEMBERS = 2
 /** Validate a council config. Returns human-readable errors; empty means valid. */
 export function validateCouncilConfig(config: CouncilConfig): string[] {
   const errors: string[] = []
-  const t = config.timeoutSeconds
-  if (typeof t !== 'number' || !Number.isFinite(t)) {
-    errors.push('Council timeout must be a finite number')
-  } else if (t < MIN_TIMEOUT_SECONDS || t > MAX_TIMEOUT_SECONDS) {
-    errors.push(`Council timeout must be between ${MIN_TIMEOUT_SECONDS} and ${MAX_TIMEOUT_SECONDS} seconds`)
+  const timeout = config.timeoutSeconds
+  if (typeof timeout !== 'number' || !Number.isFinite(timeout)) {
+    errors.push(t('errors.council.timeoutNotNumber'))
+  } else if (timeout < MIN_TIMEOUT_SECONDS || timeout > MAX_TIMEOUT_SECONDS) {
+    errors.push(t('errors.council.timeoutRange', { min: MIN_TIMEOUT_SECONDS, max: MAX_TIMEOUT_SECONDS }))
   }
   if (!VALID_CONSENSUS_MODES.includes(config.consensusMode)) {
-    errors.push(`Unknown consensus mode: ${String(config.consensusMode)}`)
+    errors.push(t('errors.council.unknownConsensusMode', { mode: String(config.consensusMode) }))
   }
   return errors
 }
@@ -87,13 +88,13 @@ export function resolveActiveMembers(
 ): MemberResolution {
   const active = COUNCIL_AGENT_IDS.filter((id) => config.members[id] && detected[id])
   if (!config.enabled) {
-    return { canRun: false, active, reason: 'Council planning is disabled in Settings.' }
+    return { canRun: false, active, reason: t('errors.council.planningDisabled') }
   }
   if (active.length < MIN_COUNCIL_MEMBERS) {
     return {
       canRun: false,
       active,
-      reason: `Council needs at least ${MIN_COUNCIL_MEMBERS} agents. Install or enable Pi, Claude, or Codex, or turn the council off.`,
+      reason: t('errors.council.notEnoughMembers', { min: MIN_COUNCIL_MEMBERS }),
     }
   }
   return { canRun: true, active }

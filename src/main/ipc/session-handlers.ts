@@ -26,6 +26,7 @@ import { assertTrustedSender, isObject, isString } from './validation'
 import { applyResumePreference, applyPermissionModeToStartOptions } from './pi-start-options'
 import { loadAppSettings } from './settings'
 import type { IpcContext } from './context'
+import { t } from '../../shared/i18n'
 
 const MAX_SESSION_LIST = 100
 
@@ -91,7 +92,7 @@ export function registerSessionHandlers(ctx: IpcContext): void {
 
   ipcMain.handle(IPC_CHANNELS.SESSION_NEW, async (): Promise<SessionRuntimeInfo> => {
     const workspace = workspaceManager.getActiveWorkspace()
-    if (!workspace) throw new Error('No active workspace')
+    if (!workspace) throw new Error(t('errors.workspace.noneActive'))
     const runtime = await workspaceManager.createNewSessionRuntime(workspace.id)
     // Navigation must not wait for Pi startup. The runtime event marks it
     // starting/running and hydrates the renderer when ready.
@@ -104,7 +105,7 @@ export function registerSessionHandlers(ctx: IpcContext): void {
       throw new Error('workspaceId and a non-empty prompt are required')
     }
     const workspace = workspaceManager.getWorkspaces().find((item) => item.id === input.workspaceId)
-    if (!workspace) throw new Error('Workspace not found')
+    if (!workspace) throw new Error(t('errors.workspace.notFoundPlain'))
     const runtime = await workspaceManager.createNewSessionRuntime(workspace.id)
     // Reserve the runtime while startup and prompt delivery are asynchronous;
     // list polling must not classify its header-only file as disposable.
@@ -123,11 +124,11 @@ export function registerSessionHandlers(ctx: IpcContext): void {
 
   const activateSession = async (sessionPath: string, cwd?: string): Promise<SessionRuntimeInfo> => {
     if (!isWithinSessionRoots(sessionPath) || !existsSync(sessionPath)) {
-      throw new Error('sessionPath must point to an existing Pi session file')
+      throw new Error(t('errors.session.pathMustExist', { field: 'sessionPath' }))
     }
     const workspace = workspaceManager.getActiveWorkspace()
-    if (!workspace) throw new Error('No active workspace')
-    if (cwd && !pathsEqual(workspace.path, cwd)) throw new Error('Session project does not match the active workspace')
+    if (!workspace) throw new Error(t('errors.workspace.noneActive'))
+    if (cwd && !pathsEqual(workspace.path, cwd)) throw new Error(t('errors.session.projectMismatch'))
     const runtime = await workspaceManager.activateSession(workspace.id, sessionPath)
     if (runtime.status !== 'running') void startRuntime(runtime, sessionPath).catch(() => undefined)
     return runtime
@@ -183,7 +184,7 @@ export function registerSessionHandlers(ctx: IpcContext): void {
     // OMP has no `clone` command; the renderer hides the action, this is the
     // backstop for any other caller.
     if (pi.getEngineKind() === 'omp') {
-      return { success: false, error: 'The OMP engine does not support cloning a session' }
+      return { success: false, error: t('errors.session.ompNoClone') }
     }
     const response = await pi.sendCommand({ type: 'clone' })
     const runtimeId = workspaceManager.runtimeIdFor(pi)
@@ -252,12 +253,12 @@ export function registerSessionHandlers(ctx: IpcContext): void {
     assertTrustedSender(event)
     if (!isString(sessionPath)) throw new Error('sessionPath must be a string')
     if (!sessionPath.endsWith(SESSION_FILE_EXTENSION)) {
-      throw new Error('sessionPath must point to a .jsonl session file')
+      throw new Error(t('errors.session.mustBeJsonlFile', { field: 'sessionPath' }))
     }
     // Confine deletion to Pi's session store so a renderer cannot delete an
     // arbitrary .jsonl file elsewhere on disk.
     if (!isWithinSessionRoots(sessionPath)) {
-      throw new Error('sessionPath must be inside the Pi sessions directory')
+      throw new Error(t('errors.session.mustBeInsideSessionsDir', { field: 'sessionPath' }))
     }
 
     // Detach any live tab first. Otherwise deleting an active/session-tab file

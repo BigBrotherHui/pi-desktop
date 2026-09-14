@@ -7,10 +7,11 @@ import type {
 import { assertTrustedSender, isObject, isOptionalBoolean, isOptionalString, isString } from './validation'
 import { commitAll, createPullRequest, getGitConveyorStatus, pushBranch } from '../git-conveyor'
 import type { IpcContext } from './context'
+import { t } from '../../shared/i18n'
 
 function activeCwd(ctx: IpcContext): string {
   const cwd = ctx.workspaceManager.getActiveWorkspace()?.path
-  if (!cwd) throw new Error('No active workspace')
+  if (!cwd) throw new Error(t('errors.workspace.noneActive'))
   return cwd
 }
 

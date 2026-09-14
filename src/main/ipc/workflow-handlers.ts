@@ -6,6 +6,7 @@ import { assertTrustedSender, isString } from './validation'
 import { RpcTimeoutError } from '../pi-rpc-manager'
 import type { PiRpcManager } from '../pi-rpc-manager'
 import type { IpcContext } from './context'
+import { t } from '../../shared/i18n'
 
 /**
  * The one resolved workspace projection shared by list, getRun and control:
@@ -47,9 +48,9 @@ export function registerWorkflowHandlers(ctx: IpcContext): void {
     assertTrustedSender(event)
     if (!isString(workspaceId) || !isString(runId)) throw new Error('workspaceId and runId must be strings')
     const workspace = await findWorkspace(ctx, workspaceId)
-    if (!workspace) throw new Error('Workspace not found')
+    if (!workspace) throw new Error(t('errors.workspace.notFoundPlain'))
     const run = await getWorkflowRun(workspace, runId)
-    if (!run) throw new Error('Workflow run not found')
+    if (!run) throw new Error(t('errors.workflow.runNotFound'))
     return run
   })
 

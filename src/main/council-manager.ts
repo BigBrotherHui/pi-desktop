@@ -14,6 +14,7 @@ import {
 import { detectAgents } from './agent-detection'
 import { escapeCmdSpawn } from './cmd-escape'
 import { getPiCli } from './pi-rpc-manager'
+import { t } from '../shared/i18n'
 
 const IS_WINDOWS = process.platform === 'win32'
 const MS_PER_SECOND = 1000
@@ -57,7 +58,7 @@ const MIN_DEBATE_PARTICIPANTS = 2
 /** Map a spawn outcome to a labeled consultant result. */
 function toResult(id: CouncilAgentId, outcome: SpawnOutcome): ConsultantResult {
   if (outcome.timedOut) return { id, status: 'timed-out' }
-  if (!outcome.ok) return { id, status: 'errored', error: outcome.error ?? 'unknown error' }
+  if (!outcome.ok) return { id, status: 'errored', error: outcome.error ?? t('errors.council.unknownError') }
   return { id, status: 'contributed', plan: outcome.output.trim() }
 }
 

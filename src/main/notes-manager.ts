@@ -4,6 +4,7 @@ import { existsSync } from 'fs'
 import { randomUUID } from 'crypto'
 import { getGuiDataPath } from './app-data-paths'
 import type { Note, NoteInput, NoteUpdate, NoteScope } from '../shared/ipc-contracts'
+import { t } from '../shared/i18n'
 
 /**
  * Notes store — reusable prompts and agent commands.
@@ -28,7 +29,7 @@ interface NotesFile {
 /** Thrown when an update/remove targets a note id that doesn't exist. */
 export class NoteNotFoundError extends Error {
   constructor(public readonly id: string) {
-    super(`Note not found: ${id}`)
+    super(t('errors.notes.notFound', { id }))
     this.name = 'NoteNotFoundError'
   }
 }
@@ -129,9 +130,9 @@ export class NotesManager {
 
   private normalize(input: NoteInput): NormalizedFields {
     const title = input.title.trim()
-    if (title.length === 0) throw new NoteValidationError('Note title is required')
+    if (title.length === 0) throw new NoteValidationError(t('errors.notes.titleRequired'))
     const body = input.body.trim()
-    if (body.length === 0) throw new NoteValidationError('Note body is required')
+    if (body.length === 0) throw new NoteValidationError(t('errors.notes.bodyRequired'))
 
     const scope = typeof input.scope === 'string' && input.scope.trim().length > 0
       ? input.scope.trim()

@@ -8,6 +8,7 @@ import { isWithinSessionRoots } from '../pi-paths'
 import { existsSync } from 'fs'
 import type { IpcContext } from './context'
 import { appLog } from '../app-log'
+import { t } from '../../shared/i18n'
 
 function validateWorkspaceTabOptions(value: unknown): WorkspaceTabOptions {
   if (value === undefined || value === null) return {}
@@ -80,7 +81,7 @@ export function registerWorkspaceHandlers(ctx: IpcContext): void {
     const opts = validateStartOptions(options)
     const settings = await loadAppSettings(workspaceManager)
     const workspace = workspaceManager.getWorkspaces().find((w) => w.id === workspaceId)
-    if (!workspace) throw new Error(`Workspace not found: ${workspaceId}`)
+    if (!workspace) throw new Error(t('errors.workspace.notFound', { workspaceId }))
     await workspaceManager.startPiForWorkspace(
       workspaceId,
       applyPermissionModeToStartOptions(
@@ -102,7 +103,7 @@ export function registerWorkspaceHandlers(ctx: IpcContext): void {
     const options = validateWorkspaceTabOptions(value)
     if (options.forkSessionPath) {
       if (!isWithinSessionRoots(options.forkSessionPath) || !existsSync(options.forkSessionPath)) {
-        throw new Error('forkSessionPath must point to an existing Pi session file')
+        throw new Error(t('errors.session.pathMustExist', { field: 'forkSessionPath' }))
       }
     }
 

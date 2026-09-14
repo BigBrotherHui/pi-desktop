@@ -2,9 +2,28 @@
   "app": {
     "quit": "Quit Pi Desktop"
   },
+  "commandGroups": {
+    "commands": "Commands",
+    "extensions": "Extensions",
+    "other": "Other",
+    "prompts": "Prompts",
+    "skills": "Skills"
+  },
   "common": {
     "cancel": "Cancel",
     "delete": "Delete"
+  },
+  "dialogs": {
+    "permissionRules": {
+      "exportTitle": "Export Permission Rules",
+      "fileFilterName": "Permission Rules",
+      "importTitle": "Import Permission Rules"
+    },
+    "theme": {
+      "exportTitle": "Export Theme",
+      "fileFilterName": "Theme",
+      "importTitle": "Import Theme"
+    }
   },
   "editorGuard": {
     "discard": "Discard unsaved changes?",
@@ -12,6 +31,146 @@
     "discardFile": "Discard unsaved changes to {{fileName}}?",
     "keepEditing": "Keep editing",
     "title": "Unsaved changes"
+  },
+  "errors": {
+    "attachments": {
+      "pathNotPermitted": "Attachment path is not permitted",
+      "tooLarge": "Attachment is too large (max {{limit}} MB)"
+    },
+    "council": {
+      "arbiterFailed": "Arbiter failed",
+      "arbiterTimedOut": "Arbiter timed out",
+      "notEnoughMembers": "Council needs at least {{min}} agents. Install or enable Pi, Claude, or Codex, or turn the council off.",
+      "planningDisabled": "Council planning is disabled in Settings.",
+      "timeoutNotNumber": "Council timeout must be a finite number",
+      "timeoutRange": "Council timeout must be between {{min}} and {{max}} seconds",
+      "unknownConsensusMode": "Unknown consensus mode: {{mode}}",
+      "unknownError": "unknown error"
+    },
+    "fileService": {
+      "refusedRead": "Refusing to read outside the active workspace",
+      "refusedWrite": "Refusing to write outside the active workspace"
+    },
+    "fs": {
+      "blockedWrite": "Could not write \"{{path}}\" ({{code}}). On Windows this is usually Controlled Folder Access (Ransomware protection) blocking the change. Either allow Pi Desktop in Windows Security → Virus & threat protection → Ransomware protection → \"Allow an app through Controlled folder access\", or move this project out of Documents/Desktop to an unprotected folder (for example C:\\dev)."
+    },
+    "git": {
+      "commandFailed": "git {{command}} failed",
+      "commandFailedWithDetail": "git {{command}} failed: {{detail}}",
+      "commitBeforePullRequest": "Commit the working tree before creating a pull request",
+      "commitBeforePush": "Commit the working tree before pushing",
+      "commitMessageRequired": "Commit message is required",
+      "commitMessageTooLong": "Commit message must be {{max}} characters or fewer",
+      "detachedHeadCommit": "Cannot commit from a detached HEAD",
+      "detachedHeadPush": "Cannot push from a detached HEAD",
+      "namedBranchRequired": "A named branch is required to create a pull request",
+      "noTrackedChanges": "No tracked changes to commit in this workspace. Stage untracked files first to include them.",
+      "operationInProgressCommit": "Cannot commit while a Git {{operation}} is in progress",
+      "operationInProgressPush": "Cannot push while a Git {{operation}} is in progress",
+      "pullRequestTitleRequired": "Pull request title is required",
+      "pushBeforePullRequest": "Push the branch before creating a pull request",
+      "pushUpstreamIsLocal": "Cannot push a branch whose upstream is the local repository",
+      "stagedOutsideWorkspace": "The index contains staged files outside the active workspace",
+      "subcommandFailed": "git {{operation}} failed: {{reason}}",
+      "subprocessFailed": "{{command}} failed",
+      "subprocessFailedWithDetail": "{{command}} failed: {{detail}}",
+      "subprocessTimedOut": "{{command}} timed out",
+      "workingTreeClean": "Working tree is clean"
+    },
+    "models": {
+      "duplicateModelId": "Provider \"{{key}}\": duplicate model id \"{{id}}\"",
+      "fieldNotFiniteNumber": "Provider \"{{key}}\", model \"{{id}}\": {{field}} must be a finite number",
+      "modelMissingId": "Provider \"{{key}}\": a model is missing an id",
+      "providerKeyEmpty": "Provider key must not be empty"
+    },
+    "notes": {
+      "bodyRequired": "Note body is required",
+      "notFound": "Note not found: {{id}}",
+      "titleRequired": "Note title is required"
+    },
+    "packages": {
+      "invalidSpec": "Invalid package specification",
+      "missingBun": "OMP needs bun to install or update npm plugins. Install bun from https://bun.sh, then try again.",
+      "pinnedOrNotFromNpm": "{{spec}} is pinned or was not installed from npm, so it cannot be updated here."
+    },
+    "permissionRules": {
+      "fileTooLarge": "rules file too large (limit {{limit}} bytes)"
+    },
+    "pi": {
+      "commandFailedFallback": "Command failed",
+      "commandTimedOut": "Command {{commandType}} timed out after {{timeoutMs}}ms",
+      "configuredPathMissing": "The Pi executable path set in {{settingsHint}} does not exist:\n  {{path}}\n\nPoint it at Pi's cli.js (or its install directory), or clear the field to auto-detect. Auto-detection also found nothing.\n\n{{installHint}}",
+      "crashedBeforeReady": "Pi crashed before becoming ready.",
+      "cwdMissing": "Pi working directory does not exist or is not a directory:\n  {{cwd}}",
+      "exitedBeforeReady": "Pi exited with code {{code}} before becoming ready.",
+      "failedToCreateManager": "Failed to create Pi manager",
+      "installHint": "Install Pi with:\n  npm install -g @earendil-works/pi-coding-agent\nor install OMP with:\n  bun install -g @oh-my-pi/pi-coding-agent",
+      "nodeNotFound": "Node binary not found at resolved path:\n  {{node}}\n\nPi's .js entry point requires Node. Install Node from https://nodejs.org or set the NODE env var to your Node binary path.",
+      "noManagerForWorkspace": "No Pi manager for workspace",
+      "notFound": "Pi binary not found. Searched the login shell PATH, npm's global prefix, node version managers (nvm, fnm, volta, asdf, mise, nodenv, n) and common install locations.\n\n{{installHint}}\n\nAlready installed? Set the full path to Pi's cli.js in {{settingsHint}}.",
+      "processExited": "Pi process exited",
+      "processKilled": "Pi process killed",
+      "processNotRunning": "Pi process is not running",
+      "settingsHint": "Settings > Agent Configuration > Agent Installation",
+      "spawnError": "Spawn error: {{detail}}\n",
+      "startupTimeoutBusy": "Pi started but did not become ready within {{seconds}}s.\n\nPi was alive and producing output, but never answered the readiness check. Extension startup hooks run before Pi reads commands, and a hook that calls a local model server can wait this long while the model loads or prefills a large prompt. Check the engine and model-server logs, then retry.",
+      "startupTimeoutBusyWithStderr": "Pi started but did not become ready within {{seconds}}s.\n\nPi was alive and producing output, but never answered the readiness check. Extension startup hooks run before Pi reads commands, and a hook that calls a local model server can wait this long while the model loads or prefills a large prompt. Check the engine and model-server logs, then retry.\n\nPi stderr captured during startup:\n{{detail}}",
+      "startupTimeoutSilentNoOutput": "Pi produced no output within {{seconds}}s.\n\nNo output captured. Check the app log for the exact spawn command, and try running `pi --mode rpc` directly in a terminal.",
+      "startupTimeoutSilentWithStderr": "Pi produced no output within {{seconds}}s.\n\nPi stderr captured during startup:\n{{detail}}"
+    },
+    "session": {
+      "alreadyAttached": "Session file is already attached to a live runtime",
+      "attachedToDifferentWorkspace": "Session is already attached to a different workspace runtime",
+      "mustBeInsideSessionsDir": "{{field}} must be inside the Pi sessions directory",
+      "mustBeJsonlFile": "{{field}} must point to a .jsonl session file",
+      "ompNoClone": "The OMP engine does not support cloning a session",
+      "pathMustExist": "{{field}} must point to an existing Pi session file",
+      "projectMismatch": "Session project does not match the active workspace",
+      "runtimeNotFound": "Session runtime not found: {{runtimeId}}"
+    },
+    "system": {
+      "externalUrlHttpOnly": "Only http(s) URLs are allowed"
+    },
+    "theme": {
+      "cannotOverwriteBuiltin": "cannot overwrite built-in theme id: {{id}}",
+      "downloadFailed": "theme download failed: {{status}}",
+      "exportWriteFailed": "Could not write theme to {{path}}",
+      "fileTooLarge": "theme file too large (limit {{limit}} bytes)",
+      "galleryIndexDownloadFailed": "gallery index download failed: {{status}}",
+      "galleryIndexNotArray": "gallery index is not a JSON array",
+      "hostBlockedIPv4": "theme URL host \"{{host}}\" is blocked (private/reserved IPv4 address)",
+      "hostBlockedIPv6": "theme URL host \"{{host}}\" is blocked (private/reserved IPv6 address)",
+      "hostBlockedLocal": "theme URL host \"{{host}}\" is blocked (local/loopback hostname)",
+      "invalidThemeId": "invalid theme id: {{id}}",
+      "kindInvalid": "kind must be \"dark\" or \"light\"",
+      "missingKey": "{{label}} is missing \"{{key}}\"",
+      "mustBeJsonObject": "theme must be a JSON object",
+      "mustBeObject": "{{label}} must be an object",
+      "mustUseHttps": "theme URLs must use https, got {{protocol}}",
+      "notValidColor": "{{label}}.{{key}} is not a valid color",
+      "redirectMissingLocation": "theme URL redirect ({{status}}) had no location header",
+      "screenshotDownloadFailed": "screenshot download failed: {{status}}",
+      "screenshotPathNotAllowed": "screenshot URL is not an allowed gallery path",
+      "screenshotTooLarge": "screenshot too large (limit {{limit}} bytes)",
+      "screenshotTypeNotAllowed": "screenshot is not an allowed image type (content-type: {{contentType}})",
+      "textFieldInvalid": "{{label}} must be a non-empty string of at most {{max}} characters",
+      "tooManyRedirects": "theme URL exceeded {{max}} redirects",
+      "unknownKey": "{{label}} has unknown key \"{{key}}\"",
+      "unsupportedSchema": "unsupported $schema (expected {{expected}})"
+    },
+    "workflow": {
+      "runNotFound": "Workflow run not found"
+    },
+    "workspace": {
+      "folderMissing": "Folder does not exist: {{path}}",
+      "managedWorktreeCannotChangeFolder": "Managed worktree tabs cannot change folder; close the tab and create another one",
+      "noneActive": "No active workspace",
+      "noSourceForNewTab": "No source workspace available for a new tab",
+      "notFound": "Workspace not found: {{workspaceId}}",
+      "notFoundPlain": "Workspace not found",
+      "pullRequestNotCheckedOut": "The task references a GitHub pull request that is not checked out in a local worktree",
+      "sourceFolderMissing": "Source folder does not exist: {{path}}"
+    }
   },
   "language": {
     "nativeName": "English"
