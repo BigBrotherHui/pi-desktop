@@ -12,6 +12,7 @@
     "./**/*.ts",
     "../shared/**/*.ts",
     "../../resources/permission-rules.ts",
-    "../../resources/permission-rules.test.ts"
+    "../../resources/permission-rules.test.ts",
+    "../../resources/locales/*/translation.json"
   ]
 }
