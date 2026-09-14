@@ -6,6 +6,7 @@ import { workspaceTrustStore } from './workspace-trust'
 import { WorkspaceManager } from './workspace-manager'
 import { registerIpcHandlers, loadAppSettings, saveAppSettings } from './ipc-handlers'
 import { setPiExecutableOverride, cleanupPiChildTempDir } from './pi-rpc-manager'
+import { applyLanguageSetting } from './i18n'
 import { fetchAllCatalogPackages } from './package-catalog'
 import { activityStatsStore } from './activity-stats'
 import { configureGuiDataDir, getCanonicalUserDataDir, getExternalGuiDataDir, migrateLegacyGuiData } from './app-data-paths'
@@ -419,6 +420,9 @@ app.whenReady().then(async () => {
   // binary before this setting is applied.
   const settings = await loadAppSettings(workspaceManager)
   setPiExecutableOverride(settings.piExecutablePath, settings.piEngine)
+
+  // Before the menu, window, and tray exist, so they are built in the saved language.
+  applyLanguageSetting(settings.language)
 
   // Register IPC handlers before creating windows. The window getter is a
   // lazy closure — mainWindow is created later and the notification wiring

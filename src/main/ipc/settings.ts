@@ -5,6 +5,9 @@ import { getGuiDataPath } from '../app-data-paths'
 import type { AppSettings } from '../../shared/ipc-contracts'
 import { IPC_CHANNELS } from '../../shared/ipc-contracts'
 import { DEFAULT_SETTINGS } from '../../shared/default-settings'
+import { availableLanguages } from '../../shared/i18n'
+import { normalizeLanguageSetting } from '../../shared/i18n/resolve'
+import { applyLanguageSetting, getI18nEnvironment, isPseudoLanguageEnabled } from '../i18n'
 import { applyRunOnStartup } from '../startup-launch'
 import { setTrayEnabled } from '../tray-manager'
 import { readFile, writeFile, mkdir } from 'fs/promises'
@@ -32,6 +35,7 @@ export async function loadAppSettings(workspaceManager: WorkspaceManager): Promi
       if (merged.piEngine !== 'auto' && merged.piEngine !== 'pi' && merged.piEngine !== 'omp') {
         merged.piEngine = 'auto'
       }
+      merged.language = normalizeLanguageSetting(merged.language, availableLanguages(isPseudoLanguageEnabled()))
       return merged
     }
   } catch {
@@ -103,8 +107,13 @@ export function registerSettingsHandlers(ctx: IpcContext): void {
     if ('piExecutablePath' in settings || 'piEngine' in settings) {
       setPiExecutableOverride(updated.piExecutablePath, updated.piEngine)
     }
+    if ('language' in settings) {
+      applyLanguageSetting(updated.language)
+    }
     return updated
   })
+
+  ipcMain.handle(IPC_CHANNELS.I18N_GET_ENVIRONMENT, () => getI18nEnvironment())
 
   // Reconcile the OS-level "run on startup" state with the saved preference on
   // launch. Self-healing: repairs a stale Linux autostart Exec path after an

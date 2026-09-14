@@ -57,6 +57,7 @@ export const IPC_CHANNELS = {
   // Settings
   SETTINGS_GET_ALL: 'settings:get-all',
   SETTINGS_SAVE: 'settings:save',
+  I18N_GET_ENVIRONMENT: 'i18n:get-environment',
 
   // Permission rules
   PERMISSION_RULES_GET: 'permission-rules:get',
@@ -1142,8 +1143,17 @@ export interface AppSettings {
   // Show OS desktop notifications when a turn finishes, fails, or waits for
   // approval in a workspace the user is not currently looking at.
   desktopNotifications: boolean
+  // Interface language: 'system' (follow the OS language list) or a bundled
+  // language code. Unknown values reset to 'system' on load.
+  language: string
   // Multi-agent council planning configuration.
   council: CouncilConfig
+}
+
+/** What the renderer needs to resolve the `language` setting like main does. */
+export interface I18nEnvironment {
+  systemLanguages: string[]
+  pseudoLanguageEnabled: boolean
 }
 
 // ─── Update Check Types ─────────────────────────────────────────────────────
