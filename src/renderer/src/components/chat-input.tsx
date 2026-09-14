@@ -1,6 +1,8 @@
 import { useRef, useCallback, useState, useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../store'
 import { DEFAULT_AGENT_ENGINE_LABEL, agentEngineLabel } from '../../../shared/agent-engine-label'
+import { t } from '../../../shared/i18n'
 import { useChatKeyboard, useCommandCatalog } from '../hooks'
 import { ComposerPermissionMenu } from './composer-permission-menu'
 import { CommandResults } from './command-results'
@@ -40,9 +42,9 @@ function readFileAsDataUrl(file: File): Promise<string> {
     const reader = new FileReader()
     reader.onload = () => {
       if (typeof reader.result === 'string') resolve(reader.result)
-      else reject(new Error('Could not read image data'))
+      else reject(new Error(t('chat.attach.readImageFailed')))
     }
-    reader.onerror = () => reject(reader.error ?? new Error('Could not read image data'))
+    reader.onerror = () => reject(reader.error ?? new Error(t('chat.attach.readImageFailed')))
     reader.readAsDataURL(file)
   })
 }
@@ -73,6 +75,7 @@ type Attachment =
   | { kind: 'image'; name: string; path: string; image: PromptImage }
 
 export function ChatInput(): React.JSX.Element {
+  const { t } = useTranslation()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const sendPrompt = useAppStore((state) => state.sendPrompt)
   const abort = useAppStore((state) => state.abort)
@@ -222,8 +225,8 @@ export function ChatInput(): React.JSX.Element {
     () =>
       slashToken === null
         ? { grouped: [], flat: [] }
-        : groupCommands(filterCommands(allCommands, slashToken)),
-    [slashToken, allCommands]
+        : groupCommands(filterCommands(allCommands, slashToken), t),
+    [slashToken, allCommands, t]
   )
   const slashOpen = slashResults.flat.length > 0
 
@@ -313,11 +316,11 @@ export function ChatInput(): React.JSX.Element {
     setAttachError(null)
     try {
       const path = await window.piDesktop.system.openDialog({
-        title: 'Attach file',
+        title: t('common.attachFile'),
         mode: 'file',
         filters: [
-          { name: 'Images', extensions: [...SUPPORTED_IMAGE_EXTENSIONS] },
-          { name: 'All Files', extensions: ['*'] },
+          { name: t('chat.attach.imagesFilter'), extensions: [...SUPPORTED_IMAGE_EXTENSIONS] },
+          { name: t('chat.attach.allFilesFilter'), extensions: ['*'] },
         ],
       })
       if (!path) return
@@ -328,21 +331,21 @@ export function ChatInput(): React.JSX.Element {
           : { kind: 'text', name: result.name, path, content: result.content }
       setAttachments((prev) => (prev.some((a) => a.path === path) ? prev : [...prev, next]))
     } catch (err) {
-      setAttachError(err instanceof Error ? err.message : 'Could not attach file')
+      setAttachError(err instanceof Error ? err.message : t('chat.attach.attachFailed'))
     }
-  }, [])
+  }, [t])
 
   const attachImageFile = useCallback(async (file: File): Promise<void> => {
     const mime = file.type.toLowerCase()
     if (!mime.startsWith('image/')) {
-      setAttachError('Only images can be pasted into the composer')
+      setAttachError(t('chat.attach.onlyImagesPasted'))
       return
     }
     // Browsers send image/jpeg; our allow-list includes both "jpeg" and "jpg".
     const subtype = mime.slice('image/'.length)
     const allowed = new Set(SUPPORTED_IMAGE_EXTENSIONS.map((e) => e.toLowerCase()))
     if (!allowed.has(subtype)) {
-      setAttachError(`Unsupported image type (${mime || 'unknown'}). Use PNG, JPEG, GIF, or WebP.`)
+      setAttachError(t('chat.attach.unsupportedImageType', { mimeType: mime || t('chat.attach.unknownMimeType') }))
       return
     }
 
@@ -366,9 +369,9 @@ export function ChatInput(): React.JSX.Element {
       }
       setAttachments((prev) => (prev.some((a) => a.path === path) ? prev : [...prev, next]))
     } catch (err) {
-      setAttachError(err instanceof Error ? err.message : 'Could not paste image')
+      setAttachError(err instanceof Error ? err.message : t('chat.attach.pasteFailed'))
     }
-  }, [])
+  }, [t])
 
   // A stopped agent stays typable: the first send lazy-starts Pi/OMP.
   // Only transient/error states block input.
@@ -434,7 +437,7 @@ export function ChatInput(): React.JSX.Element {
               />
             </div>
             <div className="border-t border-border px-3 py-1 text-[10px] text-faint">
-              ↑↓ navigate · Enter/Tab select · Esc close
+              {t('chat.commandPopup.selectHint')}
             </div>
           </div>
         )}
@@ -463,7 +466,7 @@ export function ChatInput(): React.JSX.Element {
               ))}
             </div>
             <div className="border-t border-border px-3 py-1 text-[10px] text-faint">
-              ↑↓ navigate · Enter/Tab insert path · Esc close
+              {t('chat.mentionPopup.insertHint')}
             </div>
           </div>
         )}
@@ -500,10 +503,10 @@ export function ChatInput(): React.JSX.Element {
           ref={textareaRef}
           placeholder={
             isDisabled
-              ? `${engineLabel} agent is not running...`
+              ? t('chat.composer.placeholderNotRunning', { agent: engineLabel })
               : isStreaming
-                ? 'Type to steer the agent...'
-                : `Ask ${engineLabel} anything — / for commands`
+                ? t('chat.composer.placeholderSteering')
+                : t('chat.composer.placeholderIdle', { agent: engineLabel })
           }
           disabled={isDisabled}
           rows={1}
@@ -635,24 +638,24 @@ export function ChatInput(): React.JSX.Element {
             onClick={handleAttachFile}
             disabled={isDisabled}
             className="hover:bg-highlight-strong flex items-center justify-center rounded-md p-1.5 text-dim hover:text-secondary transition-colors disabled:opacity-50"
-            title="Attach file"
-            aria-label="Attach file"
+            title={t('common.attachFile')}
+            aria-label={t('common.attachFile')}
           >
             <Paperclip size={15} />
           </button>
           <button
             onClick={() => setNotePickerOpen(true)}
             className="hover:bg-highlight-strong flex items-center justify-center rounded-md p-1.5 text-dim hover:text-secondary transition-colors"
-            title="Insert note (Ctrl+Shift+P)"
-            aria-label="Insert note"
+            title={t('chat.insertNote.titleWithShortcut')}
+            aria-label={t('chat.insertNote.ariaLabel')}
           >
             <StickyNote size={15} />
           </button>
           <button
             onClick={() => toggleFileSearch()}
             className="hover:bg-highlight-strong flex items-center justify-center rounded-md p-1.5 text-dim hover:text-secondary transition-colors"
-            title="Search workspace (Ctrl+Shift+F)"
-            aria-label="Search workspace"
+            title={t('chat.searchWorkspace.titleWithShortcut')}
+            aria-label={t('chat.searchWorkspace.ariaLabel')}
           >
             <Search size={15} />
           </button>
@@ -671,8 +674,8 @@ export function ChatInput(): React.JSX.Element {
               }}
               disabled={isDisabled || isStreaming}
               className="hover:bg-highlight-strong flex items-center justify-center rounded-md p-1.5 text-dim hover:text-secondary transition-colors disabled:opacity-50"
-              title={isDisabled ? 'Start Pi/OMP before planning with Council' : 'Plan with Council'}
-              aria-label="Plan with Council"
+              title={isDisabled ? t('chat.council.startEngineFirst') : t('chat.council.planWithCouncil')}
+              aria-label={t('chat.council.planWithCouncil')}
             >
               <Users size={15} />
             </button>
@@ -680,9 +683,9 @@ export function ChatInput(): React.JSX.Element {
 
           <span className="ml-auto mr-1 hidden text-[11px] text-faint sm:inline">
             {isStreaming ? (
-              <span className="text-warning animate-pulse">Streaming…</span>
+              <span className="text-warning animate-pulse">{t('chat.composer.streaming')}</span>
             ) : (
-              'Shift+Enter newline'
+              t('chat.composer.shiftEnterNewline')
             )}
           </span>
 
@@ -698,8 +701,8 @@ export function ChatInput(): React.JSX.Element {
             <button
               onClick={handleAbort}
               className="hover:bg-highlight-strong flex items-center justify-center rounded-lg p-1.5 text-dim hover:text-secondary transition-colors"
-              title="Stop (Esc)"
-              aria-label="Stop generating"
+              title={t('chat.stopButton.titleWithShortcut')}
+              aria-label={t('chat.stopButton.ariaLabel')}
             >
               <Square size={16} />
             </button>
@@ -713,8 +716,8 @@ export function ChatInput(): React.JSX.Element {
               }}
               disabled={isDisabled}
               className="hover:bg-highlight-strong flex items-center justify-center rounded-lg p-1.5 text-dim hover:text-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Send (Enter)"
-              aria-label="Send message"
+              title={t('chat.sendButton.titleWithShortcut')}
+              aria-label={t('chat.sendButton.ariaLabel')}
             >
               <CornerDownLeft size={16} />
             </button>

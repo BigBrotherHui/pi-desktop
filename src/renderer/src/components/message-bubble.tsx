@@ -1,10 +1,12 @@
 import { memo, useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore, type DisplayMessage } from '../store'
 import { modelDisplayName } from '../../../shared/models-config'
 import { DEFAULT_SETTINGS } from '../../../shared/default-settings'
 import {
   toolCallLabel,
-  toolLabel,
+  toolCallStatusLabel,
+  toolKind,
   toolCallFile,
   parseEdits,
   editStats,
@@ -45,6 +47,7 @@ function MessageBubbleImpl({
   // suppress this message's own provider · model line to avoid repetition.
   hideModelHeader?: boolean
 }): React.JSX.Element {
+  const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
   const [showThinking, setShowThinking] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -75,10 +78,11 @@ function MessageBubbleImpl({
 
   const handleBranch = () => {
     // Branch from this message's position
+    const excerpt = message.content.slice(0, 100) + (message.content.length > 100 ? '...' : '')
     useAppStore.getState().addMessage({
       id: `branch-${Date.now()}`,
       role: 'system',
-      content: `Branched from: "${message.content.slice(0, 100)}${message.content.length > 100 ? '...' : ''}"`,
+      content: t('chat.message.branchedFrom', { excerpt }),
       timestamp: Date.now(),
     })
   }
@@ -201,6 +205,7 @@ function UserMessage({
   onRetry?: (id: string) => void
   onExport: () => void
 }): React.JSX.Element {
+  const { t } = useTranslation()
   const editRef = useRef<HTMLTextAreaElement>(null)
 
   if (isEditing) {
@@ -225,14 +230,14 @@ function UserMessage({
               onClick={onCancelEdit}
               className="rounded px-2 py-1 text-xs text-muted hover:text-primary transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               onClick={onSaveEdit}
               className="flex items-center gap-1 rounded bg-accent px-2 py-1 text-xs text-white hover:bg-accent-hover transition-colors"
             >
               <Send size={10} />
-              Send
+              {t('common.send')}
             </button>
           </div>
         </div>
@@ -265,13 +270,13 @@ function UserMessage({
         </div>
         {/* Actions */}
         <div className="mt-1 flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          <ActionButton icon={<Copy size={11} />} onClick={onCopy} title="Copy" />
-          <ActionButton icon={<Edit3 size={11} />} onClick={onEdit} title="Edit & resend" />
-          <ActionButton icon={<GitBranch size={11} />} onClick={onBranch} title="Branch from here" />
+          <ActionButton icon={<Copy size={11} />} onClick={onCopy} title={t('common.copy')} />
+          <ActionButton icon={<Edit3 size={11} />} onClick={onEdit} title={t('chat.message.editAndResend')} />
+          <ActionButton icon={<GitBranch size={11} />} onClick={onBranch} title={t('chat.message.branchFromHere')} />
           {onRetry && (
-            <ActionButton icon={<RotateCcw size={11} />} onClick={() => onRetry(message.id)} title="Retry" />
+            <ActionButton icon={<RotateCcw size={11} />} onClick={() => onRetry(message.id)} title={t('common.retry')} />
           )}
-          <ActionButton icon={<Download size={11} />} onClick={onExport} title="Export" />
+          <ActionButton icon={<Download size={11} />} onClick={onExport} title={t('common.export')} />
         </div>
       </div>
     </div>
@@ -297,6 +302,7 @@ function AssistantMessage({
   onExport: () => void
   hideModelHeader?: boolean
 }): React.JSX.Element {
+  const { t } = useTranslation()
   const customModels = useAppStore((state) => state.customModels)
   const thinkingEnabled = useAppStore(
     (state) => state.settingsDraft.showThinking ?? state.settings?.showThinking ?? DEFAULT_SETTINGS.showThinking
@@ -357,7 +363,7 @@ function AssistantMessage({
           >
             <Brain size={12} />
             {showThinking ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            Thinking
+            {t('common.thinking')}
           </button>
           <CopyButton text={message.thinking!} className="thinking-copy-btn" />
         </div>
@@ -482,7 +488,7 @@ function AssistantMessage({
                 >
                   <Brain size={12} />
                   {showThinking ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                  Thinking
+                  {t('common.thinking')}
                 </button>
                 <CopyButton text={message.thinking} className="thinking-copy-btn" />
               </div>
@@ -520,10 +526,10 @@ function AssistantMessage({
               <ActionButton
                 icon={copied ? <Check size={11} /> : <Copy size={11} />}
                 onClick={onCopy}
-                title={copied ? 'Copied' : 'Copy'}
-                label={copied ? 'Copied' : 'Copy'}
+                title={copied ? t('common.copied') : t('common.copy')}
+                label={copied ? t('common.copied') : t('common.copy')}
               />
-              <ActionButton icon={<Download size={11} />} onClick={onExport} title="Export" />
+              <ActionButton icon={<Download size={11} />} onClick={onExport} title={t('common.export')} />
             </div>
           )}
 
@@ -562,8 +568,9 @@ function ToolCallBadge({
 }: {
   toolCall: NonNullable<DisplayMessage['toolCalls']>[number]
 }): React.JSX.Element {
+  const { t } = useTranslation()
   // Edit diffs open expanded so the change is visible without a second result pill.
-  const edits = toolLabel(toolCall.name) === 'Edit file' ? parseEdits(toolCall.arguments) : null
+  const edits = toolKind(toolCall.name) === 'edit' ? parseEdits(toolCall.arguments) : null
   const stats = edits ? editStats(edits) : null
   const editFile = edits ? toolCallFile(toolCall.name, toolCall.arguments) : null
   const editLang = editFile ? getCodeEditorLanguageName(editFile) : 'plain text'
@@ -586,7 +593,7 @@ function ToolCallBadge({
         className="flex w-full min-w-0 items-center gap-2 py-2 pl-3 pr-9 text-xs text-muted hover:text-secondary transition-colors"
       >
         <span className="font-jetbrains min-w-0 truncate">
-          {toolCallLabel(toolCall.name, toolCall.arguments)}
+          {toolCallLabel(toolCall.name, toolCall.arguments, t)}
         </span>
         {stats && (
           <span className="shrink-0 font-jetbrains">
@@ -606,7 +613,7 @@ function ToolCallBadge({
               status === 'done' && 'text-success'
             )}
           >
-            {status}
+            {toolCallStatusLabel(status, t)}
           </span>
         )}
         {expanded ? (
@@ -690,6 +697,7 @@ function DiffLines({
 // ─── Tool Result Message ─────────────────────────────────────────────────────
 
 function ToolResultMessage({ message }: { message: DisplayMessage }): React.JSX.Element {
+  const { t } = useTranslation()
   // Collapsed by default — tool results can be huge and otherwise dominate the
   // scrollback. Mirrors ToolCallBadge's expand/collapse affordance.
   const [expanded, setExpanded] = useState(false)
@@ -704,9 +712,8 @@ function ToolResultMessage({ message }: { message: DisplayMessage }): React.JSX.
   // line-numbered, syntax-highlighted code. Everything else stays plain text —
   // notably writes/creates, whose result is a "wrote N bytes" success line (not
   // the file), plus CSV, command output, and fetches.
-  const label = message.toolName ? toolLabel(message.toolName) : null
   const codeLang =
-    label === 'Read file' && message.toolFile
+    message.toolName && toolKind(message.toolName) === 'read' && message.toolFile
       ? getCodeEditorLanguageName(message.toolFile)
       : 'plain text'
   const isCode = codeLang !== 'plain text'
@@ -732,8 +739,8 @@ function ToolResultMessage({ message }: { message: DisplayMessage }): React.JSX.
               <button
                 onClick={() => setExpanded(false)}
                 className="absolute right-8 top-1.5 rounded p-1 text-dim transition-colors hover:text-secondary"
-                title="Collapse"
-                aria-label="Collapse"
+                title={t('common.collapse')}
+                aria-label={t('common.collapse')}
               >
                 <ChevronDown size={12} />
               </button>

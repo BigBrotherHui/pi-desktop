@@ -4,10 +4,13 @@ import {
   classifyProviderKey,
   countPathEntries,
   extractVersionLine,
-  sanitizeProvidersError,
+  reportModelsReadFailure,
+  reportPiStartFailure,
   summarizeProviders,
 } from './diagnostics-report'
+import { describePiStartFailure, PI_FALLBACK_BINARY_POSIX, type PiStartFailure } from './pi-binary-resolution'
 import type { ModelsConfig } from '../shared/ipc-contracts'
+import { PSEUDO_LANGUAGE, SOURCE_LANGUAGE } from '../shared/i18n/languages'
 
 test('classifyProviderKey covers literal, env, shell, and missing keys', () => {
   const env = { OPENAI_KEY: 'sk-real', EMPTY_KEY: '' }
@@ -53,29 +56,81 @@ test('extractVersionLine takes the first non-empty line', () => {
   assert.equal(extractVersionLine(''), null)
 })
 
-test('sanitizeProvidersError withholds JSON.parse detail that can quote file content', () => {
+test('reportModelsReadFailure withholds parse detail that can quote file content', () => {
   assert.equal(
-    sanitizeProvidersError('models.json is not valid JSON: Unexpected token s, ..."apiKey": sk-live-ab"...'),
+    reportModelsReadFailure('models.json', {
+      kind: 'invalid-syntax',
+      format: 'json',
+      detail: 'Unexpected token s, ..."apiKey": sk-live-ab"...',
+    }),
     'models.json is not valid JSON',
   )
   assert.equal(
-    sanitizeProvidersError('models.json is not a valid models config (missing "providers")'),
+    reportModelsReadFailure('models.yml', {
+      kind: 'invalid-syntax',
+      format: 'yaml',
+      detail: 'Nested mappings are not allowed at line 3:\n\n    apiKey: sk-live-abcdef: oops\n            ^',
+    }),
+    'models.yml is not valid YAML',
+  )
+})
+
+test('reportModelsReadFailure keeps safe detail', () => {
+  assert.equal(
+    reportModelsReadFailure('models.json', { kind: 'missing-providers' }),
     'models.json is not a valid models config (missing "providers")',
   )
   assert.equal(
-    sanitizeProvidersError('Could not read models.json: EACCES: permission denied'),
+    reportModelsReadFailure('models.json', { kind: 'unreadable', detail: 'EACCES: permission denied' }),
     'Could not read models.json: EACCES: permission denied',
   )
 })
 
-test('sanitizeProvidersError withholds YAML parse detail that prints the source line', () => {
-  assert.equal(
-    sanitizeProvidersError(
-      'models.yml is not valid YAML: Nested mappings are not allowed at line 3:\n\n    apiKey: sk-live-abcdef: oops\n            ^'
-    ),
-    'models.yml is not valid YAML',
-  )
-  assert.equal(sanitizeProvidersError('models.yaml is not valid YAML: bad'), 'models.yaml is not valid YAML')
+test('reportModelsReadFailure does not depend on the interface language', async () => {
+  const { i18n } = await import('../shared/i18n')
+  await i18n.changeLanguage(PSEUDO_LANGUAGE)
+  try {
+    assert.equal(
+      reportModelsReadFailure('models.json', { kind: 'invalid-syntax', format: 'json', detail: 'apiKey: sk-live' }),
+      'models.json is not valid JSON',
+    )
+  } finally {
+    await i18n.changeLanguage(SOURCE_LANGUAGE)
+  }
+})
+
+test('reportPiStartFailure stays English under the pseudo-language', async () => {
+  const { i18n, t } = await import('../shared/i18n')
+  const notFound: PiStartFailure = {
+    kind: 'pi-not-found',
+    resolution: {
+      script: PI_FALLBACK_BINARY_POSIX,
+      useNode: false,
+      needsShell: false,
+      source: 'fallback',
+      found: false,
+      rejectedOverride: null,
+      pathEnv: '',
+    },
+  }
+  const node = '/usr/bin/node'
+  const nodeMissing: PiStartFailure = { kind: 'node-not-found', node }
+  await i18n.changeLanguage(PSEUDO_LANGUAGE)
+  try {
+    const notFoundReport = reportPiStartFailure(notFound) ?? ''
+    assert.match(notFoundReport, /^Pi binary not found\. /)
+    assert.match(notFoundReport, /Settings > Agent Configuration > Agent Installation\.$/)
+    assert.equal(
+      reportPiStartFailure(nodeMissing),
+      `Node binary not found at resolved path:\n  ${node}\n\nPi's .js entry point requires Node. ` +
+        'Install Node from https://nodejs.org or set the NODE env var to your Node binary path.',
+    )
+    // The UI rendering of the same failure is in the interface language.
+    assert.notEqual(describePiStartFailure(nodeMissing, t), reportPiStartFailure(nodeMissing))
+  } finally {
+    await i18n.changeLanguage(SOURCE_LANGUAGE)
+  }
+  assert.equal(reportPiStartFailure(null), null)
 })
 
 test('countPathEntries splits on the platform delimiter and drops blanks', () => {

@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react'
+import { useTranslation } from 'react-i18next'
 import { formatRelativeTime } from './format-relative-time'
 
 export { formatRelativeTime }
@@ -15,6 +16,10 @@ export const NowContext = createContext<number>(Date.now())
  * re-render every 30s — only these labels do.
  */
 export function RelativeTime({ timestamp }: { timestamp: number }): React.JSX.Element {
+  // formatRelativeTime reads the interface language from the shared i18n
+  // instance directly (not via a prop), so this hook call is the only thing
+  // that makes the label re-render when the language changes.
+  useTranslation()
   const now = useContext(NowContext)
   return <span>{formatRelativeTime(timestamp, now)}</span>
 }

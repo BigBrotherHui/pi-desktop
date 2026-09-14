@@ -15,6 +15,7 @@ import type {
   InstalledPackage,
   InstalledSkill,
   CatalogPackage,
+  PackageUpdate,
   FileTreeNode,
   FileSearchResult,
   FileChangeEvent,
@@ -68,6 +69,7 @@ import type {
   GitConveyorCommitOptions,
   GitConveyorPullRequestOptions,
   GitConveyorPullRequestResult,
+  I18nEnvironment,
 } from '../shared/ipc-contracts'
 import type { ThemeFile } from '../shared/theme/theme-file'
 import { IPC_CHANNELS } from '../shared/ipc-contracts'
@@ -138,6 +140,11 @@ interface PiDesktopAPI {
     save(settings: Partial<AppSettings>): Promise<AppSettings>
   }
 
+  // Interface language
+  i18n: {
+    getEnvironment(): Promise<I18nEnvironment>
+  }
+
   // Permission rules
   permissionRules: {
     get(scope: PermissionRulesScope): Promise<PermissionRulesGetResult>
@@ -159,6 +166,8 @@ interface PiDesktopAPI {
     import(): Promise<ThemeImportResult>
     gallery(): Promise<ThemeGalleryResult>
     galleryImage(url: string): Promise<ThemeGalleryImageResult>
+    /** Native window background, as a computed `rgb()`/`rgba()` color. */
+    setWindowBackground(color: string): Promise<void>
   }
 
   // Workspace management
@@ -188,7 +197,9 @@ interface PiDesktopAPI {
     listInstalled(): Promise<InstalledPackage[]>
     install(spec: string): Promise<{ success: boolean; output: string }>
     remove(spec: string): Promise<{ success: boolean; output: string }>
-    update(spec?: string): Promise<{ success: boolean; output: string }>
+    update(spec: string): Promise<{ success: boolean; output: string }>
+    updateAll(): Promise<{ success: boolean; output: string }>
+    checkUpdates(): Promise<PackageUpdate[]>
     fetchCatalog(query?: string): Promise<CatalogPackage[]>
   }
 
@@ -400,6 +411,10 @@ const api: PiDesktopAPI = {
     save: (settings) => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_SAVE, settings),
   },
 
+  i18n: {
+    getEnvironment: () => ipcRenderer.invoke(IPC_CHANNELS.I18N_GET_ENVIRONMENT),
+  },
+
   permissionRules: {
     get: (scope) => ipcRenderer.invoke(IPC_CHANNELS.PERMISSION_RULES_GET, scope),
     set: (scope, rules) => ipcRenderer.invoke(IPC_CHANNELS.PERMISSION_RULES_SET, scope, rules),
@@ -419,6 +434,7 @@ const api: PiDesktopAPI = {
     import: () => ipcRenderer.invoke(IPC_CHANNELS.THEMES_IMPORT),
     gallery: () => ipcRenderer.invoke(IPC_CHANNELS.THEMES_GALLERY_LIST),
     galleryImage: (url) => ipcRenderer.invoke(IPC_CHANNELS.THEMES_GALLERY_IMAGE, url),
+    setWindowBackground: (color) => ipcRenderer.invoke(IPC_CHANNELS.THEMES_SET_WINDOW_BACKGROUND, color),
   },
 
   workspace: {
@@ -442,6 +458,8 @@ const api: PiDesktopAPI = {
     install: (spec) => ipcRenderer.invoke(IPC_CHANNELS.PACKAGE_INSTALL, spec),
     remove: (spec) => ipcRenderer.invoke(IPC_CHANNELS.PACKAGE_REMOVE, spec),
     update: (spec) => ipcRenderer.invoke(IPC_CHANNELS.PACKAGE_UPDATE, spec),
+    updateAll: () => ipcRenderer.invoke(IPC_CHANNELS.PACKAGE_UPDATE_ALL),
+    checkUpdates: () => ipcRenderer.invoke(IPC_CHANNELS.PACKAGE_CHECK_UPDATES),
     fetchCatalog: (query) => ipcRenderer.invoke(IPC_CHANNELS.PACKAGE_CATALOG_FETCH, query),
   },
 

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
 import { Search } from 'lucide-react'
 import { useAppStore } from '../store'
@@ -10,6 +11,7 @@ const GLOBAL_SCOPE = 'global'
  * chat input. Opened via the input button or the Ctrl+Shift+N shortcut.
  */
 export function NotePicker(): React.JSX.Element | null {
+  const { t } = useTranslation()
   const open = useAppStore((state) => state.notePickerOpen)
   const notes = useAppStore((state) => state.notes)
   const activeWorkspace = useAppStore((state) => state.activeWorkspace)
@@ -99,7 +101,7 @@ export function NotePicker(): React.JSX.Element | null {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Search saved notes to insert..."
+            placeholder={t('notes.picker.searchPlaceholder')}
             className="flex-1 bg-transparent text-sm text-primary placeholder:text-faint outline-none"
           />
         </div>
@@ -110,19 +112,19 @@ export function NotePicker(): React.JSX.Element | null {
             <div className="px-3 py-6 text-center text-sm text-faint">
               {available.length === 0 ? (
                 <>
-                  <p>No saved notes yet.</p>
+                  <p>{t('notes.picker.noSavedNotes')}</p>
                   <p className="mt-1 text-xs">
-                    This picker inserts notes you&apos;ve saved — it&apos;s not a compose box.
+                    {t('notes.picker.notComposeBox')}
                   </p>
                   <button
                     onClick={openNotesTab}
                     className="mt-3 rounded-md bg-accent px-3 py-1.5 text-xs text-white hover:bg-accent-hover transition-colors"
                   >
-                    Create a note
+                    {t('notes.picker.createNote')}
                   </button>
                 </>
               ) : (
-                'No matching notes'
+                t('notes.picker.noMatchingNotes')
               )}
             </div>
           ) : (
@@ -145,7 +147,7 @@ export function NotePicker(): React.JSX.Element | null {
 
         {/* Hint */}
         <div className="border-t border-border px-3 py-1.5 text-[10px] text-faint">
-          ↑↓ navigate · Enter insert · Esc close
+          {t('notes.picker.navigationHint')}
         </div>
       </div>
     </div>

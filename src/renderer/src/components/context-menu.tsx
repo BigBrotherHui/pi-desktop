@@ -18,6 +18,7 @@ import {
 import type { SessionListItem } from '../../../shared/ipc-contracts'
 import { useAppStore } from '../store'
 import { getSessionTitle } from '../utils/session-title'
+import { t } from '../../../shared/i18n'
 
 interface ContextMenuItem {
   id: string
@@ -194,9 +195,9 @@ export function buildDefaultContextMenu(): ContextMenuItem[] {
   return [
     {
       id: 'copy',
-      label: 'Copy',
+      label: t('common.copy'),
       icon: <Copy size={14} />,
-      shortcut: 'Ctrl+C',
+      shortcut: t('contextMenu.shortcuts.copy'),
       disabled: !hasSelection,
       action: () => {
         if (hasSelection) {
@@ -206,9 +207,9 @@ export function buildDefaultContextMenu(): ContextMenuItem[] {
     },
     {
       id: 'cut',
-      label: 'Cut',
+      label: t('common.cut'),
       icon: <Scissors size={14} />,
-      shortcut: 'Ctrl+X',
+      shortcut: t('contextMenu.shortcuts.cut'),
       disabled: !hasSelection,
       action: () => {
         if (hasSelection) {
@@ -220,9 +221,9 @@ export function buildDefaultContextMenu(): ContextMenuItem[] {
     },
     {
       id: 'paste',
-      label: 'Paste',
+      label: t('common.paste'),
       icon: <ClipboardPaste size={14} />,
-      shortcut: 'Ctrl+V',
+      shortcut: t('contextMenu.shortcuts.paste'),
       action: async () => {
         try {
           const text = await navigator.clipboard.readText()
@@ -252,16 +253,16 @@ export function buildDefaultContextMenu(): ContextMenuItem[] {
     },
     {
       id: 'select-all',
-      label: 'Select All',
+      label: t('common.selectAll'),
       icon: <TextSelect size={14} />,
-      shortcut: 'Ctrl+A',
+      shortcut: t('contextMenu.shortcuts.selectAll'),
       action: () => {
         document.execCommand('selectAll')
       },
     },
     {
       id: 'copy-all',
-      label: 'Copy All Visible Text',
+      label: t('contextMenu.copyAllVisibleText'),
       icon: <Copy size={14} />,
       disabled: !hasSelection,
       action: () => {
@@ -277,14 +278,14 @@ export function buildCodeBlockContextMenu(code: string): ContextMenuItem[] {
   return [
     {
       id: 'copy-code',
-      label: 'Copy Code Block',
+      label: t('contextMenu.copyCodeBlock'),
       icon: <Copy size={14} />,
-      shortcut: 'Ctrl+Shift+C',
+      shortcut: t('contextMenu.shortcuts.copyCodeBlock'),
       action: () => navigator.clipboard.writeText(code),
     },
     {
       id: 'search-code',
-      label: 'Search Selection',
+      label: t('contextMenu.searchSelection'),
       icon: <Search size={14} />,
       disabled: !getSelectedText(),
       action: () => {
@@ -310,13 +311,13 @@ export function buildMessageContextMenu(
   return [
     {
       id: 'copy-message',
-      label: 'Copy Message',
+      label: t('contextMenu.copyMessage'),
       icon: <Copy size={14} />,
       action: () => navigator.clipboard.writeText(messageContent),
     },
     {
       id: 'copy-selection',
-      label: 'Copy Selection',
+      label: t('contextMenu.copySelection'),
       icon: <Copy size={14} />,
       disabled: !hasSelection,
       action: () => {
@@ -325,7 +326,7 @@ export function buildMessageContextMenu(
     },
     {
       id: 'add-to-notes',
-      label: hasSelection ? 'Add Selection to Notes' : 'Add Message to Notes',
+      label: hasSelection ? t('contextMenu.addSelectionToNotes') : t('contextMenu.addMessageToNotes'),
       icon: <StickyNote size={14} />,
       action: () => onAddToNotes(hasSelection ? selectedText : messageContent),
     },
@@ -367,14 +368,14 @@ export function buildSessionContextMenu(
   const items: ContextMenuItem[] = [
     {
       id: 'session-open',
-      label: 'Open Session',
+      label: t('contextMenu.openSession'),
       icon: <MessageSquare size={14} />,
       action: () => actions.onOpen(session),
     },
     ...(actions.onRuns
       ? [{
           id: 'session-runs',
-          label: 'Workflow Runs',
+          label: t('contextMenu.workflowRuns'),
           icon: <WorkflowIcon size={14} />,
           action: () => actions.onRuns!(session),
         }]
@@ -388,13 +389,13 @@ export function buildSessionContextMenu(
     isArchived
       ? {
           id: 'session-unarchive',
-          label: 'Unarchive',
+          label: t('contextMenu.unarchive'),
           icon: <ArchiveRestore size={14} />,
           action: () => actions.onUnarchive(session.sessionId),
         }
       : {
           id: 'session-archive',
-          label: 'Archive',
+          label: t('contextMenu.archive'),
           icon: <Archive size={14} />,
           action: () => actions.onArchive(session.sessionId),
         },
@@ -403,7 +404,7 @@ export function buildSessionContextMenu(
   if (actions.onRename) {
     items.push({
       id: 'session-rename',
-      label: 'Rename…',
+      label: t('contextMenu.rename'),
       icon: <Pencil size={14} />,
       action: () => actions.onRename!(session),
     })
@@ -411,7 +412,7 @@ export function buildSessionContextMenu(
 
   items.push({
     id: 'session-delete',
-    label: 'Delete…',
+    label: t('contextMenu.deleteSessionLabel'),
     icon: <Trash2 size={14} />,
     action: async () => {
       // Confirm before destructive action via an in-app themed dialog (not the
@@ -419,9 +420,9 @@ export function buildSessionContextMenu(
       // Electron window without keyboard focus). Trash is recoverable when
       // installed; without it, delete is permanent — the wording is honest.
       const ok = await useAppStore.getState().requestConfirm({
-        title: 'Delete session',
-        message: `Delete session "${displayName}"?\n\nWill use the system 'trash' CLI if installed (recoverable); otherwise the .jsonl session file is permanently removed.`,
-        confirmLabel: 'Delete',
+        title: t('contextMenu.deleteSessionConfirmTitle'),
+        message: t('contextMenu.deleteSessionConfirmMessage', { name: displayName }),
+        confirmLabel: t('common.delete'),
         danger: true,
       })
       if (ok) actions.onDelete(session)
@@ -435,13 +436,13 @@ export function buildLinkContextMenu(url: string): ContextMenuItem[] {
   return [
     {
       id: 'open-link',
-      label: 'Open Link',
+      label: t('contextMenu.openLink'),
       icon: <ExternalLink size={14} />,
       action: () => window.piDesktop.system.openExternal(url),
     },
     {
       id: 'copy-link',
-      label: 'Copy Link',
+      label: t('contextMenu.copyLink'),
       icon: <Copy size={14} />,
       action: () => navigator.clipboard.writeText(url),
     },

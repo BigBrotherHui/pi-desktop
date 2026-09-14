@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { test } from 'node:test'
 import {
+  describeGitFailure,
   GIT_FATAL_EXIT_CODE,
   GitCommandError,
   isMissingRepositoryError,
@@ -13,6 +14,8 @@ import {
   worktreeBranchName,
   worktreeTargetPath,
 } from './git-worktree'
+import { i18n, tEnglish } from '../shared/i18n'
+import { PSEUDO_LANGUAGE, SOURCE_LANGUAGE } from '../shared/i18n/languages'
 
 test('slugifyWorktreePart produces safe readable path and branch segments', () => {
   assert.equal(slugifyWorktreePart('Feature: Add café tabs'), 'feature-add-cafe-tabs')
@@ -68,6 +71,24 @@ test('isMissingRepositoryError classifies only repository discovery failures', (
     false
   )
   assert.equal(isMissingRepositoryError(new Error('spawn git ENOENT')), false)
+})
+
+test('describeGitFailure renders English for the log and marked text for the UI', async () => {
+  const args = ['worktree', 'remove', '/repo/worktrees/x']
+  await i18n.changeLanguage(PSEUDO_LANGUAGE)
+  try {
+    assert.equal(
+      describeGitFailure(args, '', 'fatal: worktree is dirty\n', tEnglish),
+      'git worktree remove /repo/worktrees/x failed: fatal: worktree is dirty',
+    )
+    // Only the app's own words are marked; the command and Git's text are not.
+    assert.match(
+      describeGitFailure(args, '', 'fatal: worktree is dirty\n'),
+      /^\[git worktree remove \/repo\/worktrees\/x ƒáîļéð: fatal: worktree is dirty ~+\]$/,
+    )
+  } finally {
+    await i18n.changeLanguage(SOURCE_LANGUAGE)
+  }
 })
 
 test('worktree names are deterministic and isolated by workspace id', () => {

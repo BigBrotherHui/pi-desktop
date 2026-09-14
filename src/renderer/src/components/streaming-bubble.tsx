@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { MarkdownRenderer } from './markdown-renderer'
-import { toolLabel } from '../message-grouping'
+import { toolLabel, toolCallStatusLabel } from '../message-grouping'
 import { toolCallIconFor } from './tool-call-icon'
 import { useAppStore } from '../store'
 import { DEFAULT_SETTINGS } from '../../../shared/default-settings'
@@ -25,6 +26,7 @@ interface StreamingBubbleProps {
 }
 
 export function StreamingBubble({ content, thinking, toolCalls }: StreamingBubbleProps): React.JSX.Element {
+  const { t } = useTranslation()
   const thinkingEnabled = useAppStore(
     (state) => state.settingsDraft.showThinking ?? state.settings?.showThinking ?? DEFAULT_SETTINGS.showThinking
   )
@@ -54,7 +56,7 @@ export function StreamingBubble({ content, thinking, toolCalls }: StreamingBubbl
               <div className="flex h-7 items-center gap-1.5 text-sm text-dim">
                 <Brain size={12} className="shrink-0" />
                 <Loader2 size={12} className="shrink-0 animate-spin text-special" />
-                <span>Thinking</span>
+                <span>{t('common.thinking')}</span>
               </div>
               <div
                 ref={thinkingScrollRef}
@@ -88,7 +90,7 @@ export function StreamingBubble({ content, thinking, toolCalls }: StreamingBubbl
                     ) : (
                       <Icon size={12} className="shrink-0" />
                     )}
-                    <span className="min-w-0 truncate font-jetbrains">{toolLabel(tc.name)}</span>
+                    <span className="min-w-0 truncate font-jetbrains">{toolLabel(tc.name, t)}</span>
                     <span
                       className={clsx(
                         'ml-auto shrink-0 text-xs capitalize',
@@ -97,7 +99,7 @@ export function StreamingBubble({ content, thinking, toolCalls }: StreamingBubbl
                         !tc.isExecuting && !tc.isError && 'text-success'
                       )}
                     >
-                      {tc.isExecuting ? 'running' : tc.isError ? 'error' : 'done'}
+                      {toolCallStatusLabel(tc.isExecuting ? 'running' : tc.isError ? 'error' : 'done', t)}
                     </span>
                   </div>
                 )
@@ -116,7 +118,7 @@ export function StreamingBubble({ content, thinking, toolCalls }: StreamingBubbl
           {!content && !thinking && toolCalls.size === 0 && (
             <div className="flex h-7 items-center gap-2 text-sm text-dim">
               <Loader2 size={12} className="animate-spin" />
-              Waiting for response...
+              {t('chat.waitingForResponse')}
             </div>
           )}
         </div>

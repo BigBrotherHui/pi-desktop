@@ -1,5 +1,7 @@
 import { basename, join, posix as posixPath } from 'path'
 import { buildNpmPrefixCommand, escapeCmdSpawn } from './cmd-escape'
+import { i18n, type Translate } from '../shared/i18n'
+import type { PiResolutionSource } from '../shared/ipc-contracts'
 
 /**
  * Locating the Pi CLI is the single most failure-prone step at startup, and the
@@ -14,6 +16,10 @@ import { buildNpmPrefixCommand, escapeCmdSpawn } from './cmd-escape'
 
 export const PI_PACKAGE = '@earendil-works/pi-coding-agent'
 export const PI_CLI_REL = join('node_modules', PI_PACKAGE, 'dist', 'cli.js')
+export const OMP_PACKAGE = '@oh-my-pi/pi-coding-agent'
+/** The commands shown in `errors.pi.installHint`, as `{{npmCommand}}`/`{{bunCommand}}` placeholders. */
+export const PI_NPM_INSTALL_COMMAND = `npm install -g ${PI_PACKAGE}`
+export const OMP_BUN_INSTALL_COMMAND = `bun install -g ${OMP_PACKAGE}`
 export const PI_FALLBACK_BINARY_POSIX = 'pi'
 export const PI_FALLBACK_BINARY_WINDOWS = 'pi.cmd'
 export const OMP_FALLBACK_BINARY_POSIX = 'omp'
@@ -38,16 +44,6 @@ const JS_EXTENSION = '.js'
 const SHELL_SCRIPT_PATTERN = /\.(cmd|bat|ps1)$/i
 const VERSION_NUMBER_PATTERN = /\d+/g
 const OMP_BINARY_PATTERN = /(?:^|[\\/])omp(?:\.(?:cmd|exe|bat|ps1))?$/i
-
-/** Where a resolved path came from, for logging and error messaging. */
-export type PiResolutionSource =
-  | 'override'
-  | 'npm-prefix'
-  | 'path'
-  | 'version-manager'
-  | 'common-location'
-  | 'omp'
-  | 'fallback'
 
 export interface CaptureOptions {
   shell: boolean
@@ -614,26 +610,40 @@ export function resolvePiBinary(
   return finalize(deps, fallback, 'fallback', false, rejectedOverride, pathEnv)
 }
 
-const SETTINGS_HINT = 'Settings > Agent Configuration > Agent Installation'
-const INSTALL_HINT =
-  'Install Pi with:\n  npm install -g @earendil-works/pi-coding-agent\nor install OMP with:\n  bun install -g @oh-my-pi/pi-coding-agent'
-
 /**
  * Explain a failed resolution. A stale configured path is the headline when
  * one exists, because "Pi is not installed" is actively misleading to someone
- * who did point the app at their install.
+ * who did point the app at their install. `t` defaults to the interface
+ * language.
  */
-export function describePiResolutionFailure(resolution: PiResolution): string {
+export function describePiResolutionFailure(resolution: PiResolution, t: Translate = i18n.t): string {
+  const settingsHint = t('errors.pi.settingsHint')
+  const installHint = t('errors.pi.installHint', {
+    npmCommand: PI_NPM_INSTALL_COMMAND,
+    bunCommand: OMP_BUN_INSTALL_COMMAND,
+  })
   if (resolution.rejectedOverride) {
-    return (
-      `The Pi executable path set in ${SETTINGS_HINT} does not exist:\n  ${resolution.rejectedOverride}\n\n` +
-      'Point it at Pi\'s cli.js (or its install directory), or clear the field to auto-detect. ' +
-      `Auto-detection also found nothing.\n\n${INSTALL_HINT}`
-    )
+    return t('errors.pi.configuredPathMissing', {
+      settingsHint,
+      path: resolution.rejectedOverride,
+      installHint,
+    })
   }
-  return (
-    `Pi binary not found. Searched the login shell PATH, npm's global prefix, node version managers ` +
-    `(nvm, fnm, volta, asdf, mise, nodenv, n) and common install locations.\n\n${INSTALL_HINT}\n\n` +
-    `Already installed? Set the full path to Pi's cli.js in ${SETTINGS_HINT}.`
-  )
+  return t('errors.pi.notFound', { installHint, settingsHint })
+}
+
+/**
+ * Why a resolved Pi invocation cannot start. Kept as data, not text, so each
+ * sink renders it in its own language: the interface language for the UI,
+ * English for the log and the diagnostics report.
+ */
+export type PiStartFailure =
+  | { kind: 'pi-not-found'; resolution: PiResolution }
+  | { kind: 'node-not-found'; node: string }
+
+/** Render a start failure with `t` (interface text) or `tEnglish` (log, report). */
+export function describePiStartFailure(failure: PiStartFailure, t: Translate): string {
+  return failure.kind === 'pi-not-found'
+    ? describePiResolutionFailure(failure.resolution, t)
+    : t('errors.pi.nodeNotFound', { node: failure.node })
 }

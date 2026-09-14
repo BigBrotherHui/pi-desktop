@@ -1,4 +1,6 @@
-import type { DiagnosticsProviderInfo, ModelsConfig, ProviderKeyState } from '../shared/ipc-contracts'
+import type { DiagnosticsProviderInfo, ModelsConfig, ModelsReadFailure, ProviderKeyState } from '../shared/ipc-contracts'
+import { describePiStartFailure, type PiStartFailure } from './pi-binary-resolution'
+import { tEnglish, type Translate } from '../shared/i18n'
 
 /**
  * Pure diagnostics-report helpers, Electron-free so they are unit-testable
@@ -58,14 +60,32 @@ export function countPathEntries(pathEnv: string, isWindows: boolean): number {
 }
 
 /**
- * Keep models-file failure text out of the shareable report when it may embed
- * file content: V8's JSON.parse errors quote the source around the bad token,
- * and the YAML parser prints the offending line with a caret — either can
- * include literal apiKey material.
+ * The models-file failure line for the shareable report. The report is always
+ * English (ruling R15) and is built from the failure code, never from display
+ * text — rendered with the fixed-English translator using the same keys as
+ * `describeModelsReadFailure`'s interface-language text. Parse detail is left
+ * out: V8's JSON.parse errors quote the source around the bad token, and the
+ * YAML parser prints the offending line with a caret — either can include
+ * literal apiKey material.
  */
-const MODELS_PARSE_ERROR_PREFIX = /^(models\.(?:json|ya?ml)) is not valid (JSON|YAML)/
+export function reportModelsReadFailure(
+  fileName: string,
+  failure: ModelsReadFailure,
+  t: Translate = tEnglish,
+): string {
+  switch (failure.kind) {
+    case 'invalid-syntax':
+      return failure.format === 'json'
+        ? t('models.readFailure.invalidJsonNoDetail', { file: fileName })
+        : t('models.readFailure.invalidYamlNoDetail', { file: fileName })
+    case 'missing-providers':
+      return t('models.readFailure.missingProviders', { file: fileName })
+    case 'unreadable':
+      return t('models.readFailure.unreadable', { file: fileName, detail: failure.detail })
+  }
+}
 
-export function sanitizeProvidersError(error: string): string {
-  const match = error.match(MODELS_PARSE_ERROR_PREFIX)
-  return match ? `${match[1]} is not valid ${match[2]}` : error
+/** Why Pi cannot start, for the shareable report: always English. */
+export function reportPiStartFailure(failure: PiStartFailure | null): string | null {
+  return failure && describePiStartFailure(failure, tEnglish)
 }

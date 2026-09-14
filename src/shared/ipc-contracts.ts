@@ -57,6 +57,7 @@ export const IPC_CHANNELS = {
   // Settings
   SETTINGS_GET_ALL: 'settings:get-all',
   SETTINGS_SAVE: 'settings:save',
+  I18N_GET_ENVIRONMENT: 'i18n:get-environment',
 
   // Permission rules
   PERMISSION_RULES_GET: 'permission-rules:get',
@@ -116,6 +117,8 @@ export const IPC_CHANNELS = {
   PACKAGE_INSTALL: 'package:install',
   PACKAGE_REMOVE: 'package:remove',
   PACKAGE_UPDATE: 'package:update',
+  PACKAGE_UPDATE_ALL: 'package:update-all',
+  PACKAGE_CHECK_UPDATES: 'package:check-updates',
   PACKAGE_CATALOG_FETCH: 'package:catalog-fetch',
 
   // Skills
@@ -180,6 +183,7 @@ export const IPC_CHANNELS = {
   THEMES_IMPORT: 'themes:import',
   THEMES_GALLERY_LIST: 'themes:gallery-list',
   THEMES_GALLERY_IMAGE: 'themes:gallery-image',
+  THEMES_SET_WINDOW_BACKGROUND: 'themes:set-window-background',
 
   // Events (main → renderer)
   EVENT_PI: 'event:pi',
@@ -956,9 +960,15 @@ export interface ModelsFileInfo {
   name: string
 }
 
+/** Why the models file could not be used. Display text is built from this. */
+export type ModelsReadFailure =
+  | { kind: 'unreadable'; detail: string }
+  | { kind: 'invalid-syntax'; format: 'json' | 'yaml'; detail: string }
+  | { kind: 'missing-providers' }
+
 export type ModelsReadResult =
   | { config: ModelsConfigType; location: ModelsFileInfo }
-  | { error: string; raw: string; location: ModelsFileInfo }
+  | { error: string; failure: ModelsReadFailure; raw: string; location: ModelsFileInfo }
 
 // ─── Agent Message Types ────────────────────────────────────────────────────
 
@@ -1093,6 +1103,11 @@ export interface AppSettings {
   piEngine: AgentEngine
   defaultArgs: string[]
   theme: string // 'system' or a theme id (built-in or user theme)
+  // Themes 'system' switches between when the OS prefers light or dark. Each
+  // must be a theme of the matching kind; otherwise the built-in default for
+  // that slot is used.
+  systemLightTheme: string
+  systemDarkTheme: string
   defaultModel: string | null
   defaultProvider: string | null
   defaultCwd: string | null
@@ -1134,8 +1149,17 @@ export interface AppSettings {
   // Show OS desktop notifications when a turn finishes, fails, or waits for
   // approval in a workspace the user is not currently looking at.
   desktopNotifications: boolean
+  // Interface language: 'system' (follow the OS language list) or a bundled
+  // language code. Unknown values reset to 'system' on load.
+  language: string
   // Multi-agent council planning configuration.
   council: CouncilConfig
+}
+
+/** What the renderer needs to resolve the `language` setting like main does. */
+export interface I18nEnvironment {
+  systemLanguages: string[]
+  pseudoLanguageEnabled: boolean
 }
 
 // ─── Update Check Types ─────────────────────────────────────────────────────
@@ -1292,6 +1316,13 @@ export interface InstalledPackage {
   path: string
 }
 
+/** An installed package with a newer registry version; `source` matches its InstalledPackage. */
+export interface PackageUpdate {
+  source: string
+  installedVersion: string
+  latestVersion: string
+}
+
 export interface CatalogPackage {
   name: string
   description: string
@@ -1370,6 +1401,16 @@ export interface DiagnosticsProviderInfo {
   envVar?: string
 }
 
+/** Where a resolved Pi path came from, for logging and error messaging. */
+export type PiResolutionSource =
+  | 'override'
+  | 'npm-prefix'
+  | 'path'
+  | 'version-manager'
+  | 'common-location'
+  | 'omp'
+  | 'fallback'
+
 /** Everything the Diagnostics view shows, assembled in one main-side pass. */
 export interface DiagnosticsReport {
   generatedAt: number
@@ -1383,7 +1424,7 @@ export interface DiagnosticsReport {
   piBinary: {
     found: boolean
     script: string
-    source: string
+    source: PiResolutionSource
     useNode: boolean
     nodeBinary: string
     nodeFound: boolean
@@ -1479,9 +1520,13 @@ export interface DiffFile {
 
 // ─── Timeline Event Types ───────────────────────────────────────────────────
 
+export type TimelineEventKind = 'agent-run'
+
 export interface TimelineEvent {
   id: string
   type: 'user_message' | 'assistant_message' | 'tool_start' | 'tool_end' | 'thinking' | 'compaction' | 'retry' | 'queue' | 'system' | 'error'
+  /** Stable identity for events that logic pairs up; `title` is display text. */
+  kind?: TimelineEventKind
   timestamp: number
   duration?: number
   title: string

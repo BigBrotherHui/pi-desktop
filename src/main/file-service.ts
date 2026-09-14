@@ -3,13 +3,20 @@ import { readdir, stat, readFile, writeFile, realpath } from 'fs/promises'
 import { join, extname, basename, resolve, relative, isAbsolute, sep, dirname } from 'path'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
+import { homedir } from 'os'
 import { describeWriteError } from './fs-errors'
 import { appLog } from './app-log'
 import type { FileChangeEvent } from '../shared/ipc-contracts'
+import { i18n, t, tEnglish, type Translate } from '../shared/i18n'
 
 const execFileAsync = promisify(execFile)
 
 const PARENT_ESCAPE = '..'
+
+const WORKSPACE_ESCAPE_KEYS = {
+  read: 'errors.fileService.refusedRead',
+  write: 'errors.fileService.refusedWrite',
+} as const satisfies Record<'read' | 'write', string>
 
 const NOT_GIT_REPO_RE = /not a git repository/i
 // Bare repos: rev-parse succeeds but status/diff refuse to run.
@@ -28,12 +35,15 @@ export function isBenignGitError(err: unknown): boolean {
   return NOT_GIT_REPO_RE.test(text) || NO_WORK_TREE_RE.test(text)
 }
 
-/** Compact failure text for a git subcommand: first stderr line, else message. */
-export function describeGitError(operation: string, err: unknown): string {
+/**
+ * Compact failure text for a git subcommand: first stderr line, else message.
+ * `t` defaults to the interface language; the log passes `tEnglish`.
+ */
+export function describeGitError(operation: string, err: unknown, t: Translate = i18n.t): string {
   const { stderr, message } = (err ?? {}) as { stderr?: unknown; message?: unknown }
   const stderrLine = typeof stderr === 'string' ? stderr.trim().split('\n')[0] : ''
-  const reason = stderrLine || (typeof message === 'string' ? message : String(err))
-  return `git ${operation} failed: ${reason}`
+  const detail = stderrLine || (typeof message === 'string' ? message : String(err))
+  return t('errors.git.commandFailedWithDetail', { command: `git ${operation}`, detail })
 }
 
 // One log entry per workspace+operation per run — git status is polled every
@@ -91,6 +101,23 @@ const IGNORED_DIRS = new Set([
 ])
 
 /**
+ * Package caches and tool state that live under a home-directory workspace.
+ * Each holds thousands of directories, so watching them exhausts file
+ * descriptors long before `WATCH_DEPTH` bounds the walk.
+ */
+const HOME_TOOLING_IGNORED = new Set([
+  '.npm', '.pnpm-store', '.yarn', '.bun', '.nvm', '.cargo', '.rustup',
+  '.gradle', '.m2', '.local', '.docker', '.codex', '.gemini', '.Trash',
+])
+
+/**
+ * macOS keeps application state in `~/Library`, the largest tree in a home
+ * directory. Only applied on darwin so a project folder named `Library`
+ * elsewhere is still watched.
+ */
+const DARWIN_HOME_IGNORED = new Set(['Library'])
+
+/**
  * Windows user-profile folders that appear under a home-directory workspace.
  * Watching them hits junctions / protected reparse points (EPERM noise).
  * Only applied on win32 so other platforms are unaffected.
@@ -111,6 +138,30 @@ const WIN32_PROFILE_IGNORED = new Set([
   'my pictures',
   'my videos',
 ])
+
+/**
+ * True when a directory name is skipped in every workspace by the watcher,
+ * the tree view, and file search.
+ */
+export function isIgnoredDirName(name: string): boolean {
+  return IGNORED_DIRS.has(name)
+}
+
+/**
+ * True when a directory directly under a home-directory workspace is skipped.
+ * Project folders can share these names (`.cargo`, `templates`), so the sets
+ * never apply to other workspaces or to nested paths. Platform-specific sets
+ * only apply on their own platform.
+ */
+export function isIgnoredHomeRootDirName(name: string, platform: NodeJS.Platform = process.platform): boolean {
+  if (HOME_TOOLING_IGNORED.has(name)) return true
+  if (platform === 'darwin') return DARWIN_HOME_IGNORED.has(name)
+  if (platform !== 'win32') return false
+  const lower = name.toLowerCase()
+  return WIN32_PROFILE_IGNORED.has(lower) || lower.startsWith('ntuser.')
+}
+
+const WORKSPACE_ROOT_DEPTH = 0
 
 /** Log each watch error path at most once to avoid console floods. */
 const watchErrorLogged = new Set<string>()
@@ -176,11 +227,19 @@ export function buildNewFileDiff(relativePath: string, content: string): string 
 export class FileService {
   private watcher: FSWatcher | null = null
   private workspacePath: string
+  private readonly isHomeWorkspace: boolean
   private debounceTimer: ReturnType<typeof setTimeout> | null = null
   private pendingChange: FileChangeEvent | null = null
 
-  constructor(workspacePath: string) {
+  constructor(workspacePath: string, homePath: string = homedir()) {
     this.workspacePath = workspacePath
+    this.isHomeWorkspace = resolve(workspacePath) === resolve(homePath)
+  }
+
+  /** True when an entry at `depth` below the workspace root must be skipped. */
+  private isIgnoredEntry(name: string, depth: number): boolean {
+    if (isIgnoredDirName(name)) return true
+    return this.isHomeWorkspace && depth === WORKSPACE_ROOT_DEPTH && isIgnoredHomeRootDirName(name)
   }
 
   /**
@@ -288,15 +347,17 @@ export class FileService {
   }
 
   private describeAndLogGitError(operation: string, err: unknown): Error {
-    const description = describeGitError(operation, err)
+    // The log stays English, so it (and its dedup key) uses the English text;
+    // the returned error carries the interface-language text for the UI.
+    const englishDescription = describeGitError(operation, err, tEnglish)
     // Dedup by error signature, not just operation, so a NEW failure mode for
     // the same command still reaches the log.
-    const key = `${this.workspacePath}:${description}`
+    const key = `${this.workspacePath}:${englishDescription}`
     if (!gitErrorLogged.has(key)) {
       gitErrorLogged.add(key)
-      appLog.warn('git', `${description} (${this.workspacePath})`, err)
+      appLog.warn('git', `${englishDescription} (${this.workspacePath})`, err)
     }
-    return new Error(description)
+    return new Error(describeGitError(operation, err))
   }
 
   // Some git subcommands fail outside a repo with errors that never mention
@@ -415,7 +476,7 @@ export class FileService {
    */
   private async resolveInsideWorkspace(filePath: string, action: 'read' | 'write'): Promise<string> {
     if (!isPathInsideWorkspace(this.workspacePath, filePath)) {
-      throw new Error(`Refusing to ${action} outside the active workspace`)
+      throw new Error(t(WORKSPACE_ESCAPE_KEYS[action]))
     }
     const fullPath = isAbsolute(filePath) ? filePath : join(this.workspacePath, filePath)
     const resolvedFile = resolve(fullPath)
@@ -424,7 +485,7 @@ export class FileService {
     const realWorkspace = await realpath(this.workspacePath)
     const realTarget = await realpathDeepest(resolvedFile)
     if (!isPathInsideWorkspace(realWorkspace, realTarget)) {
-      throw new Error(`Refusing to ${action} outside the active workspace`)
+      throw new Error(t(WORKSPACE_ESCAPE_KEYS[action]))
     }
     return resolvedFile
   }
@@ -442,9 +503,10 @@ export class FileService {
     this.watcher = watch(this.workspacePath, {
       ignored: (path) => this.isIgnoredPath(path),
       ignoreInitial: true,
-      // Home-directory workspaces on Windows contain junctions into protected
-      // trees; following them floods EPERM. POSIX trees rarely need this.
-      followSymlinks: process.platform !== 'win32',
+      // Ignores are decided by the link name, not its target, so a followed
+      // symlink can fan out into an unbounded tree (Windows junctions into
+      // protected folders, POSIX links into package stores). Never follow.
+      followSymlinks: false,
       depth: WATCH_DEPTH,
       awaitWriteFinish: { stabilityThreshold: WATCH_DEBOUNCE_MS, pollInterval: 50 },
       persistent: true,
@@ -507,14 +569,7 @@ export class FileService {
   private isIgnoredPath(absolutePath: string): boolean {
     const rel = relative(this.workspacePath, absolutePath)
     if (!rel || rel.startsWith('..')) return false
-    return rel.split(/[\\/]/).some((segment) => {
-      if (IGNORED_DIRS.has(segment)) return true
-      // Windows profile noise only — do not broaden ignore sets on other OSes.
-      if (process.platform !== 'win32') return false
-      const lower = segment.toLowerCase()
-      if (WIN32_PROFILE_IGNORED.has(lower)) return true
-      return lower.startsWith('ntuser.')
-    })
+    return rel.split(/[\\/]/).some((segment, depth) => this.isIgnoredEntry(segment, depth))
   }
 
   /**
@@ -545,7 +600,7 @@ export class FileService {
 
           // Sort: directories first, then files, both alphabetical
           const sorted = items
-            .filter((item) => !IGNORED_DIRS.has(item.name) && !item.name.startsWith('.git'))
+            .filter((item) => !this.isIgnoredEntry(item.name, depth) && !item.name.startsWith('.git'))
             .sort((a, b) => {
               if (a.isDirectory() && !b.isDirectory()) return -1
               if (!a.isDirectory() && b.isDirectory()) return 1
@@ -576,9 +631,10 @@ export class FileService {
   ): Promise<void> {
     try {
       const items = await readdir(dir, { withFileTypes: true })
+      const depth = relBase ? relBase.split('/').length : WORKSPACE_ROOT_DEPTH
 
       for (const item of items) {
-        if (IGNORED_DIRS.has(item.name) || item.name.startsWith('.git')) continue
+        if (this.isIgnoredEntry(item.name, depth) || item.name.startsWith('.git')) continue
 
         const fullPath = join(dir, item.name)
         const relPath = relBase ? `${relBase}/${item.name}` : item.name

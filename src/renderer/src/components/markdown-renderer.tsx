@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -167,6 +168,7 @@ function isRenderableSvg(text: string): boolean {
  * from model/tool output can't run code or phone home.
  */
 function SvgBlock({ raw }: { raw: string }): React.JSX.Element {
+  const { t } = useTranslation()
   const [showSource, setShowSource] = useState(false)
   const src = `data:image/svg+xml;utf8,${encodeURIComponent(raw)}`
 
@@ -180,8 +182,8 @@ function SvgBlock({ raw }: { raw: string }): React.JSX.Element {
               'rounded p-1 transition-colors',
               showSource ? 'bg-card text-primary' : 'text-dim hover:bg-surface-hover/50 hover:text-secondary'
             )}
-            title="View source"
-            aria-label="View source"
+            title={t('chat.svgBlock.viewSource')}
+            aria-label={t('chat.svgBlock.viewSource')}
           >
             <Code2 size={14} />
           </button>
@@ -191,8 +193,8 @@ function SvgBlock({ raw }: { raw: string }): React.JSX.Element {
               'rounded p-1 transition-colors',
               !showSource ? 'bg-card text-primary' : 'text-dim hover:bg-surface-hover/50 hover:text-secondary'
             )}
-            title="Render SVG"
-            aria-label="Render SVG"
+            title={t('chat.svgBlock.renderSvg')}
+            aria-label={t('chat.svgBlock.renderSvg')}
           >
             <Eye size={14} />
           </button>
@@ -210,7 +212,7 @@ function SvgBlock({ raw }: { raw: string }): React.JSX.Element {
         </pre>
       ) : (
         <div className="flex justify-center p-3">
-          <img src={src} alt="Rendered SVG" className="max-h-[480px] max-w-full" />
+          <img src={src} alt={t('chat.svgBlock.renderedSvgAlt')} className="max-h-[480px] max-w-full" />
         </div>
       )}
     </div>

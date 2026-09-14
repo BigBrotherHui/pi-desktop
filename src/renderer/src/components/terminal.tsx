@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Terminal as XTerm, type ITheme } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
 import { useAppStore } from '../store'
+import { useAppliedThemeId } from '../hooks'
 import { DEFAULT_SETTINGS } from '../../../shared/default-settings'
 import { clsx } from 'clsx'
 import {
@@ -52,13 +54,14 @@ function buildTerminalTheme(): ITheme {
 }
 
 export function TerminalPanel(): React.JSX.Element | null {
+  const { t } = useTranslation()
   const terminalOpen = useAppStore((state) => state.terminalOpen)
   const toggleTerminal = useAppStore((state) => state.toggleTerminal)
   const activeWorkspace = useAppStore((state) => state.activeWorkspace)
-  const theme = useAppStore((state) => state.settings?.theme)
+  const appliedThemeId = useAppliedThemeId()
 
   const [maximized, setMaximized] = useState(false)
-  const [shellLabel, setShellLabel] = useState<string>('Terminal')
+  const [shellLabel, setShellLabel] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const terminalRef = useRef<XTerm | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
@@ -149,7 +152,7 @@ export function TerminalPanel(): React.JSX.Element | null {
     if (terminalRef.current) {
       terminalRef.current.options.theme = buildTerminalTheme()
     }
-  }, [theme])
+  }, [appliedThemeId])
 
   if (!terminalOpen) return null
 
@@ -163,31 +166,31 @@ export function TerminalPanel(): React.JSX.Element | null {
       <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
         <div className="flex items-center gap-2">
           <TerminalIcon size={14} className="text-dim" />
-          <span className="text-xs text-muted">Terminal</span>
-          <span className="text-[10px] text-faint">{shellLabel}</span>
+          <span className="text-xs text-muted">{t('terminal.title')}</span>
+          <span className="text-[10px] text-faint">{shellLabel ?? t('terminal.title')}</span>
         </div>
         <div className="flex items-center gap-1">
           <button
             onClick={() => terminalRef.current?.clear()}
             className="rounded p-1 text-faint hover:text-muted transition-colors"
-            title="Clear"
-            aria-label="Clear terminal"
+            title={t('terminal.clearTitle')}
+            aria-label={t('terminal.clearAriaLabel')}
           >
             <Trash2 size={12} />
           </button>
           <button
             onClick={() => setMaximized(!maximized)}
             className="rounded p-1 text-faint hover:text-muted transition-colors"
-            title={maximized ? 'Restore terminal' : 'Maximize terminal'}
-            aria-label={maximized ? 'Restore terminal' : 'Maximize terminal'}
+            title={maximized ? t('terminal.restoreLabel') : t('terminal.maximizeLabel')}
+            aria-label={maximized ? t('terminal.restoreLabel') : t('terminal.maximizeLabel')}
           >
             {maximized ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
           </button>
           <button
             onClick={toggleTerminal}
             className="rounded p-1 text-faint hover:text-muted transition-colors"
-            title="Close terminal"
-            aria-label="Close terminal"
+            title={t('terminal.closeTitle')}
+            aria-label={t('terminal.closeTitle')}
           >
             <X size={12} />
           </button>

@@ -8,11 +8,19 @@ import {
   buildPiInvocation,
   detectPiInstallations,
   PiRpcManager,
+  RpcTimeoutError,
   resolveStartCli,
   RpcFrameDecoder,
   setPiExecutableOverride,
   type PiCli,
 } from './pi-rpc-manager'
+import { appLog } from './app-log'
+import { i18n } from '../shared/i18n'
+import { PSEUDO_LANGUAGE, SOURCE_LANGUAGE } from '../shared/i18n/languages'
+
+/** A pseudo-language string: bracketed and padded with "~" (see pseudo.ts). */
+const PSEUDO_MARKED = /^\[[^]*~+\]$/
+const PREFLIGHT_LOG_MESSAGE = 'Pre-flight failed'
 
 /** The sender's chunk size: OMP protocol v2 splits payloads at 256 KiB. */
 const CHUNK_PAYLOAD_BYTES = 256 * 1024
@@ -202,6 +210,38 @@ test('a session whose engine is not installed still opens under the configured o
     assert.equal(cli.found, true)
     assert.equal(cli.failureReason, null)
   } finally {
+    setPiExecutableOverride(null, 'auto')
+    process.env.HOME = saved.HOME
+    process.env.PATH = saved.PATH
+    if (saved.SHELL === undefined) delete process.env.SHELL
+    else process.env.SHELL = saved.SHELL
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('a pre-flight failure shows interface text and logs English', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pi-preflight-language-'))
+  const saved = { HOME: process.env.HOME, PATH: process.env.PATH, SHELL: process.env.SHELL }
+  await i18n.changeLanguage(PSEUDO_LANGUAGE)
+  try {
+    process.env.HOME = dir
+    process.env.PATH = dir
+    process.env.SHELL = join(dir, 'no-such-shell')
+    writeFileSync(join(dir, 'pi'), '')
+    setPiExecutableOverride(null, 'pi')
+    const missingCwd = join(dir, 'missing')
+
+    const status = await new PiRpcManager().start({ cwd: missingCwd })
+
+    assert.equal(status.status, 'error')
+    // The UI text is in the interface language; the path inside it is not.
+    assert.match(status.error ?? '', PSEUDO_MARKED)
+    assert.ok(status.error?.includes(missingCwd))
+    // The log feeds the diagnostics report, which stays English.
+    const logged = appLog.getRecent().filter((entry) => entry.message === PREFLIGHT_LOG_MESSAGE).at(-1)
+    assert.equal(logged?.detail, `Pi working directory does not exist or is not a directory:\n  ${missingCwd}`)
+  } finally {
+    await i18n.changeLanguage(SOURCE_LANGUAGE)
     setPiExecutableOverride(null, 'auto')
     process.env.HOME = saved.HOME
     process.env.PATH = saved.PATH
@@ -415,4 +455,13 @@ test('detectPiInstallations serves a cached scan until a rescan forces a fresh o
     else process.env.SHELL = saved.SHELL
     rmSync(dir, { recursive: true, force: true })
   }
+})
+
+test('RpcTimeoutError is identified by class, not by message text', () => {
+  const error = new RpcTimeoutError('get_state', 30_000)
+  assert.ok(error instanceof RpcTimeoutError)
+  assert.ok(error instanceof Error)
+  assert.equal(error.name, 'RpcTimeoutError')
+  assert.equal(error.commandType, 'get_state')
+  assert.equal(error.message, 'Command get_state timed out after 30000ms')
 })

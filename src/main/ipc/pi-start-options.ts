@@ -2,13 +2,14 @@ import { app } from 'electron'
 import type { AgentEngineKind, PiStartOptions, AppSettings, PermissionMode } from '../../shared/ipc-contracts'
 import { getGuiDataPath } from '../app-data-paths'
 import { workspaceTrustStore } from '../workspace-trust'
-import { join } from 'path'
+import { join, dirname } from 'path'
 import { existsSync } from 'fs'
 import { PERMISSION_RULES_FILE_NAME } from '../../../resources/permission-rules'
 import { isString, isObject, isOptionalString, isOptionalBoolean, isOptionalStringArray } from './validation'
 import { getPiCli } from '../pi-rpc-manager'
 import { engineForBoundSession } from '../pi-paths'
 import { DEFAULT_AGENT_ENGINE_LABEL, agentEngineLabel } from '../../shared/agent-engine-label'
+import { i18n } from '../../shared/i18n'
 
 const READ_ONLY_TOOLS = 'read,grep,find,ls'
 const OMP_READ_ONLY_TOOLS = 'read,grep,glob'
@@ -16,6 +17,10 @@ const OMP_READ_ONLY_TOOLS = 'read,grep,glob'
 const PERMISSIONS_EXTENSION_PATH = app.isPackaged
   ? join(process.resourcesPath, 'resources', 'pi-desktop-permissions.ts')
   : join(app.getAppPath(), 'resources', 'pi-desktop-permissions.ts')
+
+const LOCALES_DIR_NAME = 'locales'
+// The language files ship next to the extension (resources/ is extraResources).
+const LOCALES_DIR = join(dirname(PERMISSIONS_EXTENSION_PATH), LOCALES_DIR_NAME)
 
 export function getGlobalPermissionRulesPath(): string {
   return getGuiDataPath(PERMISSION_RULES_FILE_NAME)
@@ -94,6 +99,10 @@ export function applyPermissionModeToStartOptions(
       // has no other way to know which CLI it is running in. Without this the
       // prompt says "Pi wants to run..." during an OMP session.
       PI_DESKTOP_AGENT_LABEL: agentEngineLabel(engine) ?? DEFAULT_AGENT_ENGINE_LABEL,
+      // The approval prompt is shown by the extension inside the agent, so it
+      // reads the language files itself. A running agent keeps this language.
+      PI_DESKTOP_LANGUAGE: i18n.language,
+      PI_DESKTOP_LOCALES_DIR: LOCALES_DIR,
       // Resolved here because the extension cannot re-derive the GUI data
       // dir (env override / canonical appData / legacy fallback).
       PI_DESKTOP_PERMISSION_RULES_PATH: globalRulesPath,

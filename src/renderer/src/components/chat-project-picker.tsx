@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
 import { Check, ChevronDown, FolderOpen, Layers } from 'lucide-react'
 import { useAppStore } from '../store'
@@ -11,6 +12,7 @@ import { pathsEqual } from '../../../shared/path-compare'
  * Defaults to the active workspace; supports No project → home directory.
  */
 export function ChatProjectPicker(): React.JSX.Element {
+  const { t } = useTranslation()
   const workspaces = useAppStore((s) => s.workspaces)
   const activeWorkspace = useAppStore((s) => s.activeWorkspace)
   const activateWorkspace = useAppStore((s) => s.activateWorkspace)
@@ -98,7 +100,7 @@ export function ChatProjectPicker(): React.JSX.Element {
   }
 
   const openFolder = async (): Promise<void> => {
-    const path = await window.piDesktop.system.openDialog({ title: 'Open Folder' })
+    const path = await window.piDesktop.system.openDialog({ title: t('dialogs.openFolder.title') })
     if (!path) return
     setBusy(true)
     try {
@@ -123,7 +125,7 @@ export function ChatProjectPicker(): React.JSX.Element {
         onClick={() => setPickerOpen((o) => !o)}
         disabled={busy}
         className="flex max-w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-xs text-secondary hover:bg-highlight-strong transition-colors disabled:opacity-50"
-        title={selected?.path ?? homePath ?? 'No project — home directory'}
+        title={selected?.path ?? homePath ?? t('chat.projectPicker.noProjectHomeDirectory')}
       >
         {selected ? (
           <Layers size={14} className="shrink-0" style={{ color: selected.color }} />
@@ -131,7 +133,7 @@ export function ChatProjectPicker(): React.JSX.Element {
           <Layers size={14} className="shrink-0 text-faint" />
         )}
         <span className={clsx('min-w-0 truncate font-medium', selected ? 'text-primary' : 'text-dim')}>
-          {selected?.name ?? 'No project'}
+          {selected?.name ?? t('chat.projectPicker.noProject')}
         </span>
         <ChevronDown
           size={12}
@@ -151,8 +153,8 @@ export function ChatProjectPicker(): React.JSX.Element {
           >
             <Layers size={13} className="shrink-0 text-faint" />
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm text-primary">No project</div>
-              <div className="truncate text-[11px] text-faint">{homePath ?? 'Your home directory'}</div>
+              <div className="truncate text-sm text-primary">{t('chat.projectPicker.noProject')}</div>
+              <div className="truncate text-[11px] text-faint">{homePath ?? t('chat.projectPicker.yourHomeDirectory')}</div>
             </div>
             {selectedId === null && <Check size={12} className="shrink-0 text-success" />}
           </button>
@@ -182,7 +184,7 @@ export function ChatProjectPicker(): React.JSX.Element {
             className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-secondary hover:bg-surface-hover transition-colors"
           >
             <FolderOpen size={13} className="shrink-0 text-muted" />
-            Open folder…
+            {t('chat.projectPicker.openFolder')}
           </button>
         </div>
       )}

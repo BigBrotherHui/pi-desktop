@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { mkdtemp, writeFile, mkdir, readFile } from 'fs/promises'
+import { mkdtemp, writeFile, mkdir, readFile, symlink } from 'fs/promises'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import {
@@ -8,9 +8,13 @@ import {
   describeGitError,
   FileService,
   isBenignGitError,
+  isIgnoredDirName,
+  isIgnoredHomeRootDirName,
   isPathInsideWorkspace,
 } from './file-service'
-import type { FileChangeEvent } from '../shared/ipc-contracts'
+import type { FileChangeEvent, FileTreeNode } from '../shared/ipc-contracts'
+import { i18n, tEnglish } from '../shared/i18n'
+import { PSEUDO_LANGUAGE, SOURCE_LANGUAGE } from '../shared/i18n/languages'
 
 // ─── Path-boundary guard ──────────────────────────────────────────────────
 
@@ -113,8 +117,114 @@ async function testWatcherIgnoresHeavyDirs(): Promise<void> {
   assert.equal(events.length, 0, 'changes under node_modules must not emit events')
 }
 
+async function testWatcherDoesNotFollowSymlinks(): Promise<void> {
+  const dir = await mkdtemp(join(tmpdir(), 'pi-fs-symlink-'))
+  const target = await mkdtemp(join(tmpdir(), 'pi-fs-symlink-target-'))
+  await symlink(target, join(dir, 'alias'), 'dir')
+  const service = new FileService(dir)
+  const { promise, onChange } = waitForChange(1500)
+
+  service.startWatching(onChange)
+  await new Promise((r) => setTimeout(r, 300))
+  await writeFile(join(target, 'inside-target.txt'), 'x')
+
+  const events = await promise
+  service.stopWatching()
+
+  const reported = events.map((event) => event.relativePath)
+  assert.ok(
+    reported.every((path) => !path.includes('inside-target.txt')),
+    `files behind a symlinked directory must not be reported, got: ${reported.join(', ')}`
+  )
+}
+
 test('watcher emits a debounced change event', testWatcherEmitsOnChange)
 test('watcher ignores heavy dirs like node_modules', testWatcherIgnoresHeavyDirs)
+test('watcher does not descend into symlinked directories', testWatcherDoesNotFollowSymlinks)
+
+// ─── Ignored directory names ──────────────────────────────────────────────
+
+test('isIgnoredDirName ignores build artifacts but not project tooling folders', () => {
+  assert.equal(isIgnoredDirName('node_modules'), true)
+  assert.equal(isIgnoredDirName('src'), false)
+  assert.equal(isIgnoredDirName('.cargo'), false)
+  assert.equal(isIgnoredDirName('.yarn'), false)
+  assert.equal(isIgnoredDirName('templates'), false)
+})
+
+test('isIgnoredHomeRootDirName ignores home tooling stores on every platform', () => {
+  for (const platform of ['linux', 'darwin', 'win32'] as const) {
+    assert.equal(isIgnoredHomeRootDirName('.npm', platform), true)
+    assert.equal(isIgnoredHomeRootDirName('.cargo', platform), true)
+    assert.equal(isIgnoredHomeRootDirName('.codex', platform), true)
+    assert.equal(isIgnoredHomeRootDirName('.local', platform), true)
+    assert.equal(isIgnoredHomeRootDirName('Projects', platform), false)
+  }
+})
+
+test('isIgnoredHomeRootDirName ignores the macOS Library folder only on darwin', () => {
+  assert.equal(isIgnoredHomeRootDirName('Library', 'darwin'), true)
+  assert.equal(isIgnoredHomeRootDirName('Library', 'linux'), false)
+  assert.equal(isIgnoredHomeRootDirName('Library', 'win32'), false)
+})
+
+test('isIgnoredHomeRootDirName ignores Windows profile folders only on win32', () => {
+  assert.equal(isIgnoredHomeRootDirName('AppData', 'win32'), true)
+  assert.equal(isIgnoredHomeRootDirName('ntuser.dat', 'win32'), true)
+  assert.equal(isIgnoredHomeRootDirName('Templates', 'win32'), true)
+  assert.equal(isIgnoredHomeRootDirName('AppData', 'linux'), false)
+  assert.equal(isIgnoredHomeRootDirName('AppData', 'darwin'), false)
+})
+
+async function makeToolingWorkspace(): Promise<string> {
+  const dir = await mkdtemp(join(tmpdir(), 'pi-fs-tooling-'))
+  await mkdir(join(dir, '.cargo'), { recursive: true })
+  await writeFile(join(dir, '.cargo', 'config.toml'), '[build]')
+  await mkdir(join(dir, 'Projects', 'app', '.cargo'), { recursive: true })
+  await writeFile(join(dir, 'Projects', 'app', '.cargo', 'config.toml'), '[build]')
+  return dir
+}
+
+function childNames(node: FileTreeNode): string[] {
+  return (node.children ?? []).map((child) => child.name)
+}
+
+test('project workspaces keep tooling folders in the tree and in search', async () => {
+  const dir = await makeToolingWorkspace()
+  const service = new FileService(dir, join(dir, 'not-home'))
+  const tree = await service.getFileTree()
+  assert.ok(childNames(tree).includes('.cargo'))
+  const found = await service.searchFiles('config.toml')
+  assert.deepEqual(found.map((hit) => hit.relativePath).sort(), ['.cargo/config.toml', 'Projects/app/.cargo/config.toml'])
+})
+
+test('a home workspace hides tooling stores only at its root', async () => {
+  const dir = await makeToolingWorkspace()
+  const service = new FileService(dir, dir)
+  const tree = await service.getFileTree()
+  assert.equal(childNames(tree).includes('.cargo'), false)
+  const found = await service.searchFiles('config.toml')
+  assert.deepEqual(found.map((hit) => hit.relativePath), ['Projects/app/.cargo/config.toml'])
+})
+
+async function testHomeWatcherIgnoresRootToolingOnly(): Promise<void> {
+  const dir = await makeToolingWorkspace()
+  const service = new FileService(dir, dir)
+  const { promise, onChange } = waitForChange(3000)
+
+  service.startWatching(onChange)
+  await new Promise((r) => setTimeout(r, 300))
+  await writeFile(join(dir, '.cargo', 'ignored.toml'), 'x')
+  await new Promise((r) => setTimeout(r, 800))
+  await writeFile(join(dir, 'Projects', 'app', '.cargo', 'seen.toml'), 'x')
+
+  const events = await promise
+  service.stopWatching()
+
+  assert.deepEqual(events.map((event) => event.relativePath), ['Projects/app/.cargo/seen.toml'])
+}
+
+test('home watcher ignores root tooling stores but watches nested ones', testHomeWatcherIgnoresRootToolingOnly)
 
 // ─── Git error classification ─────────────────────────────────────────────
 
@@ -140,6 +250,18 @@ test('describeGitError prefers the first stderr line over the message', () => {
     'git status failed: fatal: bad object HEAD',
   )
   assert.equal(describeGitError('diff', { message: 'timed out' }), 'git diff failed: timed out')
+})
+
+test('describeGitError renders English for the log and marked text for the UI', async () => {
+  const err = { stderr: 'fatal: bad object HEAD\n' }
+  await i18n.changeLanguage(PSEUDO_LANGUAGE)
+  try {
+    assert.equal(describeGitError('status', err, tEnglish), 'git status failed: fatal: bad object HEAD')
+    // Only the app's own words are marked; the command and Git's text are not.
+    assert.match(describeGitError('status', err), /^\[git status ƒáîļéð: fatal: bad object HEAD ~+\]$/)
+  } finally {
+    await i18n.changeLanguage(SOURCE_LANGUAGE)
+  }
 })
 
 test('getGitStatus returns empty for a non-repo directory', async () => {

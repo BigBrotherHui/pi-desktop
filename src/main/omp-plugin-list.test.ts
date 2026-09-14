@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { parseOmpPluginList } from './omp-plugin-list'
+import { parseOmpNpmPlugins, parseOmpPluginList } from './omp-plugin-list'
 
 const PLUGINS_DIR = '/home/u/.omp/plugins'
 
@@ -65,4 +65,30 @@ test('parseOmpPluginList returns [] on garbage', () => {
   assert.deepEqual(parseOmpPluginList('not json at all', PLUGINS_DIR), [])
   assert.deepEqual(parseOmpPluginList('[]', PLUGINS_DIR), [])
   assert.deepEqual(parseOmpPluginList('', PLUGINS_DIR), [])
+})
+
+test('parseOmpNpmPlugins keeps the runtime state a reinstall resets', () => {
+  const output = JSON.stringify({
+    npm: [
+      { name: 'defaults', version: '0.14.0', enabledFeatures: null, enabled: true },
+      { name: 'picked', version: '1.0.0', enabledFeatures: ['a', 7, 'b'], enabled: false },
+    ],
+    marketplace: [{ id: 'reviewer@main-market', scope: 'user', entries: [] }],
+  })
+  assert.deepEqual(parseOmpNpmPlugins(output), [
+    { name: 'defaults', version: '0.14.0', enabled: true, enabledFeatures: null },
+    { name: 'picked', version: '1.0.0', enabled: false, enabledFeatures: ['a', 'b'] },
+  ])
+})
+
+test('parseOmpNpmPlugins treats a missing enabled flag as enabled and skips nameless rows', () => {
+  const output = `warning: x\n${JSON.stringify({ npm: [{ name: 'x' }, { version: '1.0.0' }, null] })}`
+  assert.deepEqual(parseOmpNpmPlugins(output), [
+    { name: 'x', version: null, enabled: true, enabledFeatures: null },
+  ])
+})
+
+test('parseOmpNpmPlugins returns [] without an npm array', () => {
+  assert.deepEqual(parseOmpNpmPlugins('{"marketplace":[]}'), [])
+  assert.deepEqual(parseOmpNpmPlugins('not json'), [])
 })

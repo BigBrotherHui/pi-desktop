@@ -7,6 +7,7 @@ import {
 } from '../shared/theme/theme-file'
 import { BUILTIN_THEME_IDS } from '../shared/theme/builtin-ids'
 import type { GalleryTheme } from '../shared/ipc-contracts'
+import { t, tEnglish } from '../shared/i18n'
 
 const THEME_FILE_EXT = '.json'
 const VALID_THEME_ID = /^[a-z0-9-]+$/
@@ -16,14 +17,26 @@ export interface UserThemeList {
   warnings: string[]
 }
 
+/** Theme file names in `dir`, or a warning when the directory cannot be read. */
+async function readThemeEntries(dir: string): Promise<{ entries: string[]; warning: string | null }> {
+  try {
+    await mkdir(dir, { recursive: true })
+    return { entries: (await readdir(dir)).filter((f) => f.endsWith(THEME_FILE_EXT)).sort(), warning: null }
+  } catch (error) {
+    return { entries: [], warning: `${dir}: ${error instanceof Error ? error.message : String(error)}` }
+  }
+}
+
 export async function listUserThemes(dir: string): Promise<UserThemeList> {
-  await mkdir(dir, { recursive: true })
   const themes: UserThemeList['themes'] = []
-  const warnings: string[] = []
-  for (const entry of (await readdir(dir)).filter((f) => f.endsWith(THEME_FILE_EXT)).sort()) {
+  const { entries, warning } = await readThemeEntries(dir)
+  const warnings: string[] = warning ? [warning] : []
+  for (const entry of entries) {
     const id = entry.slice(0, -THEME_FILE_EXT.length)
     try {
-      const file = validateThemeFile(JSON.parse(await readFile(join(dir, entry), 'utf8')))
+      // These warnings only ever reach console.warn (renderer store.ts), never
+      // the UI, so validation errors are rendered in fixed English (ruling R15).
+      const file = validateThemeFile(JSON.parse(await readFile(join(dir, entry), 'utf8')), tEnglish)
       // Theme files are untrusted input (imported from disk or installed
       // from arbitrary URLs). saveUserTheme refuses to *create* a file whose
       // id collides with a built-in, but a colliding file can still land in
@@ -104,7 +117,7 @@ export async function saveUserTheme(
   let id: string
   if (existingId !== undefined) {
     const takenIds = new Set<string>(BUILTIN_THEME_IDS)
-    for (const t of themes) takenIds.add(t.id)
+    for (const userTheme of themes) takenIds.add(userTheme.id)
     id = nextAvailableId(base, (candidate) => takenIds.has(candidate) && candidate !== existingId)
   } else {
     // Fresh create, file import, or URL install: dedupe by identity
@@ -116,7 +129,7 @@ export async function saveUserTheme(
     const taken = new Map<string, string>(
       BUILTIN_THEME_IDS.map((builtinId) => [builtinId, BUILTIN_IDENTITY_SENTINEL]),
     )
-    for (const t of themes) taken.set(t.id, themeIdentity(t.file))
+    for (const userTheme of themes) taken.set(userTheme.id, themeIdentity(userTheme.file))
     const identity = themeIdentity(theme)
     id = nextAvailableId(base, (candidate) => taken.has(candidate) && taken.get(candidate) !== identity)
   }
@@ -145,7 +158,7 @@ async function readCappedText(response: Response, limitBytes: number): Promise<s
     totalBytes += value.byteLength
     if (totalBytes > limitBytes) {
       await reader.cancel()
-      throw new Error(`theme file too large (limit ${limitBytes} bytes)`)
+      throw new Error(t('errors.theme.fileTooLarge', { limit: limitBytes }))
     }
     text += decoder.decode(value, { stream: true })
   }
@@ -262,7 +275,7 @@ function isBlockedIPv6(hostname: string): boolean {
 // and connects to whatever the Location header says next.
 function assertSafeThemeUrl(parsed: URL): void {
   if (parsed.protocol !== 'https:') {
-    throw new Error(`theme URLs must use https, got ${parsed.protocol}`)
+    throw new Error(t('errors.theme.mustUseHttps', { protocol: parsed.protocol }))
   }
   // WHATWG URL.hostname keeps IPv6 literals bracketed (e.g. "[::1]"), unlike
   // the "brackets already stripped" shape node:net's isIP()/isIPv6() and our
@@ -272,14 +285,14 @@ function assertSafeThemeUrl(parsed: URL): void {
     ? rawHostname.slice(1, -1)
     : rawHostname
   if (hostname === 'localhost' || hostname.endsWith('.localhost') || hostname.endsWith('.local')) {
-    throw new Error(`theme URL host "${hostname}" is blocked (local/loopback hostname)`)
+    throw new Error(t('errors.theme.hostBlockedLocal', { host: hostname }))
   }
   const ipv4 = parseIPv4(hostname)
   if (ipv4 && isBlockedIPv4(ipv4)) {
-    throw new Error(`theme URL host "${hostname}" is blocked (private/reserved IPv4 address)`)
+    throw new Error(t('errors.theme.hostBlockedIPv4', { host: hostname }))
   }
   if (isIPv6(hostname) && isBlockedIPv6(hostname)) {
-    throw new Error(`theme URL host "${hostname}" is blocked (private/reserved IPv6 address)`)
+    throw new Error(t('errors.theme.hostBlockedIPv6', { host: hostname }))
   }
   // Residual limitation, deliberately not solved here: a *hostname* that is
   // not an IP literal (e.g. an attacker-registered "public" domain) can
@@ -314,10 +327,10 @@ async function guardedFetch(url: string, fetchFn: typeof fetch): Promise<Respons
     if (!REDIRECT_STATUS_CODES.has(response.status)) break
     redirects += 1
     if (redirects > MAX_THEME_REDIRECTS) {
-      throw new Error(`theme URL exceeded ${MAX_THEME_REDIRECTS} redirects`)
+      throw new Error(t('errors.theme.tooManyRedirects', { max: MAX_THEME_REDIRECTS }))
     }
     const location = response.headers.get('location')
-    if (!location) throw new Error(`theme URL redirect (${response.status}) had no location header`)
+    if (!location) throw new Error(t('errors.theme.redirectMissingLocation', { status: response.status }))
     // Resolve relative to the current hop, then re-validate before the next
     // hop is fetched: this is what stops a public URL from bouncing the
     // GET onto an internal host via a redirect the guard never saw.
@@ -331,7 +344,7 @@ export async function installThemeFromUrl(
   dir: string, url: string, fetchFn: typeof fetch = fetch,
 ): Promise<{ id: string; file: ThemeFile }> {
   const response = await guardedFetch(url, fetchFn)
-  if (!response.ok) throw new Error(`theme download failed: ${response.status}`)
+  if (!response.ok) throw new Error(t('errors.theme.downloadFailed', { status: response.status }))
   const body = await readCappedText(response, MAX_THEME_FILE_BYTES)
   const file = validateThemeFile(JSON.parse(body))
   const { id } = await saveUserTheme(dir, file)
@@ -383,10 +396,10 @@ function displayText(value: unknown, maxLength: number): string | undefined {
 
 export async function fetchGalleryThemes(fetchFn: typeof fetch = fetch): Promise<GalleryTheme[]> {
   const response = await guardedFetch(GALLERY_INDEX_URL, fetchFn)
-  if (!response.ok) throw new Error(`gallery index download failed: ${response.status}`)
+  if (!response.ok) throw new Error(t('errors.theme.galleryIndexDownloadFailed', { status: response.status }))
   const body = await readCappedText(response, MAX_GALLERY_INDEX_BYTES)
   const parsed: unknown = JSON.parse(body)
-  if (!Array.isArray(parsed)) throw new Error('gallery index is not a JSON array')
+  if (!Array.isArray(parsed)) throw new Error(t('errors.theme.galleryIndexNotArray'))
 
   const themes: GalleryTheme[] = []
   for (const entry of parsed) {
@@ -432,7 +445,7 @@ async function readCappedBytes(response: Response, limitBytes: number): Promise<
   if (!reader) {
     const buffer = new Uint8Array(await response.arrayBuffer())
     if (buffer.byteLength > limitBytes) {
-      throw new Error(`screenshot too large (limit ${limitBytes} bytes)`)
+      throw new Error(t('errors.theme.screenshotTooLarge', { limit: limitBytes }))
     }
     return buffer
   }
@@ -444,7 +457,7 @@ async function readCappedBytes(response: Response, limitBytes: number): Promise<
     total += value.byteLength
     if (total > limitBytes) {
       await reader.cancel()
-      throw new Error(`screenshot too large (limit ${limitBytes} bytes)`)
+      throw new Error(t('errors.theme.screenshotTooLarge', { limit: limitBytes }))
     }
     chunks.push(value)
   }
@@ -467,13 +480,15 @@ export async function fetchGalleryImage(
 ): Promise<{ dataUri: string }> {
   const prefix = `${GALLERY_RAW_BASE}/`
   if (!url.startsWith(prefix) || !GALLERY_SCREENSHOT_PATH.test(url.slice(prefix.length))) {
-    throw new Error('screenshot URL is not an allowed gallery path')
+    throw new Error(t('errors.theme.screenshotPathNotAllowed'))
   }
   const response = await guardedFetch(url, fetchFn)
-  if (!response.ok) throw new Error(`screenshot download failed: ${response.status}`)
+  if (!response.ok) throw new Error(t('errors.theme.screenshotDownloadFailed', { status: response.status }))
   const contentType = (response.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase()
   if (!GALLERY_IMAGE_CONTENT_TYPES.includes(contentType)) {
-    throw new Error(`screenshot is not an allowed image type (content-type: ${contentType || 'none'})`)
+    throw new Error(contentType
+      ? t('errors.theme.screenshotTypeNotAllowed', { contentType })
+      : t('errors.theme.screenshotTypeMissing'))
   }
   const bytes = await readCappedBytes(response, MAX_GALLERY_IMAGE_BYTES)
   return { dataUri: `data:${contentType};base64,${Buffer.from(bytes).toString('base64')}` }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { clsx } from 'clsx'
+import { useTranslation } from 'react-i18next'
 import { RotateCcw, X } from 'lucide-react'
 import { useAppStore } from '../store'
 import {
@@ -13,6 +14,7 @@ import {
 import { resolveThemeVars } from '../../../shared/theme/resolve'
 import { applyThemeVars } from '../theme/engine'
 import { applyTheme, registerThemes, setThemePreviewActive } from '../utils/theme'
+import { themeDisplayName } from '../themes'
 import { forkTheme, withOverride, withSeed, withSyntax } from './theme-editor-helpers'
 
 export { forkTheme, withOverride, withSeed, withSyntax }
@@ -29,15 +31,21 @@ export interface ThemeEditorProps {
   onSaved: (id: string, warning?: string) => void
 }
 
-const SEED_LABELS: Record<SeedName, string> = {
-  app: 'App background',
-  surface: 'Surface',
-  text: 'Text',
-  accent: 'Accent',
-  success: 'Success',
-  warning: 'Warning',
-  error: 'Error',
-}
+const SEED_LABEL_KEYS = {
+  app: 'themes.editor.seedLabels.app',
+  surface: 'themes.editor.seedLabels.surface',
+  text: 'themes.editor.seedLabels.text',
+  accent: 'themes.editor.seedLabels.accent',
+  success: 'themes.editor.seedLabels.success',
+  warning: 'themes.editor.seedLabels.warning',
+  error: 'themes.editor.seedLabels.error',
+} as const satisfies Record<SeedName, string>
+
+// Shared key names with theme-gallery.tsx's badge for the same ThemeFile['kind'] enum.
+const THEME_KIND_KEYS = {
+  dark: 'themes.kind.dark',
+  light: 'themes.kind.light',
+} as const satisfies Record<ThemeFile['kind'], string>
 
 // The 7 seed tokens (app/surface/primary/accent/success/warning/error) are
 // edited via the seed rows, not the Advanced list — listing them twice would
@@ -79,11 +87,12 @@ function resolveSettingsThemeId(state: ReturnType<typeof useAppStore.getState>):
 export function ThemeEditor({
   baseTheme, baseId, isUserTheme, onClose, onSaved,
 }: ThemeEditorProps): React.JSX.Element {
+  const { t } = useTranslation()
   const settingsThemeId = useAppStore(resolveSettingsThemeId)
   const setSettingsDraft = useAppStore((s) => s.setSettingsDraft)
 
   const [draft, setDraft] = useState<ThemeFile>(() =>
-    isUserTheme ? structuredClone(baseTheme) : forkTheme(baseTheme, `${baseTheme.name} Copy`))
+    isUserTheme ? structuredClone(baseTheme) : forkTheme(baseTheme, t('themes.editor.copySuffix', { name: themeDisplayName(baseId, baseTheme.name) })))
   const previousKeys = useRef<string[]>([])
   const [effective, setEffective] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
@@ -192,8 +201,7 @@ export function ThemeEditor({
           // (the leftover old-id registry entry until restart is a known,
           // accepted limitation — see task report), passing the warning
           // through onSaved for the parent to render.
-          warning =
-            `Theme saved as "${draft.name}", but the old version could not be removed and may still appear in the list.`
+          warning = t('themes.editor.renameCleanupWarning', { name: draft.name })
         }
       }
       onSaved(id, warning)
@@ -216,13 +224,13 @@ export function ThemeEditor({
       <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg border border-border-strong bg-surface shadow-xl">
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <h2 className="text-base font-semibold text-primary">
-            {isUserTheme ? 'Edit theme' : 'Create theme'}
+            {isUserTheme ? t('themes.editor.editTitle') : t('themes.editor.createTitle')}
           </h2>
           <button
             type="button"
             onClick={cancel}
             className="rounded-md p-1 text-dim hover:bg-surface-hover transition-colors"
-            aria-label="Close"
+            aria-label={t('common.close')}
           >
             <X size={16} />
           </button>
@@ -232,7 +240,7 @@ export function ThemeEditor({
           <div className="flex items-center gap-4">
             <div className="flex-1">
               <label className="mb-1 block text-xs text-dim" htmlFor="theme-editor-name">
-                Name
+                {t('themes.editor.nameLabel')}
               </label>
               <input
                 id="theme-editor-name"
@@ -244,7 +252,7 @@ export function ThemeEditor({
               />
             </div>
             <div>
-              <span className="mb-1 block text-xs text-dim">Kind</span>
+              <span className="mb-1 block text-xs text-dim">{t('themes.editor.kindLabel')}</span>
               <div className="flex overflow-hidden rounded-md border border-border-strong">
                 {(['dark', 'light'] as const).map((kind) => (
                   <button
@@ -252,13 +260,13 @@ export function ThemeEditor({
                     type="button"
                     onClick={() => preview({ ...draft, kind })}
                     className={clsx(
-                      'px-3 py-1.5 text-sm capitalize transition-colors',
+                      'px-3 py-1.5 text-sm transition-colors',
                       draft.kind === kind
                         ? 'bg-accent text-white'
                         : 'text-muted hover:bg-surface-hover'
                     )}
                   >
-                    {kind}
+                    {t(THEME_KIND_KEYS[kind])}
                   </button>
                 ))}
               </div>
@@ -268,28 +276,28 @@ export function ThemeEditor({
           <div className="flex items-start gap-4">
             <div className="w-56">
               <label className="mb-1 block text-xs text-dim" htmlFor="theme-editor-author">
-                Author (optional)
+                {t('themes.editor.authorLabel')}
               </label>
               <input
                 id="theme-editor-author"
                 type="text"
                 value={draft.author ?? ''}
                 maxLength={MAX_THEME_AUTHOR_LENGTH}
-                placeholder="Shown in the gallery"
+                placeholder={t('themes.editor.authorPlaceholder')}
                 onChange={(event) => preview({ ...draft, author: event.target.value })}
                 className="w-full rounded-md border border-border-strong bg-surface px-3 py-1.5 text-sm text-primary focus:border-focus focus:outline-none"
               />
             </div>
             <div className="flex-1">
               <label className="mb-1 block text-xs text-dim" htmlFor="theme-editor-description">
-                Description (optional)
+                {t('themes.editor.descriptionLabel')}
               </label>
               <input
                 id="theme-editor-description"
                 type="text"
                 value={draft.description ?? ''}
                 maxLength={MAX_THEME_DESCRIPTION_LENGTH}
-                placeholder="One or two sentences about the theme"
+                placeholder={t('themes.editor.descriptionPlaceholder')}
                 onChange={(event) => preview({ ...draft, description: event.target.value })}
                 className="w-full rounded-md border border-border-strong bg-surface px-3 py-1.5 text-sm text-primary focus:border-focus focus:outline-none"
               />
@@ -300,7 +308,7 @@ export function ThemeEditor({
             {SEED_NAMES.map((seed) => (
               <div key={seed} className="flex items-center justify-between gap-3">
                 <label className="text-sm text-primary" htmlFor={`theme-editor-seed-${seed}`}>
-                  {SEED_LABELS[seed]}
+                  {t(SEED_LABEL_KEYS[seed])}
                 </label>
                 <div className="flex items-center gap-2">
                   <input
@@ -324,7 +332,7 @@ export function ThemeEditor({
 
           <details className="rounded-md border border-border">
             <summary className="cursor-pointer select-none px-3 py-2 text-sm text-secondary">
-              Advanced
+              {t('themes.editor.advancedSummary')}
             </summary>
             <div className="space-y-1 border-t border-border px-3 py-2">
               {ADVANCED_TOKENS.map((token) => {
@@ -345,7 +353,7 @@ export function ThemeEditor({
 
           <details className="rounded-md border border-border">
             <summary className="cursor-pointer select-none px-3 py-2 text-sm text-secondary">
-              Syntax colors
+              {t('themes.editor.syntaxColorsSummary')}
             </summary>
             <div className="space-y-1 border-t border-border px-3 py-2">
               {SYNTAX_KEYS.map((key: SyntaxKey) => {
@@ -373,7 +381,7 @@ export function ThemeEditor({
               onClick={cancel}
               className="rounded-md border border-border-strong px-4 py-2 text-sm text-muted hover:bg-surface-hover transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="button"
@@ -381,7 +389,7 @@ export function ThemeEditor({
               disabled={nameEmpty || saving}
               className="rounded-md bg-accent px-4 py-2 text-sm text-white hover:bg-accent-hover transition-colors disabled:opacity-50"
             >
-              {saving ? 'Saving…' : 'Save'}
+              {saving ? t('themes.editor.savingLabel') : t('common.save')}
             </button>
           </div>
         </div>
@@ -399,6 +407,7 @@ function TokenPinRow({
   onPin: (value: string) => void
   onReset: () => void
 }): React.JSX.Element {
+  const { t } = useTranslation()
   const pinned = overrideValue !== undefined
   return (
     <div className="flex items-center justify-between gap-3 py-1">
@@ -420,7 +429,7 @@ function TokenPinRow({
           type="button"
           onClick={onReset}
           disabled={!pinned}
-          title="Reset to derived value"
+          title={t('themes.editor.resetToDerivedTitle')}
           className="rounded-md border border-border-strong p-1 text-dim hover:bg-surface-hover transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
         >
           <RotateCcw size={12} />

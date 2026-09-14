@@ -12,12 +12,13 @@ const SESSION_ID = 'ba5eba11-0000-4000-8000-000000000001'
 const WORKSPACE_ID = 'ws-1'
 
 let isGlobalWorkflowOpen: (scope: WorkflowPanelScope) => boolean
+let isAbortShortcut: (event: { key: string; defaultPrevented: boolean }, isStreaming: boolean) => boolean
 
 // hooks.ts pulls in the store, which reaches for the preload bridge inside its
 // actions. A bare stub is enough to import the module under test.
 before(async () => {
   ;(globalThis as unknown as { window: unknown }).window = { piDesktop: {} }
-  ;({ isGlobalWorkflowOpen } = await import('./hooks'))
+  ;({ isGlobalWorkflowOpen, isAbortShortcut } = await import('./hooks'))
 })
 
 test('an unscoped open panel is the global workflow view', () => {
@@ -74,4 +75,14 @@ test('a closed panel is never the global view, whatever scope it kept', () => {
     }),
     false
   )
+})
+
+test('Escape aborts a streaming turn', () => {
+  assert.equal(isAbortShortcut({ key: 'Escape', defaultPrevented: false }, true), true)
+  assert.equal(isAbortShortcut({ key: 'Escape', defaultPrevented: false }, false), false)
+  assert.equal(isAbortShortcut({ key: 'Enter', defaultPrevented: false }, true), false)
+})
+
+test('Escape already consumed by another surface does not abort the turn', () => {
+  assert.equal(isAbortShortcut({ key: 'Escape', defaultPrevented: true }, true), false)
 })

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { clsx } from 'clsx'
+import { Trans, useTranslation } from 'react-i18next'
 import { Plus, Trash2, Save, RefreshCw, AlertTriangle } from 'lucide-react'
 import { useAppStore } from '../store'
 import { withImageInput } from '../../../shared/models-config'
@@ -49,6 +50,7 @@ function rowsToConfig(rows: ProviderRow[]): ModelsConfig {
 }
 
 export function CustomModelsEditor(): React.JSX.Element {
+  const { t } = useTranslation()
   const customModels = useAppStore((s) => s.customModels)
   const customModelsError = useAppStore((s) => s.customModelsError)
   const loadCustomModels = useAppStore((s) => s.loadCustomModels)
@@ -58,7 +60,7 @@ export function CustomModelsEditor(): React.JSX.Element {
   // exactly that so they can never name a file the save does not touch.
   const modelsFile = useAppStore((s) => s.customModelsFile)
   const engineLabel = agentEngineLabel(modelsFile?.engine ?? null) ?? DEFAULT_AGENT_ENGINE_LABEL
-  const modelsFileName = modelsFile?.name ?? 'models file'
+  const modelsFileName = modelsFile?.name ?? t('customModels.defaultFileName')
   const modelsFilePath = modelsFile?.file ?? modelsFileName
 
   const [rows, setRows] = useState<ProviderRow[]>([])
@@ -102,8 +104,8 @@ export function CustomModelsEditor(): React.JSX.Element {
     // Duplicate/empty provider keys collapse in object form, so check here.
     const keys = rows.map((r) => r.key.trim())
     const localErrors: string[] = []
-    if (keys.some((k) => k.length === 0)) localErrors.push('Every provider needs a non-empty key')
-    if (new Set(keys).size !== keys.length) localErrors.push('Provider keys must be unique')
+    if (keys.some((k) => k.length === 0)) localErrors.push(t('customModels.errors.emptyKey'))
+    if (new Set(keys).size !== keys.length) localErrors.push(t('customModels.errors.duplicateKeys'))
     if (localErrors.length > 0) {
       setErrors(localErrors)
       return
@@ -113,7 +115,7 @@ export function CustomModelsEditor(): React.JSX.Element {
       setErrors([])
       setSaved(true)
     } else {
-      setErrors(result.errors ?? ['Save failed'])
+      setErrors(result.errors ?? [t('customModels.errors.saveFailed')])
     }
   }
 
@@ -122,13 +124,13 @@ export function CustomModelsEditor(): React.JSX.Element {
       <div className="flex items-start gap-2 text-sm text-warning">
         <AlertTriangle size={16} className="mt-0.5 shrink-0" />
         <div>
-          <p>Could not load {modelsFileName} safely, so editing is disabled to avoid overwriting it.</p>
+          <p>{t('customModels.loadError.message', { fileName: modelsFileName })}</p>
           <p className="mt-1 text-xs text-dim">{customModelsError}</p>
           <button
             onClick={() => loadCustomModels()}
             className="mt-2 rounded border border-border-strong px-2 py-1 text-xs text-secondary hover:bg-surface-hover"
           >
-            Retry
+            {t('common.retry')}
           </button>
         </div>
       </div>
@@ -138,12 +140,18 @@ export function CustomModelsEditor(): React.JSX.Element {
   return (
     <div className="space-y-4">
       <p className="text-xs text-dim">
-        Custom providers and models in <code>{modelsFilePath}</code>. Applied when {engineLabel} restarts.
+        <Trans
+          i18nKey="customModels.description"
+          values={{ path: modelsFilePath, engine: engineLabel }}
+          components={{ code: <code /> }}
+        />
       </p>
       <p className="text-xs text-faint">
-        Heads-up: imported models may load without capability flags set. If a model supports
-        thinking, tick <span className="text-muted">reasoning</span>; if it accepts images,
-        tick <span className="text-muted">vision</span>. Restart {engineLabel} to apply.
+        <Trans
+          i18nKey="customModels.capabilityHint"
+          values={{ engine: engineLabel }}
+          components={{ reasoning: <span className="text-muted" />, vision: <span className="text-muted" /> }}
+        />
       </p>
 
       {rows.map((row, pi) => (
@@ -152,13 +160,13 @@ export function CustomModelsEditor(): React.JSX.Element {
             <input
               value={row.key}
               onChange={(e) => patchProvider(pi, { key: e.target.value })}
-              placeholder="provider-key (e.g. ollama)"
+              placeholder={t('customModels.providerKeyPlaceholder')}
               className="flex-1 rounded border border-border-strong bg-surface px-2 py-1 text-sm text-primary focus:border-focus focus:outline-none"
             />
             <button
               onClick={() => removeProvider(pi)}
               className="rounded p-1 text-dim hover:bg-surface-hover hover:text-error"
-              title="Remove provider"
+              title={t('customModels.removeProviderTitle')}
             >
               <Trash2 size={14} />
             </button>
@@ -168,7 +176,7 @@ export function CustomModelsEditor(): React.JSX.Element {
             <input
               value={row.baseUrl}
               onChange={(e) => patchProvider(pi, { baseUrl: e.target.value })}
-              placeholder="baseUrl"
+              placeholder={t('customModels.baseUrlPlaceholder')}
               className="rounded border border-border-strong bg-surface px-2 py-1 text-sm text-primary focus:border-focus focus:outline-none"
             />
             <select
@@ -188,12 +196,12 @@ export function CustomModelsEditor(): React.JSX.Element {
               onChange={(e) => patchProviderCompat(pi, { supportsReasoningEffort: e.target.checked })}
               className="accent-accent"
             />
-            supports reasoning effort
+            {t('customModels.supportsReasoningEffortLabel')}
           </label>
           <input
             value={row.apiKey}
             onChange={(e) => patchProvider(pi, { apiKey: e.target.value })}
-            placeholder="apiKey — literal, $ENV_VAR, or !shell-command"
+            placeholder={t('customModels.apiKeyPlaceholder')}
             className="mt-2 w-full rounded border border-border-strong bg-surface px-2 py-1 text-sm text-primary focus:border-focus focus:outline-none"
           />
 
@@ -204,26 +212,26 @@ export function CustomModelsEditor(): React.JSX.Element {
                   <input
                     value={model.id ?? ''}
                     onChange={(e) => patchModel(pi, mi, { id: e.target.value })}
-                    placeholder="model id (required)"
+                    placeholder={t('customModels.modelIdPlaceholder')}
                     className="flex-1 rounded border border-border-strong bg-surface px-2 py-1 text-xs text-primary focus:border-focus focus:outline-none"
                   />
                   <input
                     value={model.name ?? ''}
                     onChange={(e) => patchModel(pi, mi, { name: e.target.value })}
-                    placeholder="name"
+                    placeholder={t('customModels.modelNamePlaceholder')}
                     className="flex-1 rounded border border-border-strong bg-surface px-2 py-1 text-xs text-primary focus:border-focus focus:outline-none"
                   />
                   <button
                     onClick={() => removeModel(pi, mi)}
                     className="rounded p-1 text-dim hover:bg-surface-hover hover:text-error"
-                    title="Remove model"
+                    title={t('customModels.removeModelTitle')}
                   >
                     <Trash2 size={12} />
                   </button>
                 </div>
                 <div className="mt-2 grid grid-cols-4 gap-2">
                   <label className="flex items-center gap-1 text-[11px] text-dim">
-                    ctx
+                    {t('customModels.contextWindowLabel')}
                     <input
                       type="number"
                       value={model.contextWindow ?? ''}
@@ -236,7 +244,7 @@ export function CustomModelsEditor(): React.JSX.Element {
                     />
                   </label>
                   <label className="flex items-center gap-1 text-[11px] text-dim">
-                    max
+                    {t('customModels.maxTokensLabel')}
                     <input
                       type="number"
                       value={model.maxTokens ?? ''}
@@ -255,7 +263,7 @@ export function CustomModelsEditor(): React.JSX.Element {
                       onChange={(e) => patchModel(pi, mi, { reasoning: e.target.checked })}
                       className="accent-accent"
                     />
-                    reasoning
+                    {t('customModels.reasoningLabel')}
                   </label>
                   <label className="flex items-center gap-1 text-[11px] text-dim">
                     <input
@@ -266,7 +274,7 @@ export function CustomModelsEditor(): React.JSX.Element {
                       }
                       className="accent-accent"
                     />
-                    vision
+                    {t('customModels.visionLabel')}
                   </label>
                 </div>
               </div>
@@ -275,7 +283,7 @@ export function CustomModelsEditor(): React.JSX.Element {
               onClick={() => addModel(pi)}
               className="flex items-center gap-1 text-xs text-muted hover:text-primary"
             >
-              <Plus size={12} /> Add model
+              <Plus size={12} /> {t('customModels.addModelButton')}
             </button>
           </div>
         </div>
@@ -285,7 +293,7 @@ export function CustomModelsEditor(): React.JSX.Element {
         onClick={addProvider}
         className="flex items-center gap-1 text-sm text-muted hover:text-primary"
       >
-        <Plus size={14} /> Add provider
+        <Plus size={14} /> {t('customModels.addProviderButton')}
       </button>
 
       {errors.length > 0 && (
@@ -302,7 +310,7 @@ export function CustomModelsEditor(): React.JSX.Element {
           className="flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm text-white hover:bg-accent-hover transition-colors"
         >
           <Save size={14} />
-          Save {modelsFileName}
+          {t('customModels.saveButton', { fileName: modelsFileName })}
         </button>
         {saved && (
           <button
@@ -313,7 +321,7 @@ export function CustomModelsEditor(): React.JSX.Element {
             )}
           >
             <RefreshCw size={14} />
-            Saved — Restart {engineLabel} to apply
+            {t('customModels.savedRestartButton', { engine: engineLabel })}
           </button>
         )}
       </div>

@@ -1,5 +1,6 @@
 import { useAppStore } from '../store'
 import { useState, useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
 import {
   ChevronDown,
@@ -111,6 +112,7 @@ function AgentRow({ line }: { line: AgentLine }): React.JSX.Element {
 }
 
 export function SubagentProgress(): React.JSX.Element | null {
+  const { t } = useTranslation()
   const subagentProgress = useAppStore((state) => state.subagentProgress)
   const extensionStatuses = useAppStore((state) => state.extensionStatuses)
 
@@ -182,8 +184,8 @@ export function SubagentProgress(): React.JSX.Element | null {
   const listMaxH = MAX_ROWS * ROW_H
 
   const summary = hasRunning
-    ? `${runningCount} subagent${runningCount === 1 ? '' : 's'} running`
-    : `${totalCount} subagent${totalCount === 1 ? '' : 's'} done`
+    ? t('chat.subagentProgress.running', { count: runningCount })
+    : t('chat.subagentProgress.done', { count: totalCount })
 
   return (
     // Flush to the pill below: top rounded, bottom square so it reads as a cap.

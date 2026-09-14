@@ -1,8 +1,10 @@
 import { AlertCircle, CheckCircle2, Loader2, XCircle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import type { SessionRuntimeInfo } from '../../../shared/ipc-contracts'
 import { DEFAULT_AGENT_ENGINE_LABEL, agentEngineLabel } from '../../../shared/agent-engine-label'
 
 export function SessionRuntimeIndicator({ runtime }: { runtime: SessionRuntimeInfo }): React.JSX.Element | null {
+  const { t } = useTranslation()
   const working = runtime.activity === 'working' || runtime.status === 'starting'
   const needsApproval = runtime.activity === 'needs-approval'
   const completed = runtime.activity === 'completed'
@@ -12,16 +14,30 @@ export function SessionRuntimeIndicator({ runtime }: { runtime: SessionRuntimeIn
   const agent = agentEngineLabel(runtime.engine) ?? DEFAULT_AGENT_ENGINE_LABEL
 
   if (working) {
-    return <Loader2 size={12} className="shrink-0 animate-spin text-accent-fg" aria-label={`${agent} is working`} />
+    return (
+      <Loader2
+        size={12}
+        className="shrink-0 animate-spin text-accent-fg"
+        aria-label={t('sessions.runtime.working', { agent })}
+      />
+    )
   }
   if (needsApproval) {
-    return <AlertCircle size={12} className="shrink-0 text-warning" aria-label={`${agent} is waiting for approval`} />
+    return (
+      <AlertCircle
+        size={12}
+        className="shrink-0 text-warning"
+        aria-label={t('sessions.runtime.needsApproval', { agent })}
+      />
+    )
   }
   if (completed) {
-    return <CheckCircle2 size={12} className="shrink-0 text-success" aria-label={`${agent} finished`} />
+    return (
+      <CheckCircle2 size={12} className="shrink-0 text-success" aria-label={t('sessions.runtime.completed', { agent })} />
+    )
   }
   if (failed) {
-    return <XCircle size={12} className="shrink-0 text-error" aria-label={`${agent} stopped with an error`} />
+    return <XCircle size={12} className="shrink-0 text-error" aria-label={t('sessions.runtime.failed', { agent })} />
   }
   return null
 }

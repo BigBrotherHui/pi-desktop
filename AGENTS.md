@@ -33,6 +33,17 @@ Project is currently in **Alpha**. APIs, IPC contracts, on-disk config formats, 
 - Per-workspace trust gate: an untrusted workspace's own `.pi-desktop/permission-rules.json` allow rules are ignored, and its HTML preview runs without scripts/network, until the user trusts the workspace
 - Attachment reads limited to picked or in-workspace paths; session deletion confined to the Pi sessions dir; package specs validated before the Pi CLI runs
 
+### Interface text
+
+- One i18next default instance per process (`src/shared/i18n`), starting in English; language files live in `resources/locales/<code>/translation.json`
+- Components call `useTranslation()` from `react-i18next`; other code imports `t` from `src/shared/i18n`. Text is built when called, never stored translated at module load
+- `tEnglish` (also from `src/shared/i18n`) is used instead of `t` for logs, `appLog.*`, and the diagnostics report, which stay English regardless of the interface language
+- Product names ("Pi Desktop", "Pi", "OMP") are never translation keys — they come from `agentEngineLabel()`, `councilAgentLabel()`, or a named constant, never from a language file
+- `npm run lint` runs `i18next-cli lint` and `i18next-cli extract --ci --dry-run`, so hard-coded text and stale keys fail CI
+- Code never decides behavior from a translated display string; it reads underlying values (failure codes, `kind`/`ToolKind` enums, error types) instead
+- `t` from `useTranslation()` changes identity on every language switch. List it in the deps of a `useMemo`/`useCallback` that builds text, but never in the deps of a `useEffect` that does I/O or resets state (a re-run once discarded unsaved editor edits): keep the outcome as data and translate it at render (`utils/preview-load-error.ts`)
+- `i18next-cli extract` finds keys only in `t('literal.key')` calls on an identifier named `t`, or through a key map declared in the same file. A translator passed to a helper must be a parameter named `t`; a key map imported from another file is invisible, and `removeUnusedKeys` deletes its keys. Share labels through a helper that calls `t` directly (`utils/process-status-label.ts`)
+
 ## Project Structure
 
 Modules have colocated `*.test.ts` files; `resources/` has tests too. CI runs `npx tsx --test $(find src resources -name '*.test.ts')`.
@@ -46,10 +57,13 @@ src/
 │   ├── models-config.ts          # Custom models.json validate/merge
 │   ├── package-filter.ts         # Tokenized catalog search, shared main+renderer
 │   ├── package-spec.ts           # Validate package specs before the Pi CLI runs
+│   ├── version-compare.ts        # x.y.z-prerelease ordering (app and package update checks)
 │   ├── path-compare.ts           # Platform-aware path equality (win32 case-fold); main+renderer
 │   ├── folder-drop.ts            # Pure helpers for drag-drop folder → workspace
 │   ├── untrusted-data.ts         # Wrap file/agent text as a labeled untrusted-data block
 │   ├── agent-engine-label.ts     # Display names for the Pi/OMP engines (every surface reads this one map)
+│   ├── product-name.ts           # "Pi Desktop" display name (a named constant, never a translation key)
+│   ├── i18n/                     # i18next instance, t/tEnglish, bundled languages, OS-language resolver, pseudo-language, locale checks
 │   ├── pi-command.ts             # Slash-command filtering
 │   ├── fork-point.ts             # Fork/branch message helpers
 │   ├── session-lineage.ts        # Cross-session lineage tree
@@ -59,6 +73,7 @@ src/
 │   └── theme/                    # Theme-file format, resolver, syntax defaults, tokens
 ├── main/
 │   ├── index.ts                  # App lifecycle, window creation, hardening
+│   ├── i18n.ts                   # Main-process language: OS language list, pseudo-language gate, apply the setting
 │   ├── ipc-handlers.ts           # IPC composition root (creates context, calls ipc/ modules)
 │   ├── ipc/                      # Domain-specific IPC handler modules (pi, session, files, ...)
 │   ├── app-log.ts                # Main-process log: ring buffer + JSONL file in the GUI data dir
@@ -85,6 +100,7 @@ src/
 │   ├── session-name.ts           # Read a session's display name from its .jsonl
 │   ├── activity-stats.ts         # Persisted per-day message/token/model stats store
 │   ├── package-catalog.ts        # pi.dev catalog crawl, concurrent + prefetched + cached
+│   ├── package-updates.ts        # npm-registry update check + OMP npm-plugin update spec
 │   ├── auto-tag.ts               # Machine-derived session tags
 │   ├── archived-sessions.ts      # Archived session persistence
 │   ├── app-data-paths.ts         # Resolve app data directories
@@ -119,6 +135,7 @@ src/
         ├── store.ts              # Zustand state management
         ├── hooks.ts              # Event subscriptions, lifecycle
         ├── global.d.ts           # Renderer ambient types
+        ├── i18n.ts               # Boot language, language picker options, apply the language setting
         ├── message-parsing.ts    # Pi messages -> display messages
         ├── message-grouping.ts   # Tool-name labels and message grouping
         ├── theme/engine.ts       # Apply a resolved theme to the document
@@ -137,6 +154,8 @@ src/
         │   ├── format-relative-time.ts # Relative-time labels capped at days
         │   ├── relative-time.tsx # Shared ticking "now" for relative labels
         │   ├── stale-guard.ts    # Last-write-wins guard for overlapping loads
+        │   ├── preview-load-error.ts # Preview load/save failure kept as data, translated at render
+        │   ├── process-status-label.ts # Translated agent process status (status popover, Diagnostics)
         │   └── workflow-runs.ts  # Session id used to scope workflow runs
         └── components/
             ├── sidebar.tsx        # Workspace switcher, nav, sessions grouped by folder, inline rename
@@ -164,7 +183,7 @@ src/
             ├── code-editor-highlight.ts  # Theme-aware highlight style
             ├── status-bar.tsx     # Model selector, thinking, stats
             ├── status-popover.tsx # System status popup
-            ├── settings-panel.tsx # Theme, font, behavior, council settings (live-preview draft)
+            ├── settings-panel.tsx # Language, theme, font, behavior, council settings (live-preview draft)
             ├── custom-models-editor.tsx # Custom models/providers editor
             ├── permission-selector.tsx # Permission mode selector
             ├── permission-mode.ts # Permission mode helpers
@@ -174,7 +193,7 @@ src/
             ├── session-menu-position.ts # Session menu placement
             ├── timeline.tsx       # Agent activity timeline
             ├── review-rail.tsx    # Permissions, approvals, changed files (toggleable)
-            ├── package-browser.tsx # Package/skill browser, fetch-once + local filter
+            ├── package-browser.tsx # Package/skill browser, fetch-once + local filter, update check
             ├── skills-panel.tsx   # Skills browser
             ├── notes-panel.tsx    # Reusable prompts/notes
             ├── note-picker.tsx    # Insert a saved note
@@ -214,7 +233,7 @@ src/
 - Every surface that names the running agent (status bar, empty chat, permission prompts, Diagnostics, session tags) reads `shared/agent-engine-label.ts`; the permission extension gets the label via `PI_DESKTOP_AGENT_LABEL`. Session rows show the Pi/OMP tag only when both engines appear in one list.
 - OMP specifics: protocol-v2 chunked frames are decoded with the limits the engine advertises in its ready frame; OMP starts subagents in a new process group, so shutdown walks the descendant tree before signalling; OMP's plugin verbs back the package actions.
 - OMP RPC gaps the GUI bridges: OMP has no `fork`/`clone`/`get_fork_messages`/`get_commands`. Fork maps to OMP's `branch` (same entryId argument), fork candidates are read from the session file (`omp-fork-points.ts`), the Clone action is hidden under OMP, and the command catalog uses `get_available_commands` (`skills-mcp-handlers.ts`).
-- Per-engine config files: Pi keeps `~/.pi/agent/models.json` (JSON); OMP 18 keeps `~/.omp/agent/models.yml` (YAML) — `models-file.ts` resolves and (de)serializes both, and keeps reading a not-yet-migrated OMP `models.json`. OMP's installed-package list comes from `omp plugin list --json` (`omp-plugin-list.ts`), not from a settings.json `packages` array. Per-engine IPC decisions read `ipc/active-engine.ts` so the active session's engine wins over the configured default.
+- Per-engine config files: Pi keeps `~/.pi/agent/models.json` (JSON); OMP 18 keeps `~/.omp/agent/models.yml` (YAML) — `models-file.ts` resolves and (de)serializes both, and keeps reading a not-yet-migrated OMP `models.json`. OMP's installed-package list comes from `omp plugin list --json` (`omp-plugin-list.ts`), not from a settings.json `packages` array. `omp plugin upgrade` covers marketplace plugins only, so an npm plugin updates by reinstalling from its dist-tag with its feature selection and disabled state carried over (`package-updates.ts`). Per-engine IPC decisions read `ipc/active-engine.ts` so the active session's engine wins over the configured default.
 - Session names: Pi appends `session_info` records; OMP rewrites a fixed first-line `{"type":"title"}` slot. `session-name.ts`/`session-metadata.ts` read both (session_info outranks the title slot).
 - Skills are listed per engine (`skills-discovery.ts`): Pi scans `~/.pi/agent/skills`, `~/.agents/skills` and project `.pi/skills`/`.agents/skills` recursively; OMP scans `.omp`, `.claude` and `.agents` roots one level deep. Skills only the other engine can load are never shown. When the engine is running, plugin-shipped skills from its command catalog are merged in (`rpc:`-prefixed pseudo-paths render from the description).
 
@@ -360,6 +379,7 @@ Click the status icon in the sidebar header to see:
   - Trust posture: a workspace's `.pi-desktop/permission-rules.json` is repo content, so its allow rules take effect only after the user explicitly trusts the workspace (persisted in `trusted-workspaces.json`; surfaced as a trust prompt on open and a control in Settings). Until trusted, the repo can only add deny rules — it cannot suppress ask-mode prompts. Rule globs match raw tool input strings only (no path canonicalization, no command parsing), so rules are a guardrail against accidents, not a security sandbox.
 - Custom models & providers editor — edits the active engine's models file: `~/.pi/agent/models.json` (Pi) or `~/.omp/agent/models.yml` (OMP; a not-yet-migrated `models.json` is kept until OMP migrates it). Main reports the resolved file so the editor labels always match; applied on engine restart
 - All settings persisted to `~/.pi-desktop-gui/settings.json`; defaults come from the single shared `src/shared/default-settings.ts` (used to seed the file AND for the renderer's initial/Reset values)
+- Language (`language`, default `system`; resolved by `src/shared/i18n/resolve.ts` against `app.getPreferredSystemLanguages()`; applies on Save; `PI_DESKTOP_PSEUDO_LANGUAGE=1` offers the `en-XA` test language)
 
 ### Context Menu
 
@@ -377,7 +397,7 @@ All communication between renderer and main goes through a typed preload bridge:
 Renderer → preload (contextBridge) → IPC → main handlers → Pi RPC / File system
 ```
 
-- 139 IPC channels, all validated (count drifts as features land — check `IPC_CHANNELS` in `src/shared/ipc-contracts.ts` for the current number rather than trusting this doc)
+- 141 IPC channels, all validated (count drifts as features land — check `IPC_CHANNELS` in `src/shared/ipc-contracts.ts` for the current number rather than trusting this doc)
 - Pi events forwarded from main to renderer via `webContents.send`
 - Extension UI protocol supported (select, confirm, input, editor dialogs)
 
@@ -410,6 +430,8 @@ data-dir migration the GUI's files live under the OS app-data dir
 | `~/.omp/plugins/` | OMP plugin store (listed via `omp plugin list --json`) |
 | `~/.omp/agent/mcp.json` | OMP MCP servers (read for the status popover) |
 | `~/.pi/workflows/` | Workflow runs and projects (Mission Control) |
+| `pi-desktop.boot-theme` (renderer `localStorage`) | Last-applied theme colors, painted before the first frame so it is not a flash of the default theme |
+| `pi-desktop.boot-language` (renderer `localStorage`) | Last-resolved interface language, shown before Settings loads for the same reason |
 
 ## Distribution
 

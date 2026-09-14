@@ -6,6 +6,7 @@ import { stat } from 'fs/promises'
 import { resolve } from 'path'
 import { isString, isObject } from './validation'
 import type { IpcContext } from './context'
+import { t } from '../../shared/i18n'
 
 type OpenDialogMode = NonNullable<OpenDialogOptions['mode']>
 
@@ -81,7 +82,7 @@ export function registerSystemHandlers(ctx: IpcContext): void {
   ipcMain.handle(IPC_CHANNELS.SYSTEM_OPEN_EXTERNAL, async (_event, url: unknown) => {
     if (!isString(url)) throw new Error('url must be a string')
     if (!url.startsWith('https://') && !url.startsWith('http://')) {
-      throw new Error('Only http(s) URLs are allowed')
+      throw new Error(t('errors.system.externalUrlHttpOnly'))
     }
     await shell.openExternal(url)
   })

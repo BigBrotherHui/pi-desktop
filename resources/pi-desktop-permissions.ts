@@ -1,5 +1,6 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent'
 import { decideToolCall, loadEffectiveRules } from './permission-rules'
+import { fillTemplate, loadPermissionPromptText } from './permission-prompt-text'
 
 const mode = process.env.PI_DESKTOP_PERMISSION_MODE
 const globalRulesPath = process.env.PI_DESKTOP_PERMISSION_RULES_PATH ?? null
@@ -11,6 +12,11 @@ const workspaceTrusted = process.env.PI_DESKTOP_WORKSPACE_TRUSTED === '1'
 // extension cannot detect its own host, so an unset value means an older GUI
 // and falls back to Pi rather than guessing.
 const agentLabel = process.env.PI_DESKTOP_AGENT_LABEL || 'Pi'
+// Read once: a running Pi keeps its language until it restarts.
+const promptText = loadPermissionPromptText(
+  process.env.PI_DESKTOP_LOCALES_DIR ?? null,
+  process.env.PI_DESKTOP_LANGUAGE ?? null,
+)
 const MAX_INPUT_SUMMARY_LENGTH = 2000
 
 function summarizeInput(input: unknown): string {
@@ -19,8 +25,8 @@ function summarizeInput(input: unknown): string {
   const path = typeof data.path === 'string' ? data.path : undefined
   const command = typeof data.command === 'string' ? data.command : undefined
 
-  if (path) return `Target: ${path}`
-  if (command) return `Command:\n${command}`
+  if (path) return fillTemplate(promptText.target, { path })
+  if (command) return fillTemplate(promptText.command, { command })
 
   return JSON.stringify(data, null, 2).slice(0, MAX_INPUT_SUMMARY_LENGTH)
 }
@@ -39,9 +45,9 @@ export default function piDesktopPermissions(pi: ExtensionAPI): void {
 
     const summary = summarizeInput(event.input)
     const confirmed = await ctx.ui.confirm(
-      `Allow ${event.toolName}?`,
+      fillTemplate(promptText.title, { tool: event.toolName }),
       [
-        `${agentLabel} wants to run the ${event.toolName} tool.`,
+        fillTemplate(promptText.body, { agent: agentLabel, tool: event.toolName }),
         summary,
       ].filter(Boolean).join('\n\n')
     )

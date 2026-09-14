@@ -26,9 +26,12 @@ import { assertTrustedSender } from './validation'
 import { getGlobalPermissionRulesPath, applyResumePreference, applyPermissionModeToStartOptions } from './pi-start-options'
 import { loadAppSettings, saveAppSettings } from './settings'
 import type { IpcContext } from './context'
+import { t } from '../../shared/i18n'
 
 const MAX_PERMISSION_RULES_FILE_BYTES = 512 * 1024
-const PERMISSION_RULES_FILE_FILTER: Electron.FileFilter = { name: 'Permission Rules', extensions: ['json'] }
+function permissionRulesFileFilter(): Electron.FileFilter {
+  return { name: t('dialogs.permissionRules.fileFilterName'), extensions: ['json'] }
+}
 
 function validatePermissionRulesScope(scope: unknown): PermissionRulesScope {
   if (scope === 'global' || scope === 'workspace') return scope
@@ -37,7 +40,7 @@ function validatePermissionRulesScope(scope: unknown): PermissionRulesScope {
 
 function activeWorkspaceRulesPath(workspaceManager: WorkspaceManager): { path: string; workspacePath: string } {
   const activeWs = workspaceManager.getActiveWorkspace()
-  if (!activeWs) throw new Error('No active workspace')
+  if (!activeWs) throw new Error(t('errors.workspace.noneActive'))
   return { path: workspaceRulesPath(activeWs.path), workspacePath: activeWs.path }
 }
 
@@ -118,16 +121,16 @@ export function registerPermissionRulesHandlers(ctx: IpcContext): void {
 
   ipcMain.handle(IPC_CHANNELS.PERMISSION_RULES_IMPORT, async (): Promise<PermissionRulesImportResult> => {
     const result = await dialog.showOpenDialog({
-      title: 'Import Permission Rules',
+      title: t('dialogs.permissionRules.importTitle'),
       properties: ['openFile'],
-      filters: [PERMISSION_RULES_FILE_FILTER],
+      filters: [permissionRulesFileFilter()],
     })
     if (result.canceled || result.filePaths.length === 0) return { ok: false, canceled: true }
     try {
       const filePath = result.filePaths[0]
       const { size } = await stat(filePath)
       if (size > MAX_PERMISSION_RULES_FILE_BYTES) {
-        return { ok: false, error: `rules file too large (limit ${MAX_PERMISSION_RULES_FILE_BYTES} bytes)` }
+        return { ok: false, error: t('errors.permissionRules.fileTooLarge', { limit: MAX_PERMISSION_RULES_FILE_BYTES }) }
       }
       const file = validatePermissionRulesFile(JSON.parse(await readFile(filePath, 'utf-8')))
       return { ok: true, rules: file.rules }
@@ -144,9 +147,9 @@ export function registerPermissionRulesHandlers(ctx: IpcContext): void {
       return { ok: false, error: error instanceof Error ? error.message : String(error) }
     }
     const result = await dialog.showSaveDialog({
-      title: 'Export Permission Rules',
+      title: t('dialogs.permissionRules.exportTitle'),
       defaultPath: PERMISSION_RULES_FILE_NAME,
-      filters: [PERMISSION_RULES_FILE_FILTER],
+      filters: [permissionRulesFileFilter()],
     })
     if (result.canceled || !result.filePath) return { ok: false, canceled: true }
     try {
@@ -168,7 +171,7 @@ export function registerPermissionRulesHandlers(ctx: IpcContext): void {
       assertTrustedSender(event)
       if (typeof trusted !== 'boolean') throw new Error('trusted must be a boolean')
       const activeWs = workspaceManager.getActiveWorkspace()
-      if (!activeWs) throw new Error('No active workspace')
+      if (!activeWs) throw new Error(t('errors.workspace.noneActive'))
 
       if (trusted !== workspaceTrustStore.isTrusted(activeWs.path)) {
         if (trusted) {

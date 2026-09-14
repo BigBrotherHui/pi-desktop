@@ -13,6 +13,7 @@ import { runConsultants, runArbiter, defaultSpawnConsultant, type ArbiterRequest
 import { access } from 'fs/promises'
 import { isString, isObject } from './validation'
 import type { IpcContext } from './context'
+import { t } from '../../shared/i18n'
 
 /**
  * Resolve the working directory for council runs: the active workspace, never
@@ -21,7 +22,7 @@ import type { IpcContext } from './context'
  */
 async function resolveCouncilCwd(workspaceManager: WorkspaceManager): Promise<string> {
   const activeWs = workspaceManager.getActiveWorkspace()
-  if (!activeWs) throw new Error('No active workspace')
+  if (!activeWs) throw new Error(t('errors.workspace.noneActive'))
   try {
     await access(activeWs.path)
     return activeWs.path
@@ -117,7 +118,7 @@ export function registerCouncilHandlers(ctx: IpcContext): void {
         onProgress: (chunk) => broadcast(IPC_CHANNELS.EVENT_COUNCIL_PROGRESS, { id: 'pi', chunk }),
       })
       if (!outcome.ok) {
-        throw new Error(outcome.timedOut ? 'Arbiter timed out' : outcome.error ?? 'Arbiter failed')
+        throw new Error(outcome.timedOut ? t('errors.council.arbiterTimedOut') : outcome.error ?? t('errors.council.arbiterFailed'))
       }
       return { plan: outcome.output.trim() }
     },

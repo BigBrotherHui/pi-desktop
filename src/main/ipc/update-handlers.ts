@@ -1,6 +1,7 @@
 import { ipcMain, app } from 'electron'
 import type { UpdateCheckResult } from '../../shared/ipc-contracts'
 import { IPC_CHANNELS } from '../../shared/ipc-contracts'
+import { isNewerVersion } from '../../shared/version-compare'
 import { appLog } from '../app-log'
 
 const UPDATE_REPO = 'FaqFirebase/pi-desktop'
@@ -12,33 +13,6 @@ interface GithubRelease {
   name: string | null
   draft: boolean
   prerelease: boolean
-}
-
-/** Parse a version like "0.0.5-alpha" into numeric core + prerelease tag. */
-function parseVersion(version: string): { core: number[]; pre: string } {
-  const clean = version.replace(/^v/, '').trim()
-  const [core, pre = ''] = clean.split('-')
-  const nums = core.split('.').map((n) => parseInt(n, 10) || 0)
-  while (nums.length < 3) nums.push(0)
-  return { core: nums.slice(0, 3), pre }
-}
-
-/**
- * True when `latest` is a newer version than `current`. Handles the project's
- * `x.y.z-prerelease` scheme: a release with no prerelease tag outranks one with
- * the same core that has a tag; two prerelease tags compare lexically
- * (alpha < beta < rc).
- */
-function isNewerVersion(latest: string, current: string): boolean {
-  const a = parseVersion(latest)
-  const b = parseVersion(current)
-  for (let i = 0; i < 3; i++) {
-    if (a.core[i] !== b.core[i]) return a.core[i] > b.core[i]
-  }
-  if (a.pre === b.pre) return false
-  if (!a.pre) return true
-  if (!b.pre) return false
-  return a.pre > b.pre
 }
 
 /** Check GitHub releases (including prereleases) for a version newer than this build. */

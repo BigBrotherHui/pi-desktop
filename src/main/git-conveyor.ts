@@ -8,8 +8,10 @@ import type {
   GitConveyorPullRequestResult,
   GitConveyorStatus,
 } from '../shared/ipc-contracts'
+import { t } from '../shared/i18n'
 
 const COMMAND_TIMEOUT_MS = 30_000
+const MAX_COMMIT_MESSAGE_LENGTH = 200
 
 /** Status of a workspace folder that Git does not track. */
 const NOT_A_REPOSITORY_STATUS: GitConveyorStatus = Object.freeze({
@@ -88,9 +90,10 @@ function runCommand(file: string, args: readonly string[], cwd: string): Promise
     })
     let stdout = ''
     let stderr = ''
+    const command = `${file} ${args.join(' ')}`
     const timer = setTimeout(() => {
       child.kill()
-      reject(new Error(`${file} ${args.join(' ')} timed out`))
+      reject(new Error(t('errors.git.subprocessTimedOut', { command })))
     }, COMMAND_TIMEOUT_MS)
     child.stdout?.on('data', (chunk: Buffer) => { stdout += chunk.toString('utf8') })
     child.stderr?.on('data', (chunk: Buffer) => { stderr += chunk.toString('utf8') })
@@ -102,7 +105,11 @@ function runCommand(file: string, args: readonly string[], cwd: string): Promise
       clearTimeout(timer)
       const output = (stdout || stderr).trim()
       if (code === 0) resolvePromise(output)
-      else reject(new Error(`${file} ${args.join(' ')} failed${output ? `: ${output}` : ''}`))
+      else reject(new Error(
+        output
+          ? t('errors.git.commandFailedWithDetail', { command, detail: output })
+          : t('errors.git.commandFailed', { command })
+      ))
     })
   })
 }
@@ -226,13 +233,15 @@ export async function getGitConveyorStatus(cwd: string): Promise<GitConveyorStat
 
 export async function commitAll(cwd: string, options: GitConveyorCommitOptions): Promise<GitConveyorStatus> {
   const message = options.message.trim()
-  if (!message) throw new Error('Commit message is required')
-  if (message.length > 200) throw new Error('Commit message must be 200 characters or fewer')
+  if (!message) throw new Error(t('errors.git.commitMessageRequired'))
+  if (message.length > MAX_COMMIT_MESSAGE_LENGTH) {
+    throw new Error(t('errors.git.commitMessageTooLong', { max: MAX_COMMIT_MESSAGE_LENGTH }))
+  }
   const repository = await inspectGitRepository(cwd)
-  if (!repository.branch) throw new Error('Cannot commit from a detached HEAD')
+  if (!repository.branch) throw new Error(t('errors.git.detachedHeadCommit'))
   const operation = await activeGitOperation(cwd)
-  if (operation) throw new Error(`Cannot commit while a Git ${operation} is in progress`)
-  if (!repository.status.trim()) throw new Error('Working tree is clean')
+  if (operation) throw new Error(t('errors.git.operationInProgressCommit', { operation }))
+  if (!repository.status.trim()) throw new Error(t('errors.git.workingTreeClean'))
 
   // Preserve an intentionally curated index. Only auto-stage when there is no
   // staged content at all, and never allow staged paths outside the workspace
@@ -243,7 +252,7 @@ export async function commitAll(cwd: string, options: GitConveyorCommitOptions):
   const workspaceRoot = await realpath(cwd)
   const outsideWorkspace = staged.filter((path) => !isPathWithin(workspaceRoot, path))
   if (outsideWorkspace.length > 0) {
-    throw new Error('The index contains staged files outside the active workspace')
+    throw new Error(t('errors.git.stagedOutsideWorkspace'))
   }
 
   // Auto-staging covers tracked modifications only. A stray secret, key, or
@@ -252,7 +261,7 @@ export async function commitAll(cwd: string, options: GitConveyorCommitOptions):
   // rows too, so say plainly when that leaves nothing to commit.
   const autoStage = staged.length === 0
   if (autoStage && !(await hasUnstagedTrackedChanges(cwd))) {
-    throw new Error('No tracked changes to commit in this workspace. Stage untracked files first to include them.')
+    throw new Error(t('errors.git.noTrackedChanges'))
   }
   // The snapshot records the index as a tree, so a rejected commit restores
   // exactly what was staged before. `git reset` would instead unstage the whole
@@ -271,14 +280,14 @@ export async function commitAll(cwd: string, options: GitConveyorCommitOptions):
 
 export async function pushBranch(cwd: string): Promise<GitConveyorStatus> {
   const repository = await inspectGitRepository(cwd)
-  if (!repository.branch) throw new Error('Cannot push from a detached HEAD')
-  if (repository.status.trim()) throw new Error('Commit the working tree before pushing')
+  if (!repository.branch) throw new Error(t('errors.git.detachedHeadPush'))
+  if (repository.status.trim()) throw new Error(t('errors.git.commitBeforePush'))
   const operation = await activeGitOperation(cwd)
-  if (operation) throw new Error(`Cannot push while a Git ${operation} is in progress`)
+  if (operation) throw new Error(t('errors.git.operationInProgressPush', { operation }))
   const upstream = await resolveUpstream(cwd, repository.branch)
   const configuredRemote = await branchRemote(cwd, repository.branch)
   const remote = upstream?.remote ?? configuredRemote ?? 'origin'
-  if (remote === '.') throw new Error('Cannot push a branch whose upstream is the local repository')
+  if (remote === '.') throw new Error(t('errors.git.pushUpstreamIsLocal'))
   const branch = upstream?.branch ?? repository.branch
   const args = ['push']
   if (!upstream) args.push('--set-upstream')
@@ -292,16 +301,16 @@ export async function createPullRequest(
   options: GitConveyorPullRequestOptions,
 ): Promise<GitConveyorPullRequestResult> {
   const title = options.title.trim()
-  if (!title) throw new Error('Pull request title is required')
+  if (!title) throw new Error(t('errors.git.pullRequestTitleRequired'))
   const body = options.body.trim()
   const status = await getGitConveyorStatus(cwd)
-  if (status.dirtyFiles > 0) throw new Error('Commit the working tree before creating a pull request')
-  if (!status.hasUpstream) throw new Error('Push the branch before creating a pull request')
-  if (status.ahead > 0) throw new Error('Push the branch before creating a pull request')
+  if (status.dirtyFiles > 0) throw new Error(t('errors.git.commitBeforePullRequest'))
+  if (!status.hasUpstream) throw new Error(t('errors.git.pushBeforePullRequest'))
+  if (status.ahead > 0) throw new Error(t('errors.git.pushBeforePullRequest'))
   const branch = await runGit(['symbolic-ref', '--quiet', '--short', 'HEAD'], cwd)
     .then((result) => result.stdout.trim())
     .catch(() => '')
-  if (!branch) throw new Error('A named branch is required to create a pull request')
+  if (!branch) throw new Error(t('errors.git.namedBranchRequired'))
   const [upstream, branchRemoteName, upstreamRemote, originRemote] = await Promise.all([
     resolveUpstream(cwd, branch),
     branchRemote(cwd, branch),

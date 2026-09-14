@@ -2,6 +2,9 @@ import { useAppStore } from '../store'
 import { DEFAULT_AGENT_ENGINE_LABEL, agentEngineLabel } from '../../../shared/agent-engine-label'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { clsx } from 'clsx'
+import { useTranslation } from 'react-i18next'
+import { languagePickerOptions, loadI18nEnvironment, loadedI18nEnvironment } from '../i18n'
+import { SOURCE_LANGUAGE } from '../../../shared/i18n/languages'
 import type {
   AgentDetectionOptions,
   AgentEngine,
@@ -12,6 +15,7 @@ import type {
   PermissionRule,
   PermissionRulesScope,
   PermissionRulesWorkspaceStatus,
+  I18nEnvironment,
 } from '../../../shared/ipc-contracts'
 import type { ThemeFile } from '../../../shared/theme/theme-file'
 import { Settings, Save, RotateCcw, FolderOpen, RefreshCw, Check, ChevronDown } from 'lucide-react'
@@ -19,8 +23,18 @@ import { DEFAULT_SETTINGS } from '../../../shared/default-settings'
 import { PermissionSelector } from './permission-selector'
 import { PermissionRulesEditor } from './permission-rules-editor'
 import { validateRuleList, shouldPersistScope } from './permission-rules-editor-helpers'
-import { applyTheme, getRegisteredThemes, registerThemes, setUserThemes } from '../utils/theme'
-import { BUILTIN_THEME_IDS } from '../themes'
+import {
+  SYSTEM_THEME_ID,
+  applyTheme,
+  applyThemeSettings,
+  getRegisteredThemes,
+  registerThemes,
+  resolveSystemThemeSlot,
+  resolveThemeId,
+  setUserThemes,
+  type ThemeKind,
+} from '../utils/theme'
+import { BUILTIN_THEME_IDS, themeDisplayName } from '../themes'
 import { CustomModelsEditor } from './custom-models-editor'
 import { ThemeEditor } from './theme-editor'
 import { ThemeGallery } from './theme-gallery'
@@ -29,6 +43,7 @@ import {
   MIN_TIMEOUT_SECONDS as COUNCIL_MIN_TIMEOUT,
   MAX_TIMEOUT_SECONDS as COUNCIL_MAX_TIMEOUT,
   clampTimeoutSeconds as clampCouncilTimeout,
+  councilAgentLabel,
 } from '../../../shared/council-config'
 
 // Empty `match` from the input means "no pattern" and must not be persisted
@@ -52,6 +67,14 @@ interface ScopeRulesState {
 const EMPTY_SCOPE_RULES: ScopeRulesState = { rules: [], loaded: false, loadError: null, exists: false }
 
 export function SettingsPanel(): React.JSX.Element {
+  const { t, i18n } = useTranslation()
+  // A user who picks a language by mistake can still find this row.
+  const languageLabel = i18n.language === SOURCE_LANGUAGE
+    ? t('settings.language.label')
+    : t('settings.language.labelWithEnglish', {
+        label: t('settings.language.label'),
+        english: t('settings.language.label', { lng: SOURCE_LANGUAGE }),
+      })
   const settings = useAppStore((state) => state.settings)
   const loadSettings = useAppStore((state) => state.loadSettings)
   const setSettingsDraft = useAppStore((state) => state.setSettingsDraft)
@@ -76,6 +99,12 @@ export function SettingsPanel(): React.JSX.Element {
   const [detectedAgentInstalls, setDetectedAgentInstalls] = useState<AgentInstallation[]>([])
   const [scanningAgentInstalls, setScanningAgentInstalls] = useState(false)
   const [theme, setTheme] = useState(draft0.theme ?? settings?.theme ?? DEFAULT_SETTINGS.theme)
+  const [systemLightTheme, setSystemLightTheme] = useState(
+    draft0.systemLightTheme ?? settings?.systemLightTheme ?? DEFAULT_SETTINGS.systemLightTheme,
+  )
+  const [systemDarkTheme, setSystemDarkTheme] = useState(
+    draft0.systemDarkTheme ?? settings?.systemDarkTheme ?? DEFAULT_SETTINGS.systemDarkTheme,
+  )
   const [themeActionError, setThemeActionError] = useState<string | null>(null)
   const [themeEditorState, setThemeEditorState] = useState<{
     baseTheme: ThemeFile
@@ -97,6 +126,7 @@ export function SettingsPanel(): React.JSX.Element {
   const [permissionMode, setPermissionMode] = useState<PermissionMode>(
     draft0.permissionMode ?? settings?.permissionMode ?? DEFAULT_SETTINGS.permissionMode,
   )
+  const [language, setLanguage] = useState(draft0.language ?? settings?.language ?? DEFAULT_SETTINGS.language)
   const [rulesScope, setRulesScope] = useState<PermissionRulesScope>('global')
   const [scopeRules, setScopeRules] = useState<Record<PermissionRulesScope, ScopeRulesState>>({
     global: EMPTY_SCOPE_RULES,
@@ -264,6 +294,8 @@ export function SettingsPanel(): React.JSX.Element {
     const normalizedPiPath = nextPiPath.trim().toLowerCase()
     setCustomAgentPathMode(Boolean(nextPiPath.trim()) && normalizedPiPath !== 'pi' && normalizedPiPath !== 'omp')
     setTheme(draft.theme ?? settings.theme)
+    setSystemLightTheme(draft.systemLightTheme ?? settings.systemLightTheme)
+    setSystemDarkTheme(draft.systemDarkTheme ?? settings.systemDarkTheme)
     setFontSize(draft.fontSize ?? settings.fontSize)
     setTerminalFontSize(draft.terminalFontSize ?? settings.terminalFontSize)
     setCodeEditorFontSize(draft.codeEditorFontSize ?? settings.codeEditorFontSize)
@@ -275,6 +307,7 @@ export function SettingsPanel(): React.JSX.Element {
     setRunOnStartup(draft.runOnStartup ?? settings.runOnStartup)
     setMinimizeToTrayOnClose(draft.minimizeToTrayOnClose ?? settings.minimizeToTrayOnClose)
     setPermissionMode(draft.permissionMode ?? settings.permissionMode)
+    setLanguage(draft.language ?? settings.language)
   }, [settings])
 
   const setAgentPath = (path: string, custom = true): void => {
@@ -304,7 +337,7 @@ export function SettingsPanel(): React.JSX.Element {
   }
 
   const handleSelectPath = async (): Promise<void> => {
-    const path = await window.piDesktop.system.openDialog({ title: 'Select Agent Executable or Directory', mode: 'either' })
+    const path = await window.piDesktop.system.openDialog({ title: t('settings.agentInstallation.selectDialogTitle'), mode: 'either' })
     if (path) {
       const installation = detectedAgentInstalls.find((candidate) => candidate.path === path)
       setAgentPath(path)
@@ -325,27 +358,30 @@ export function SettingsPanel(): React.JSX.Element {
           : '__custom__'
   const showCustomAgentPath = customAgentPathMode || agentSelection === 'omp'
 
-  const resolveEffectiveThemeId = (themeId: string): string => {
-    if (themeId !== 'system') return themeId
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  const isBuiltinTheme = (themeId: string): boolean => (BUILTIN_THEME_IDS as string[]).includes(themeId)
+  const isEditableUserTheme = theme !== SYSTEM_THEME_ID && !isBuiltinTheme(theme)
+
+  const handleSystemThemesChange = (patch: Partial<Pick<AppSettings, 'systemLightTheme' | 'systemDarkTheme'>>): void => {
+    const next = { systemLightTheme, systemDarkTheme, ...patch }
+    setSystemLightTheme(next.systemLightTheme)
+    setSystemDarkTheme(next.systemDarkTheme)
+    applyThemeSettings({ theme, ...next })
+    setSettingsDraft(patch)
   }
 
-  const isBuiltinTheme = (themeId: string): boolean => (BUILTIN_THEME_IDS as string[]).includes(themeId)
-  const isEditableUserTheme = theme !== 'system' && !isBuiltinTheme(theme)
-
   const openCreateThemeEditor = () => {
-    const effectiveId = resolveEffectiveThemeId(theme)
+    const effectiveId = resolveThemeId(theme)
     const registered = getRegisteredThemes()
     const baseTheme =
-      registered.find((t) => t.id === effectiveId)?.file ??
-      registered.find((t) => t.id === 'dark')!.file
+      registered.find((entry) => entry.id === effectiveId)?.file ??
+      registered.find((entry) => entry.id === 'dark')!.file
     setThemeEditorState({ baseTheme, baseId: effectiveId, isUserTheme: false })
   }
 
   const openEditThemeEditor = () => {
-    const baseTheme = getRegisteredThemes().find((t) => t.id === theme)?.file
+    const baseTheme = getRegisteredThemes().find((entry) => entry.id === theme)?.file
     if (!baseTheme) {
-      setThemeActionError('Could not find the current theme to edit')
+      setThemeActionError(t('settings.theme.editNotFoundError'))
       return
     }
     setThemeEditorState({ baseTheme, baseId: theme, isUserTheme: true })
@@ -380,10 +416,10 @@ export function SettingsPanel(): React.JSX.Element {
   }
 
   const handleExportTheme = async () => {
-    const effectiveThemeId = resolveEffectiveThemeId(theme)
-    const currentThemeFile = getRegisteredThemes().find((t) => t.id === effectiveThemeId)?.file
+    const effectiveThemeId = resolveThemeId(theme)
+    const currentThemeFile = getRegisteredThemes().find((entry) => entry.id === effectiveThemeId)?.file
     if (!currentThemeFile) {
-      setThemeActionError('Could not find the current theme to export')
+      setThemeActionError(t('settings.theme.exportNotFoundError'))
       return
     }
     const result = await window.piDesktop.themes.export(currentThemeFile)
@@ -417,14 +453,14 @@ export function SettingsPanel(): React.JSX.Element {
   }
 
   const handleDeleteTheme = async () => {
-    const themeName = getRegisteredThemes().find((t) => t.id === theme)?.file.name ?? theme
+    const themeName = getRegisteredThemes().find((entry) => entry.id === theme)?.file.name ?? theme
     // Confirm before destructive action via the app's themed dialog, matching
     // the pattern used for session delete (context-menu.tsx) rather than the
     // native window.confirm. Deleting a theme file has no undo.
     const ok = await useAppStore.getState().requestConfirm({
-      title: 'Delete theme',
-      message: `Delete theme "${themeName}"? This cannot be undone.`,
-      confirmLabel: 'Delete',
+      title: t('settings.theme.deleteConfirmTitle'),
+      message: t('settings.theme.deleteConfirmMessage', { themeName }),
+      confirmLabel: t('common.delete'),
       danger: true,
     })
     if (!ok) return
@@ -456,14 +492,14 @@ export function SettingsPanel(): React.JSX.Element {
     if (result.ok) {
       handleRulesChange(result.rules)
     } else if (!result.canceled) {
-      setRulesActionError(result.error ?? 'Import failed')
+      setRulesActionError(result.error ?? t('settings.permissionRules.importFailed'))
     }
   }
 
   const handleRulesExport = async (): Promise<void> => {
     const result = await window.piDesktop.permissionRules.exportToFile(normalizedRules(scopeRules[rulesScope].rules))
     if (!result.ok && !result.canceled) {
-      setRulesActionError(result.error ?? 'Export failed')
+      setRulesActionError(result.error ?? t('settings.permissionRules.exportFailed'))
     }
   }
 
@@ -475,10 +511,9 @@ export function SettingsPanel(): React.JSX.Element {
 
   const handleRemoveWorkspaceRules = async (): Promise<void> => {
     const confirmed = await useAppStore.getState().requestConfirm({
-      title: 'Remove workspace rules',
-      message:
-        'Delete this workspace\'s .pi-desktop/permission-rules.json? Global permission rules will apply again.',
-      confirmLabel: 'Remove',
+      title: t('settings.permissionRules.removeWorkspaceConfirmTitle'),
+      message: t('settings.permissionRules.removeWorkspaceConfirmMessage'),
+      confirmLabel: t('common.remove'),
       danger: true,
     })
     if (!confirmed) return
@@ -513,6 +548,8 @@ export function SettingsPanel(): React.JSX.Element {
       piExecutablePath: piPath,
       piEngine,
       theme,
+      systemLightTheme,
+      systemDarkTheme,
       fontSize,
       terminalFontSize,
       codeEditorFontSize,
@@ -524,12 +561,13 @@ export function SettingsPanel(): React.JSX.Element {
       runOnStartup,
       minimizeToTrayOnClose,
       permissionMode,
+      language,
     }
 
     const result = await window.piDesktop.settings.save(updated)
 
     // Apply theme and font size immediately
-    applyTheme(result.theme)
+    applyThemeSettings(result)
     document.documentElement.style.fontSize = `${result.fontSize}px`
 
     // Reload settings in store
@@ -545,7 +583,15 @@ export function SettingsPanel(): React.JSX.Element {
         // do not clear either draft, so the user's rules edits survive and
         // can be retried.
         setRulesScope(scope)
-        setRulesActionError(`Settings saved, but ${scope} permission rules were not saved: ${rulesResult.error}`)
+        // i18next-cli cannot statically resolve `scope`'s possible values back
+        // to `context:` variants here (it comes from iterating a filtered
+        // array, not a directly-typed literal), so the two full keys are
+        // spelled out explicitly instead of relying on the context option.
+        setRulesActionError(
+          scope === 'global'
+            ? t('settings.permissionRules.saveError_global', { error: rulesResult.error })
+            : t('settings.permissionRules.saveError_workspace', { error: rulesResult.error }),
+        )
         return
       }
       setScopeRules((prev) => ({
@@ -571,6 +617,8 @@ export function SettingsPanel(): React.JSX.Element {
       piExecutablePath: DEFAULT_SETTINGS.piExecutablePath,
       piEngine: DEFAULT_SETTINGS.piEngine,
       theme: DEFAULT_SETTINGS.theme,
+      systemLightTheme: DEFAULT_SETTINGS.systemLightTheme,
+      systemDarkTheme: DEFAULT_SETTINGS.systemDarkTheme,
       fontSize: DEFAULT_SETTINGS.fontSize,
       terminalFontSize: DEFAULT_SETTINGS.terminalFontSize,
       codeEditorFontSize: DEFAULT_SETTINGS.codeEditorFontSize,
@@ -582,12 +630,15 @@ export function SettingsPanel(): React.JSX.Element {
       runOnStartup: DEFAULT_SETTINGS.runOnStartup,
       minimizeToTrayOnClose: DEFAULT_SETTINGS.minimizeToTrayOnClose,
       permissionMode: DEFAULT_SETTINGS.permissionMode,
+      language: DEFAULT_SETTINGS.language,
     }
 
     setPiPath(defaults.piExecutablePath!)
     setPiEngine(defaults.piEngine!)
     setCustomAgentPathMode(false)
     setTheme(defaults.theme!)
+    setSystemLightTheme(defaults.systemLightTheme!)
+    setSystemDarkTheme(defaults.systemDarkTheme!)
     setFontSize(defaults.fontSize!)
     setTerminalFontSize(defaults.terminalFontSize!)
     setCodeEditorFontSize(defaults.codeEditorFontSize!)
@@ -599,6 +650,7 @@ export function SettingsPanel(): React.JSX.Element {
     setRunOnStartup(defaults.runOnStartup!)
     setMinimizeToTrayOnClose(defaults.minimizeToTrayOnClose!)
     setPermissionMode(defaults.permissionMode!)
+    setLanguage(defaults.language!)
     setScopeRules({ global: EMPTY_SCOPE_RULES, workspace: EMPTY_SCOPE_RULES })
     setRulesActionError(null)
     useAppStore.getState().setPermissionRulesDraft('global', null)
@@ -607,7 +659,7 @@ export function SettingsPanel(): React.JSX.Element {
     void loadRulesScope('workspace')
 
     const result = await window.piDesktop.settings.save(defaults)
-    applyTheme(result.theme)
+    applyThemeSettings(result)
     document.documentElement.style.fontSize = `${result.fontSize}px`
     await loadSettings()
     clearSettingsDraft()
@@ -623,15 +675,15 @@ export function SettingsPanel(): React.JSX.Element {
         <div className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Settings size={20} className="text-muted" />
-            <h1 className="text-lg font-semibold text-primary">Settings</h1>
+            <h1 className="text-lg font-semibold text-primary">{t('common.settings')}</h1>
           </div>
         </div>
 
         {/* Agent Configuration */}
-        <SettingsSection title="Agent Configuration">
+        <SettingsSection title={t('settings.sections.agentConfiguration')}>
           <SettingsRow
-            label="Agent Installation"
-            description="Auto-detect Pi and OMP, choose an installed engine, or use a custom executable/path."
+            label={t('settings.agentInstallation.label')}
+            description={t('settings.agentInstallation.description')}
             stack
           >
             <div className="flex flex-col gap-2">
@@ -641,18 +693,21 @@ export function SettingsPanel(): React.JSX.Element {
                   onChange={(e) => handleAgentSelection(e.target.value)}
                   className="min-w-0 flex-1 appearance-none rounded-md border border-border-strong bg-surface px-3 py-1.5 text-sm text-primary hover:border-border-strong-hover focus:border-focus focus:outline-none"
                 >
-                  <option value="__auto__">Auto-detect (Pi first, then OMP)</option>
+                  <option value="__auto__">{t('settings.agentInstallation.autoDetectOption')}</option>
                   {detectedAgentInstalls.map((installation) => (
                     <option key={`${installation.kind}:${installation.path}`} value={installation.path}>
-                      {installation.kind === 'omp' ? 'OMP' : 'Pi'} — {installation.path}
+                      {t('settings.agentInstallation.installedOption', {
+                        engine: agentEngineLabel(installation.kind) ?? DEFAULT_AGENT_ENGINE_LABEL,
+                        path: installation.path,
+                      })}
                     </option>
                   ))}
-                  {agentSelection === 'omp' && <option value="omp">OMP (not found)</option>}
-                  <option value="__custom__">Custom path…</option>
+                  {agentSelection === 'omp' && <option value="omp">{t('settings.agentInstallation.ompNotFoundOption')}</option>}
+                  <option value="__custom__">{t('settings.agentInstallation.customPathOption')}</option>
                 </select>
                 <button
                   onClick={handleSelectPath}
-                  title="Choose executable or install directory"
+                  title={t('settings.agentInstallation.chooseExecutableTitle')}
                   className="rounded-md border border-border-strong px-3 py-1.5 text-sm text-muted hover:bg-surface-hover transition-colors"
                 >
                   <FolderOpen size={14} />
@@ -662,7 +717,7 @@ export function SettingsPanel(): React.JSX.Element {
                   // engine, so the cached detection result would be stale.
                   onClick={() => void scanAgentInstallations({ force: true })}
                   disabled={scanningAgentInstalls}
-                  title="Rescan installed agents"
+                  title={t('settings.agentInstallation.rescanTitle')}
                   className="rounded-md border border-border-strong px-3 py-1.5 text-sm text-muted hover:bg-surface-hover transition-colors disabled:opacity-50"
                 >
                   <RefreshCw size={14} className={scanningAgentInstalls ? 'animate-spin' : undefined} />
@@ -674,106 +729,123 @@ export function SettingsPanel(): React.JSX.Element {
                     type="text"
                     value={piPath}
                     onChange={(e) => setAgentPath(e.target.value)}
-                    placeholder="Path to executable, cli.js, or install directory"
+                    placeholder={t('settings.agentInstallation.pathPlaceholder')}
                     className="min-w-0 flex-1 rounded-md border border-border-strong bg-surface px-3 py-1.5 text-sm text-primary focus:border-focus focus:outline-none"
                   />
                   <select
                     value={piEngine}
                     onChange={(e) => setAgentEngine(e.target.value as AgentEngine)}
-                    aria-label="Agent engine"
+                    aria-label={t('settings.agentInstallation.engineAriaLabel')}
                     className="rounded-md border border-border-strong bg-surface px-2 py-1.5 text-sm text-primary focus:border-focus focus:outline-none"
                   >
-                    <option value="auto">Auto</option>
-                    <option value="pi">Pi</option>
-                    <option value="omp">OMP</option>
+                    <option value="auto">{t('settings.agentInstallation.engineAutoOption')}</option>
+                    <option value="pi">{agentEngineLabel('pi')}</option>
+                    <option value="omp">{agentEngineLabel('omp')}</option>
                   </select>
                 </div>
               )}
               <div className="text-xs text-dim">
                 {scanningAgentInstalls
-                  ? 'Scanning common install locations and PATH…'
+                  ? t('settings.agentInstallation.scanningStatus')
                   : detectedAgentInstalls.length > 0
-                    ? `${detectedAgentInstalls.length} installed engine${detectedAgentInstalls.length === 1 ? '' : 's'} detected`
-                    : 'No Pi or OMP installation detected yet'}
+                    ? t('settings.agentInstallation.detectedCount', { count: detectedAgentInstalls.length })
+                    : t('settings.agentInstallation.noneDetected')}
               </div>
             </div>
           </SettingsRow>
         </SettingsSection>
 
         {/* Appearance */}
-        <SettingsSection title="Appearance">
-          <SettingsRow label="Theme" description="Application color scheme">
-            <div className="relative">
-              <select
-                value={theme}
-                onChange={(e) => {
-                  const newTheme = e.target.value
-                  setTheme(newTheme)
-                  applyTheme(newTheme)
-                  setSettingsDraft({ theme: newTheme })
-                }}
-                className="w-full appearance-none rounded-md border border-border-strong bg-surface py-1.5 pl-3 pr-9 text-sm text-primary hover:border-border-strong-hover focus:border-focus focus:outline-none"
-              >
-                <option value="system">System</option>
-                {getRegisteredThemes().map((registeredTheme) => (
-                  <option key={registeredTheme.id} value={registeredTheme.id}>
-                    {registeredTheme.file.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                size={14}
-                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-dim"
-              />
-            </div>
+        <SettingsSection title={t('settings.sections.appearance')}>
+          <SettingsRow label={languageLabel} description={t('settings.language.description')}>
+            <LanguageSelect
+              value={language}
+              onChange={(next) => {
+                setLanguage(next)
+                setSettingsDraft({ language: next })
+              }}
+            />
           </SettingsRow>
 
-          <SettingsRow label="Custom Theme" description="Fork the current theme or edit one you created">
+          <SettingsRow label={t('settings.theme.label')} description={t('settings.theme.description')}>
+            <SelectField
+              value={theme}
+              onChange={(newTheme) => {
+                setTheme(newTheme)
+                applyThemeSettings({ theme: newTheme, systemLightTheme, systemDarkTheme })
+                setSettingsDraft({ theme: newTheme })
+              }}
+            >
+              <option value={SYSTEM_THEME_ID}>{t('settings.theme.systemOption')}</option>
+              <ThemeOptions />
+            </SelectField>
+          </SettingsRow>
+
+          {theme === SYSTEM_THEME_ID && (
+            <>
+              <SettingsRow label={t('settings.lightTheme.label')} description={t('settings.lightTheme.description')}>
+                <SystemThemeSelect
+                  kind="light"
+                  value={systemLightTheme}
+                  onChange={(themeId) => handleSystemThemesChange({ systemLightTheme: themeId })}
+                />
+              </SettingsRow>
+              <SettingsRow label={t('settings.darkTheme.label')} description={t('settings.darkTheme.description')}>
+                <SystemThemeSelect
+                  kind="dark"
+                  value={systemDarkTheme}
+                  onChange={(themeId) => handleSystemThemesChange({ systemDarkTheme: themeId })}
+                />
+              </SettingsRow>
+            </>
+          )}
+
+          <SettingsRow label={t('settings.customTheme.label')} description={t('settings.customTheme.description')}>
             <div className="flex gap-2">
               <button
                 onClick={openCreateThemeEditor}
                 className="rounded-md border border-border-strong px-3 py-1.5 text-sm text-muted hover:bg-surface-hover transition-colors"
               >
-                Create theme
+                {t('settings.customTheme.createButton')}
               </button>
               {isEditableUserTheme && (
                 <button
                   onClick={openEditThemeEditor}
                   className="rounded-md border border-border-strong px-3 py-1.5 text-sm text-muted hover:bg-surface-hover transition-colors"
                 >
-                  Edit theme
+                  {t('settings.customTheme.editButton')}
                 </button>
               )}
             </div>
           </SettingsRow>
 
-          <SettingsRow label="Theme Actions" description="Import, export, or install a theme from a URL" stack>
+          <SettingsRow label={t('settings.themeActions.label')} description={t('settings.themeActions.description')} stack>
             <div className="flex flex-col gap-2">
               <div className="flex gap-2">
                 <button
                   onClick={handleImportTheme}
                   className="rounded-md border border-border-strong px-3 py-1.5 text-sm text-muted hover:bg-surface-hover transition-colors"
                 >
-                  Import
+                  {t('common.import')}
                 </button>
                 <button
                   onClick={handleExportTheme}
                   className="rounded-md border border-border-strong px-3 py-1.5 text-sm text-muted hover:bg-surface-hover transition-colors"
                 >
-                  Export
+                  {t('common.export')}
                 </button>
                 <button
                   onClick={() => setGalleryOpen(true)}
                   className="rounded-md border border-border-strong px-3 py-1.5 text-sm text-muted hover:bg-surface-hover transition-colors"
                 >
-                  Browse gallery
+                  {t('settings.themeActions.browseGalleryButton')}
                 </button>
-                {!isBuiltinTheme(theme) && (
+                {isEditableUserTheme && (
                   <button
                     onClick={handleDeleteTheme}
                     className="rounded-md border border-border-strong px-3 py-1.5 text-sm text-muted hover:bg-surface-hover transition-colors"
                   >
-                    Delete
+                    {t('common.delete')}
                   </button>
                 )}
               </div>
@@ -789,14 +861,14 @@ export function SettingsPanel(): React.JSX.Element {
                   onClick={handleInstallFromUrl}
                   className="shrink-0 rounded-md border border-border-strong px-3 py-1.5 text-sm text-muted hover:bg-surface-hover transition-colors"
                 >
-                  Install
+                  {t('common.install')}
                 </button>
               </div>
               {themeActionError && <p className="text-xs text-error">{themeActionError}</p>}
             </div>
           </SettingsRow>
 
-          <SettingsRow label="UI Font Size" description="Chat, panels, and sidebar — not the terminal or code editor">
+          <SettingsRow label={t('settings.uiFontSize.label')} description={t('settings.uiFontSize.description')}>
             <div className="flex items-center gap-3">
               <input
                 type="range"
@@ -815,7 +887,7 @@ export function SettingsPanel(): React.JSX.Element {
             </div>
           </SettingsRow>
 
-          <SettingsRow label="Terminal Font Size" description="Font size for the terminal panel">
+          <SettingsRow label={t('settings.terminalFontSize.label')} description={t('settings.terminalFontSize.description')}>
             <div className="flex items-center gap-3">
               <input
                 type="range"
@@ -833,7 +905,7 @@ export function SettingsPanel(): React.JSX.Element {
             </div>
           </SettingsRow>
 
-          <SettingsRow label="Code Editor Font Size" description="Font size for the code editor / file viewer">
+          <SettingsRow label={t('settings.codeEditorFontSize.label')} description={t('settings.codeEditorFontSize.description')}>
             <div className="flex items-center gap-3">
               <input
                 type="range"
@@ -853,8 +925,8 @@ export function SettingsPanel(): React.JSX.Element {
         </SettingsSection>
 
         {/* Behavior */}
-        <SettingsSection title="Behavior">
-          <SettingsRow label="Permission Mode" description="Default safety mode for Pi actions">
+        <SettingsSection title={t('settings.sections.behavior')}>
+          <SettingsRow label={t('settings.permissionMode.label')} description={t('settings.permissionMode.description')}>
             <PermissionSelector
               value={permissionMode}
               onChange={(mode) => {
@@ -865,8 +937,8 @@ export function SettingsPanel(): React.JSX.Element {
             />
           </SettingsRow>
 
-          <SettingsRow label="Permission Rules" description="Fine-grained per-tool overrides for the mode above" stack>
-            <div className="mb-2 flex gap-1" role="tablist" aria-label="Permission rules scope">
+          <SettingsRow label={t('settings.permissionRules.label')} description={t('settings.permissionRules.description')} stack>
+            <div className="mb-2 flex gap-1" role="tablist" aria-label={t('settings.permissionRules.scopeTabListAriaLabel')}>
               {(['global', 'workspace'] as const).map((scope) => (
                 <button
                   key={scope}
@@ -881,7 +953,7 @@ export function SettingsPanel(): React.JSX.Element {
                       : 'text-dim hover:text-primary'
                   )}
                 >
-                  {scope === 'global' ? 'Global' : 'This workspace'}
+                  {scope === 'global' ? t('common.global') : t('settings.permissionRules.workspaceScopeTab')}
                 </button>
               ))}
             </div>
@@ -904,55 +976,55 @@ export function SettingsPanel(): React.JSX.Element {
             />
           </SettingsRow>
 
-          <SettingsRow label="Show Thinking" description="Display model thinking blocks in responses">
+          <SettingsRow label={t('settings.showThinking.label')} description={t('settings.showThinking.description')}>
             <Toggle checked={showThinking} onChange={(v) => { setShowThinking(v); setSettingsDraft({ showThinking: v }) }} />
           </SettingsRow>
 
-          <SettingsRow label="Auto Scroll" description="Automatically scroll to new messages">
+          <SettingsRow label={t('settings.autoScroll.label')} description={t('settings.autoScroll.description')}>
             <Toggle checked={autoScroll} onChange={(v) => { setAutoScroll(v); setSettingsDraft({ autoScroll: v }) }} />
           </SettingsRow>
 
           <SettingsRow
-            label="Desktop Notifications"
-            description="Notify when Pi finishes, fails, or waits for approval in a workspace you are not looking at"
+            label={t('settings.desktopNotifications.label')}
+            description={t('settings.desktopNotifications.description')}
           >
             <Toggle checked={desktopNotifications} onChange={(v) => { setDesktopNotifications(v); setSettingsDraft({ desktopNotifications: v }) }} />
           </SettingsRow>
 
           <SettingsRow
-            label="Open to Home Screen on Launch"
-            description="On: full Home launcher (stats, recents, open folder). Off: open Chat with the empty-session center prompt and project picker."
+            label={t('settings.openToHomeOnLaunch.label')}
+            description={t('settings.openToHomeOnLaunch.description')}
           >
             <Toggle checked={openToHomeOnLaunch} onChange={(v) => { setOpenToHomeOnLaunch(v); setSettingsDraft({ openToHomeOnLaunch: v }) }} />
           </SettingsRow>
 
           <SettingsRow
-            label="Resume Last Session"
-            description="When opening a workspace, continue its most recent session instead of starting a new one"
+            label={t('settings.resumeLastSession.label')}
+            description={t('settings.resumeLastSession.description')}
           >
             <Toggle checked={resumeLastSession} onChange={(v) => { setResumeLastSession(v); setSettingsDraft({ resumeLastSession: v }) }} />
           </SettingsRow>
 
           <SettingsRow
-            label="Run on Startup"
-            description="Automatically start Pi Desktop when you log in to your computer (takes effect in installed builds)"
+            label={t('settings.runOnStartup.label')}
+            description={t('settings.runOnStartup.description')}
           >
             <Toggle checked={runOnStartup} onChange={(v) => { setRunOnStartup(v); void applyImmediate({ runOnStartup: v }) }} />
           </SettingsRow>
 
           <SettingsRow
-            label="Minimize to Tray on Close"
-            description="Keep Pi Desktop running in the system tray when you close the window instead of quitting (Windows and Linux)"
+            label={t('settings.minimizeToTrayOnClose.label')}
+            description={t('settings.minimizeToTrayOnClose.description')}
           >
             <Toggle checked={minimizeToTrayOnClose} onChange={(v) => { setMinimizeToTrayOnClose(v); void applyImmediate({ minimizeToTrayOnClose: v }) }} />
           </SettingsRow>
         </SettingsSection>
 
         {/* Multi-Agent Council Planning */}
-        <SettingsSection title="Multi-Agent Council Planning">
+        <SettingsSection title={t('settings.sections.multiAgentCouncilPlanning')}>
           <SettingsRow
-            label="Enable council planning"
-            description="Spawns Claude/Codex alongside Pi to plan tasks. Increases token usage and credit/API costs."
+            label={t('settings.councilEnabled.label')}
+            description={t('settings.councilEnabled.description')}
           >
             <Toggle
               checked={settings?.council.enabled ?? false}
@@ -968,11 +1040,11 @@ export function SettingsPanel(): React.JSX.Element {
 
           {settings?.council.enabled && (
             <>
-              <SettingsRow label="Members" description="Which agents participate in council planning">
+              <SettingsRow label={t('settings.councilMembers.label')} description={t('settings.councilMembers.description')}>
                 <div className="flex flex-col gap-2">
                   {(['pi', 'claude', 'codex'] as const).map((id) => {
                     const detected = detectedAgents[id]
-                    const label = id === 'pi' ? 'Pi' : id === 'claude' ? 'Claude' : 'Codex'
+                    const label = councilAgentLabel(id)
                     return (
                       <label
                         key={id}
@@ -993,7 +1065,7 @@ export function SettingsPanel(): React.JSX.Element {
                         />
                         <span>
                           {label}
-                          {!detected && <span className="text-faint"> (not detected)</span>}
+                          {!detected && <span className="text-faint"> {t('settings.councilMembers.notDetected')}</span>}
                         </span>
                       </label>
                     )
@@ -1002,32 +1074,23 @@ export function SettingsPanel(): React.JSX.Element {
               </SettingsRow>
 
               <SettingsRow
-                label="Consensus mode"
-                description="How council members reach agreement"
+                label={t('settings.consensusMode.label')}
+                description={t('settings.consensusMode.description')}
               >
-                <div className="relative">
-                  <select
-                    value={settings.council.consensusMode}
-                    onChange={(e) =>
-                      void saveCouncil({
-                        consensusMode: e.target.value as CouncilConfig['consensusMode'],
-                      })
-                    }
-                    className="w-full appearance-none rounded-md border border-border-strong bg-surface py-1.5 pl-3 pr-9 text-sm text-primary hover:border-border-strong-hover focus:border-focus focus:outline-none"
-                  >
-                    <option value="arbiter">Arbiter merge (fast)</option>
-                    <option value="debate">One debate round (slower, ~2x cost)</option>
-                  </select>
-                  <ChevronDown
-                    size={14}
-                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-dim"
-                  />
-                </div>
+                <SelectField
+                  value={settings.council.consensusMode}
+                  onChange={(consensusMode) =>
+                    void saveCouncil({ consensusMode: consensusMode as CouncilConfig['consensusMode'] })
+                  }
+                >
+                  <option value="arbiter">{t('settings.consensusMode.arbiterOption')}</option>
+                  <option value="debate">{t('settings.consensusMode.debateOption')}</option>
+                </SelectField>
               </SettingsRow>
 
               <SettingsRow
-                label="Per-member timeout (seconds)"
-                description={`How long to wait for each agent (${COUNCIL_MIN_TIMEOUT}-${COUNCIL_MAX_TIMEOUT})`}
+                label={t('settings.councilTimeout.label')}
+                description={t('settings.councilTimeout.description', { min: COUNCIL_MIN_TIMEOUT, max: COUNCIL_MAX_TIMEOUT })}
               >
                 <input
                   type="number"
@@ -1053,7 +1116,7 @@ export function SettingsPanel(): React.JSX.Element {
         </SettingsSection>
 
         {/* Custom Models */}
-        <SettingsSection title="Custom Models">
+        <SettingsSection title={t('settings.sections.customModels')}>
           <CustomModelsEditor />
         </SettingsSection>
 
@@ -1064,14 +1127,14 @@ export function SettingsPanel(): React.JSX.Element {
             className="flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm text-white hover:bg-accent-hover transition-colors"
           >
             {saved ? <Check size={14} /> : <Save size={14} />}
-            {saved ? 'Saved!' : 'Save Settings'}
+            {saved ? t('settings.actions.saved') : t('settings.actions.save')}
           </button>
           <button
             onClick={handleReset}
             className="flex items-center gap-2 rounded-md border border-border-strong px-4 py-2 text-sm text-muted hover:bg-surface-hover transition-colors"
           >
             <RotateCcw size={14} />
-            Reset to Defaults
+            {t('settings.actions.reset')}
           </button>
         </div>
       </div>
@@ -1098,19 +1161,17 @@ export function SettingsPanel(): React.JSX.Element {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-md rounded-lg border border-border-strong bg-surface p-6 shadow-xl">
             <h3 className="mb-3 text-base font-semibold text-primary">
-              Enable council planning?
+              {t('settings.councilEnabled.confirmTitle')}
             </h3>
             <p className="mb-6 text-sm text-muted">
-              Each run spawns Claude and Codex in addition to {runningEngineLabel}. This can significantly increase
-              token usage and credit/API costs. Only enable this if you are comfortable with the
-              extra spend.
+              {t('settings.councilEnabled.confirmMessage', { engine: runningEngineLabel })}
             </p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowCouncilWarning(false)}
                 className="rounded-md border border-border-strong px-4 py-2 text-sm text-muted hover:bg-surface-hover transition-colors"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={() => {
@@ -1119,7 +1180,7 @@ export function SettingsPanel(): React.JSX.Element {
                 }}
                 className="rounded-md bg-accent px-4 py-2 text-sm text-white hover:bg-accent-hover transition-colors"
               >
-                Enable
+                {t('settings.councilEnabled.confirmButton')}
               </button>
             </div>
           </div>
@@ -1181,6 +1242,97 @@ function SettingsRow({
       </div>
       <div className="w-64">{children}</div>
     </div>
+  )
+}
+
+function SelectField({
+  value,
+  onChange,
+  children,
+}: {
+  value: string
+  onChange: (value: string) => void
+  children: React.ReactNode
+}): React.JSX.Element {
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full appearance-none rounded-md border border-border-strong bg-surface py-1.5 pl-3 pr-9 text-sm text-primary hover:border-border-strong-hover focus:border-focus focus:outline-none"
+      >
+        {children}
+      </select>
+      <ChevronDown
+        size={14}
+        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-dim"
+      />
+    </div>
+  )
+}
+
+// One <option> per registered theme, optionally only those of one kind.
+function ThemeOptions({ kind }: { kind?: ThemeKind }): React.JSX.Element {
+  // Subscribes this component to language changes so built-in theme names
+  // (translated by themeDisplayName, which uses the shared t) re-render.
+  useTranslation()
+  return (
+    <>
+      {getRegisteredThemes()
+        .filter((registeredTheme) => !kind || registeredTheme.file.kind === kind)
+        .map((registeredTheme) => (
+          <option key={registeredTheme.id} value={registeredTheme.id}>
+            {themeDisplayName(registeredTheme.id, registeredTheme.file.name)}
+          </option>
+        ))}
+    </>
+  )
+}
+
+// Picks the theme 'system' uses for one OS mode. Shows the theme that
+// actually applies, so a deleted or kind-flipped choice reads as its fallback.
+function SystemThemeSelect({
+  kind,
+  value,
+  onChange,
+}: {
+  kind: ThemeKind
+  value: string
+  onChange: (themeId: string) => void
+}): React.JSX.Element {
+  return (
+    <SelectField value={resolveSystemThemeSlot(kind, value)} onChange={onChange}>
+      <ThemeOptions kind={kind} />
+    </SelectField>
+  )
+}
+
+// The saved language applies on Save, like every other setting.
+function LanguageSelect({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (language: string) => void
+}): React.JSX.Element {
+  // Subscribes this component to language changes so its option labels
+  // (each language's own name) re-render when the language changes elsewhere.
+  useTranslation()
+  const [environment, setEnvironment] = useState<I18nEnvironment | null>(loadedI18nEnvironment)
+  useEffect(() => {
+    if (!environment) {
+      // On failure, leave the options empty; the next time this panel opens,
+      // environment is still null and this effect retries the load.
+      void loadI18nEnvironment().then(setEnvironment).catch(() => {})
+    }
+  }, [environment])
+  const options = environment ? languagePickerOptions(environment) : []
+  return (
+    <SelectField value={value} onChange={onChange}>
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>{option.label}</option>
+      ))}
+    </SelectField>
   )
 }
 

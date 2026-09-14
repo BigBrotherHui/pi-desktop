@@ -1,8 +1,11 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useCallback, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useCallback, useState, useSyncExternalStore } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from './store'
+import { getAppliedThemeId, subscribeAppliedTheme } from './utils/theme'
 import { DEFAULT_SETTINGS } from '../../shared/default-settings'
 import { BUILTIN_SOURCE, type PiCommand } from '../../shared/pi-command'
 import type { WorkspaceActivationIntent } from '../../shared/ipc-contracts'
+import { t } from '../../shared/i18n'
 
 /**
  * Subscribes to Pi events from the main process and routes them to the store.
@@ -101,7 +104,7 @@ export function useMenuActions(): void {
           setCurrentView('settings') // Open settings where workspace creation lives
           break
         case 'menu:open-project': {
-          void window.piDesktop.system.openDialog({ title: 'Open Project' }).then((path) => {
+          void window.piDesktop.system.openDialog({ title: t('dialogs.openProject.title') }).then((path) => {
             if (path) void useAppStore.getState().openFolderAsWorkspace(path)
           })
           break
@@ -375,6 +378,14 @@ export function useChatScroll(active: boolean): {
 }
 
 /**
+ * Escape aborts the running turn unless another surface (an extension prompt
+ * hiding itself, for example) already consumed the key press.
+ */
+export function isAbortShortcut(event: { key: string; defaultPrevented: boolean }, isStreaming: boolean): boolean {
+  return event.key === 'Escape' && isStreaming && !event.defaultPrevented
+}
+
+/**
  * Keyboard shortcut handler for the chat input.
  */
 export function useChatKeyboard(
@@ -386,8 +397,7 @@ export function useChatKeyboard(
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Escape: abort streaming
-      if (e.key === 'Escape' && isStreaming) {
+      if (isAbortShortcut(e, isStreaming)) {
         e.preventDefault()
         onAbort()
         return
@@ -424,6 +434,7 @@ export interface BuiltinCommand {
  * GUI (e.g. /name, /tree) are excluded.
  */
 export function useCommandCatalog(): { builtins: BuiltinCommand[]; allCommands: PiCommand[] } {
+  const { t } = useTranslation()
   const commands = useAppStore((s) => s.commands)
   const compactContext = useAppStore((s) => s.compactContext)
   const cloneBranch = useAppStore((s) => s.cloneBranch)
@@ -434,18 +445,18 @@ export function useCommandCatalog(): { builtins: BuiltinCommand[]; allCommands: 
 
   const builtins = useMemo<BuiltinCommand[]>(
     () => [
-      { name: 'compact', description: 'Compact the conversation to free up context', run: () => { void compactContext() } },
+      { name: 'compact', description: t('commands.compact.description'), run: () => { void compactContext() } },
       // OMP has no clone RPC command, so the action is not offered there.
       ...(piEngine === 'omp'
         ? []
-        : [{ name: 'clone', description: 'Clone the current branch into a new session', run: () => { void cloneBranch() } }]),
-      { name: 'new', description: 'Start a new session', run: () => { void createNewSession() } },
-      { name: 'task', description: 'Launch a task in a new Pi session', run: () => setTaskLauncherOpen(true) },
-      { name: 'resume', description: 'Open the Sessions list', run: () => setCurrentView('sessions') },
-      { name: 'fork', description: 'Open Branches to fork from a message', run: () => setCurrentView('timeline') },
-      { name: 'settings', description: 'Open Settings', run: () => setCurrentView('settings') },
+        : [{ name: 'clone', description: t('commands.clone.description'), run: () => { void cloneBranch() } }]),
+      { name: 'new', description: t('commands.new.description'), run: () => { void createNewSession() } },
+      { name: 'task', description: t('commands.task.description'), run: () => setTaskLauncherOpen(true) },
+      { name: 'resume', description: t('commands.resume.description'), run: () => setCurrentView('sessions') },
+      { name: 'fork', description: t('commands.fork.description'), run: () => setCurrentView('timeline') },
+      { name: 'settings', description: t('commands.settings.description'), run: () => setCurrentView('settings') },
     ],
-    [compactContext, cloneBranch, createNewSession, setTaskLauncherOpen, setCurrentView, piEngine]
+    [compactContext, cloneBranch, createNewSession, setTaskLauncherOpen, setCurrentView, piEngine, t]
   )
 
   const allCommands = useMemo<PiCommand[]>(
@@ -476,6 +487,9 @@ export function useInitialize(): void {
     initialized.current = true
 
     const initialize = async (): Promise<void> => {
+      // Registered before the first theme apply so the native window
+      // background matches from the start.
+      subscribeAppliedTheme(syncWindowBackground)
       await loadSettings()
       const openToHome = useAppStore.getState().settings?.openToHomeOnLaunch ?? DEFAULT_SETTINGS.openToHomeOnLaunch
 
@@ -551,4 +565,22 @@ export function useNotePickerShortcut(): void {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
+}
+
+/**
+ * Copies the page background to the native window, which paints areas the
+ * page has not drawn yet (live-resize edges on Windows and macOS). The body
+ * uses the theme's app color, and its computed value is always rgb()/rgba().
+ */
+function syncWindowBackground(): void {
+  void window.piDesktop.themes.setWindowBackground(getComputedStyle(document.body).backgroundColor)
+}
+
+/**
+ * The concrete id of the theme on screen ('system' already resolved). Changes
+ * on every applied theme switch, including an OS light/dark change under the
+ * System theme, which the saved `theme` setting does not reflect.
+ */
+export function useAppliedThemeId(): string | null {
+  return useSyncExternalStore(subscribeAppliedTheme, getAppliedThemeId)
 }

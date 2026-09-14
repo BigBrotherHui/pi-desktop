@@ -10,11 +10,24 @@ import { shouldNotify } from '../notify-decision'
 import { appLog } from '../app-log'
 import { loadAppSettings } from './settings'
 import type { IpcContext } from './context'
+import { t } from '../../shared/i18n'
 
-const NOTIFICATION_BODIES: Record<WorkspaceActivityNotification['kind'], string> = {
-  completed: 'Pi finished working.',
-  failed: 'Pi stopped with an error.',
-  'needs-approval': 'Pi is waiting for your approval.',
+// An explicit map, not a template-literal key built from the notification
+// kind: `kind`'s type is the indexed-access type
+// `WorkspaceActivityNotification['kind']`, and the extractor's static
+// analysis cannot trace a template literal through that (verified: a
+// directly union-typed parameter, as in permission-mode.ts's
+// `getPermissionModeLabel`, extracts fine — an indexed-access type does
+// not), so it would report the individual notification keys below as unused.
+const NOTIFICATION_KEYS = {
+  completed: 'notifications.completed',
+  failed: 'notifications.failed',
+  'needs-approval': 'notifications.needs-approval',
+} as const satisfies Record<WorkspaceActivityNotification['kind'], string>
+
+function notificationBody(kind: WorkspaceActivityNotification['kind'], opensSession: boolean): string {
+  const body = t(NOTIFICATION_KEYS[kind])
+  return opensSession ? t('notifications.withSession', { body }) : body
 }
 
 export interface WindowControls {
@@ -62,9 +75,7 @@ export function wireWorkspaceActivity(
 
     const osNotification = new Notification({
       title: workspace.name,
-      body: notification.sessionPath
-        ? `${NOTIFICATION_BODIES[notification.kind]} Click to open the finished session.`
-        : NOTIFICATION_BODIES[notification.kind],
+      body: notificationBody(notification.kind, Boolean(notification.sessionPath)),
       ...(iconPath ? { icon: iconPath } : {}),
     })
     osNotification.on('click', () => {

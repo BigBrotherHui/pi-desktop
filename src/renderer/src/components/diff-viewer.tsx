@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../store'
 import { DEFAULT_SETTINGS } from '../../../shared/default-settings'
 import { clsx } from 'clsx'
@@ -35,6 +36,7 @@ interface DiffViewerProps {
 }
 
 export function DiffViewer({ onClose }: DiffViewerProps = {}): React.JSX.Element {
+  const { t } = useTranslation()
   const [files, setFiles] = useState<DiffFileBlock[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -78,9 +80,9 @@ export function DiffViewer({ onClose }: DiffViewerProps = {}): React.JSX.Element
         <div className="flex flex-wrap items-center gap-2">
           <div className="order-1 flex min-w-0 flex-1 items-center gap-2">
             <GitCompare size={16} className="shrink-0 text-muted" />
-            <h2 className="truncate text-sm font-medium text-primary">Diff Viewer</h2>
+            <h2 className="truncate text-sm font-medium text-primary">{t('diff.heading')}</h2>
             <span className="shrink-0 rounded-full bg-card px-2 py-0.5 text-xs text-dim">
-              {files.length} file{files.length !== 1 ? 's' : ''}
+              {t('diff.fileCount', { count: files.length })}
             </span>
           </div>
           <div className="order-2 flex shrink-0 items-center gap-2">
@@ -93,12 +95,12 @@ export function DiffViewer({ onClose }: DiffViewerProps = {}): React.JSX.Element
                   : 'bg-card text-muted hover:text-secondary'
               )}
             >
-              {stagedMode ? 'Staged' : 'Working'}
+              {stagedMode ? t('diff.stagedToggle') : t('diff.workingToggle')}
             </button>
             <button
               onClick={loadDiff}
               className="rounded p-1.5 text-dim transition-colors hover:bg-surface-hover hover:text-secondary"
-              aria-label="Refresh diff"
+              aria-label={t('diff.refreshAriaLabel')}
             >
               <RefreshCw size={14} />
             </button>
@@ -111,7 +113,7 @@ export function DiffViewer({ onClose }: DiffViewerProps = {}): React.JSX.Element
                 }
               }}
               className="rounded p-1.5 text-dim transition-colors hover:bg-surface-hover hover:text-secondary"
-              aria-label="Close diff viewer"
+              aria-label={t('diff.closeAriaLabel')}
             >
               <X size={14} />
             </button>
@@ -131,21 +133,21 @@ export function DiffViewer({ onClose }: DiffViewerProps = {}): React.JSX.Element
         ) : loadError !== null ? (
           <div className="flex flex-col items-center justify-center py-12 text-dim">
             <AlertTriangle size={32} className="mb-3 text-warning" />
-            <p className="text-sm text-secondary">Couldn't load the diff</p>
+            <p className="text-sm text-secondary">{t('diff.loadErrorTitle')}</p>
             <p className="mt-1 max-w-md break-words px-4 text-center text-xs text-faint">{loadError}</p>
             <button
               onClick={loadDiff}
               className="mt-3 rounded bg-card px-3 py-1 text-xs text-secondary transition-colors hover:bg-surface-hover"
             >
-              Retry
+              {t('common.retry')}
             </button>
           </div>
         ) : files.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-dim">
             <GitCompare size={32} className="mb-3 text-faint" />
-            <p className="text-sm">No changes</p>
+            <p className="text-sm">{t('diff.noChanges')}</p>
             <p className="mt-1 text-xs text-faint">
-              {stagedMode ? 'No staged changes' : 'Working tree is clean'}
+              {stagedMode ? t('diff.noStagedChanges') : t('diff.workingTreeClean')}
             </p>
           </div>
         ) : (
@@ -174,6 +176,7 @@ function DiffFileEntry({
   expanded: boolean
   onToggle: () => void
 }): React.JSX.Element {
+  const { t } = useTranslation()
   const additions = file.hunks.flat().filter((l) => l.type === 'add').length
   const deletions = file.hunks.flat().filter((l) => l.type === 'remove').length
   // Diff body scales with the Code Editor font-size setting (like the code viewer).
@@ -193,10 +196,10 @@ function DiffFileEntry({
         <span className="text-xs text-primary truncate">{file.newPath}</span>
         <div className="ml-auto flex items-center gap-2 text-xs">
           {file.isNew && (
-            <span className="rounded bg-success-bg px-1.5 py-0.5 text-success">NEW</span>
+            <span className="rounded bg-success-bg px-1.5 py-0.5 text-success">{t('diff.newFileBadge')}</span>
           )}
           {file.isDeleted && (
-            <span className="rounded bg-error-bg px-1.5 py-0.5 text-error">DELETED</span>
+            <span className="rounded bg-error-bg px-1.5 py-0.5 text-error">{t('diff.deletedFileBadge')}</span>
           )}
           {additions > 0 && (
             <span className="text-success">+{additions}</span>
