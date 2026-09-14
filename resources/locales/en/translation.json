@@ -1,6 +1,27 @@
 {
+  "activity": {
+    "completed": "Finished in the background",
+    "failed": "Stopped with an error",
+    "inAnotherWorkspace": "{{label}} in another workspace",
+    "working": "Pi is working"
+  },
   "app": {
-    "quit": "Quit Pi Desktop"
+    "dropFolder": {
+      "description": "Opens that folder as a workspace (creates one if needed)",
+      "title": "Drop folder to open as project"
+    },
+    "errorBoundary": {
+      "fallback": "Failed to render content"
+    },
+    "quit": "Quit Pi Desktop",
+    "resizeHandle": {
+      "title": "Drag to resize"
+    },
+    "updateBanner": {
+      "available": "Pi Desktop <strong>v{{latestVersion}}</strong> is available — you're on v{{currentVersion}}.",
+      "dismissAriaLabel": "Dismiss update notification",
+      "downloadButton": "Download"
+    }
   },
   "commandGroups": {
     "commands": "Commands",
@@ -9,11 +30,64 @@
     "prompts": "Prompts",
     "skills": "Skills"
   },
+  "commands": {
+    "clone": {
+      "description": "Clone the current branch into a new session"
+    },
+    "compact": {
+      "description": "Compact the conversation to free up context"
+    },
+    "fork": {
+      "description": "Open Branches to fork from a message"
+    },
+    "new": {
+      "description": "Start a new session"
+    },
+    "resume": {
+      "description": "Open the Sessions list"
+    },
+    "settings": {
+      "description": "Open Settings"
+    },
+    "task": {
+      "description": "Launch a task in a new Pi session"
+    }
+  },
   "common": {
     "cancel": "Cancel",
-    "delete": "Delete"
+    "copied": "Copied",
+    "copy": "Copy",
+    "delete": "Delete",
+    "dismiss": "Dismiss",
+    "remove": "Remove",
+    "showSidebar": "Show sidebar"
+  },
+  "contextMenu": {
+    "addMessageToNotes": "Add Message to Notes",
+    "addSelectionToNotes": "Add Selection to Notes",
+    "archive": "Archive",
+    "copyAllVisibleText": "Copy All Visible Text",
+    "copyCodeBlock": "Copy Code Block",
+    "copyLink": "Copy Link",
+    "copyMessage": "Copy Message",
+    "copySelection": "Copy Selection",
+    "cut": "Cut",
+    "deleteSessionConfirmMessage": "Delete session \"{{name}}\"?\n\nWill use the system 'trash' CLI if installed (recoverable); otherwise the .jsonl session file is permanently removed.",
+    "deleteSessionConfirmTitle": "Delete session",
+    "deleteSessionLabel": "Delete…",
+    "openLink": "Open Link",
+    "openSession": "Open Session",
+    "paste": "Paste",
+    "rename": "Rename…",
+    "searchSelection": "Search Selection",
+    "selectAll": "Select All",
+    "unarchive": "Unarchive",
+    "workflowRuns": "Workflow Runs"
   },
   "dialogs": {
+    "openProject": {
+      "title": "Open Project"
+    },
     "permissionRules": {
       "exportTitle": "Export Permission Rules",
       "fileFilterName": "Permission Rules",
@@ -312,7 +386,6 @@
       "globalScopeTab": "Global",
       "importFailed": "Import failed",
       "label": "Permission Rules",
-      "removeWorkspaceConfirmLabel": "Remove",
       "removeWorkspaceConfirmMessage": "Delete this workspace's .pi-desktop/permission-rules.json? Global permission rules will apply again.",
       "removeWorkspaceConfirmTitle": "Remove workspace rules",
       "saveError_global": "Settings saved, but global permission rules were not saved: {{error}}",
@@ -365,6 +438,96 @@
       "description": "Chat, panels, and sidebar — not the terminal or code editor",
       "label": "UI Font Size"
     }
+  },
+  "store": {
+    "confirm": {
+      "changeAnywayLabel": "Change anyway",
+      "changeFolderMessage": "Pi has not finished responding in this session. Changing the project folder restarts Pi, which stops it: whatever Pi already wrote to the session is kept, but the rest of the response — including any tool calls still running — is discarded.",
+      "cloneAnywayLabel": "Clone anyway",
+      "cloneMessage": "Pi has not finished responding in this session. Cloning this branch stops it: whatever Pi already wrote to the session is kept, but the rest of the response — including any tool calls still running — is discarded.",
+      "closeManagedWorktreeMessage": "Close \"{{name}}\"? Clean worktrees are removed; tabs with uncommitted changes are preserved on disk.",
+      "closeSessionTabMessage": "Pi is still working in this session. Closing the tab stops its runtime; saved messages remain available from Sessions.",
+      "closeSessionTabTitle": "Close session tab?",
+      "closeTabLabel": "Close tab",
+      "closeUnmanagedWorktreeMessage": "Close \"{{name}}\"? This existing worktree and its files remain on disk.",
+      "forkAnywayLabel": "Fork anyway",
+      "forkMessage": "Pi has not finished responding in this session. Forking this session stops it: whatever Pi already wrote to the session is kept, but the rest of the response — including any tool calls still running — is discarded.",
+      "keepUntrustedLabel": "Keep untrusted",
+      "keepWorkingLabel": "Keep working",
+      "newMessage": "Pi has not finished responding in this session. Starting a new session stops it: whatever Pi already wrote to the session is kept, but the rest of the response — including any tool calls still running — is discarded.",
+      "okLabel": "OK",
+      "removeWorkspaceMessage": "Remove \"{{name}}\" from the sidebar? Its Pi process stops; files on disk are not touched.",
+      "removeWorkspaceTitle": "Remove workspace",
+      "startAnywayLabel": "Start anyway",
+      "stillWorkingTitle": "Pi is still working",
+      "switchAnywayLabel": "Switch anyway",
+      "switchMessage": "Pi has not finished responding in this session. Opening another session stops it: whatever Pi already wrote to the session is kept, but the rest of the response — including any tool calls still running — is discarded.",
+      "trustWorkspaceConfirmLabel": "Trust workspace",
+      "trustWorkspaceMessage": "This workspace defines permission rules (.pi-desktop/permission-rules.json) with allow rules that would let Pi skip confirmation prompts. They are ignored until you trust this workspace; its deny rules always apply. Only trust workspaces from a source you trust.",
+      "trustWorkspaceTitle": "Trust this workspace?",
+      "workspaceMessage": "Pi has not finished responding in this session. It keeps working after you switch: the response is saved to the session and restored when you come back, and any prompt Pi raises while you are away is held and shown on your return.",
+      "workspaceRulesNoticeMessage": "This workspace defines its own permission rules (.pi-desktop/permission-rules.json). Its deny rules restrict Pi while you work here; your global rules apply otherwise.",
+      "workspaceRulesNoticeTitle": "Workspace permission rules"
+    },
+    "messages": {
+      "arbiterFailed": "Arbiter failed: {{detail}}",
+      "archiveError": "Archive error: {{detail}}",
+      "cannotActivateSession": "Cannot activate session",
+      "cannotCreateSession": "Cannot create session",
+      "changeFolderError": "Change folder error: {{detail}}",
+      "closeSessionError": "Close session error: {{detail}}",
+      "compactingContext": "Compacting context ({{reason}})...",
+      "compactionAborted": "Compaction aborted.",
+      "contextCompacted": "Context compacted.",
+      "councilFailed": "Council failed: {{detail}}",
+      "councilNoQuorum": "No consultant produced a plan (all timed out or errored). Council aborted.",
+      "createWorkspaceError": "Create workspace error: {{detail}}",
+      "defaultTaskLabel": "Task",
+      "deleteError": "Delete error: {{detail}}",
+      "error": "Error: {{detail}}",
+      "followUpError": "Follow-up error: {{detail}}",
+      "imageFallbackName": "Image {{index}}",
+      "installedPackage": "Installed {{spec}}. Restart Pi to load it.",
+      "installFailed": "Install failed",
+      "modelError": "Model error: {{detail}}",
+      "newIsolatedTabError": "New isolated tab error: {{detail}}",
+      "newSessionError": "New session error: {{detail}}",
+      "notAFolder": "Cannot open as project — not a folder: {{path}}",
+      "notGitRepository": "This project is not a Git repository. Use New session for another conversation, or open a Git project for an isolated tab.",
+      "openFolderError": "Open folder error: {{detail}}",
+      "removedPackage": "Removed {{spec}}",
+      "removePackageFailed": "Remove failed",
+      "removeWorkspaceError": "Remove workspace error: {{detail}}",
+      "retrying": "Retrying (attempt {{attempt}}/{{maxAttempts}}): {{detail}}",
+      "reusedWorktree": "Found the related existing Git worktree and continued the task there.",
+      "steerError": "Steer error: {{detail}}",
+      "switchSessionError": "Switch session error: {{detail}}",
+      "switchWorkspaceError": "Switch workspace error: {{detail}}",
+      "tabClosedWorktreePreserved": "Tab closed, but its uncommitted worktree was preserved at {{path}}",
+      "tabFromLastCommit": "This tab starts from the last commit. Uncommitted files remain in the source tab.",
+      "taskLaunchError": "Task launch error: {{detail}}",
+      "truncatedHistory": "Showing the latest {{shown}} of {{total}} messages for performance. Older turns are still on disk in the session file.",
+      "unarchiveError": "Unarchive error: {{detail}}",
+      "unknownError": "Unknown error",
+      "updatedAllPackages": "Updated packages. Restart Pi to load them.",
+      "updatedPackage": "Updated {{spec}}. Restart Pi to load it.",
+      "updatePackageFailed": "Update failed",
+      "writeFailed": "Write failed"
+    },
+    "promptsWaiting_one": "{{count}} Pi prompt waiting",
+    "promptsWaiting_other": "{{count}} Pi prompts waiting"
+  },
+  "timeline": {
+    "agentFinished": "Agent finished",
+    "agentStarted": "Agent started processing",
+    "assistantResponseComplete": "Assistant response complete",
+    "assistantResponseFailed": "Assistant response failed",
+    "compactionComplete": "Compaction complete",
+    "compactionStarted": "Compaction started",
+    "externalPromptReceived": "External prompt received",
+    "retryAttempt": "Retry attempt {{attempt}}",
+    "retryComplete": "Retry complete",
+    "tool": "Tool: {{tool}}"
   },
   "tools": {
     "edit": {
@@ -443,5 +606,18 @@
     "stillRunningTitle": "Pi Desktop is still running",
     "unavailableBody": "This desktop has no system tray, so Pi Desktop will close normally instead of minimizing to the tray.",
     "unavailableTitle": "System tray unavailable"
+  },
+  "workspaceTabs": {
+    "closeSessionTab": "Close session tab",
+    "closeTabAriaLabel": "Close {{name}}",
+    "closeTools": "Close tools",
+    "newIsolatedTabAriaLabel": "New isolated Git tab",
+    "newIsolatedTabTitle": "New isolated Git tab (requires a Git project)",
+    "newSessionAriaLabel": "New session in this project",
+    "newSessionFallback": "New session",
+    "newSessionTitle": "New session in this project (Ctrl/Cmd+N)",
+    "removeWorkspaceAriaLabel": "Remove {{name}}",
+    "sessions": "Sessions",
+    "tools": "Tools"
   }
 }

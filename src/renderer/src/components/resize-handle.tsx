@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 /**
  * A vertical drag handle that reports horizontal movement as a delta.
  *
@@ -13,6 +15,7 @@ export function ResizeHandle({
   /** Fires once when the drag ends — for callers that persist the final size. */
   onResizeEnd?: () => void
 }): React.JSX.Element {
+  const { t } = useTranslation()
   const handleMouseDown = (event: React.MouseEvent) => {
     event.preventDefault()
     document.body.style.cursor = 'col-resize'
@@ -40,7 +43,7 @@ export function ResizeHandle({
     <div
       onMouseDown={handleMouseDown}
       className="group flex w-2 shrink-0 cursor-col-resize items-stretch justify-center bg-app transition-colors hover:bg-surface-hover"
-      title="Drag to resize"
+      title={t('app.resizeHandle.title')}
     >
       <div className="w-px bg-transparent transition-colors group-hover:bg-accent" />
     </div>

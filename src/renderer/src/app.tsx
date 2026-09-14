@@ -1,3 +1,4 @@
+import { useTranslation, Trans } from 'react-i18next'
 import { Sidebar } from './components/sidebar'
 import { ChatPanel } from './components/chat-panel'
 import { StatusBar } from './components/status-bar'
@@ -26,6 +27,7 @@ import { useEffect } from 'react'
 import { ArrowUpCircle, FolderOpen, PanelLeft, X } from 'lucide-react'
 
 export function App(): React.JSX.Element {
+  const { t } = useTranslation()
   usePiEvents()
   useMenuActions()
   useInitialize()
@@ -102,10 +104,10 @@ export function App(): React.JSX.Element {
             <FolderOpen size={36} className="text-accent" />
             <div className="text-center">
               <div className="text-base font-semibold text-primary">
-                Drop folder to open as project
+                {t('app.dropFolder.title')}
               </div>
               <div className="mt-1 text-sm text-dim">
-                Opens that folder as a workspace (creates one if needed)
+                {t('app.dropFolder.description')}
               </div>
             </div>
           </div>
@@ -115,19 +117,23 @@ export function App(): React.JSX.Element {
         <div className="flex shrink-0 items-center justify-center gap-3 bg-accent px-4 py-1.5 text-xs text-white">
           <ArrowUpCircle size={14} className="shrink-0" />
           <span>
-            Pi Desktop <strong>v{updateInfo.latestVersion}</strong> is available — you&apos;re on v{updateInfo.currentVersion}.
+            <Trans
+              i18nKey="app.updateBanner.available"
+              values={{ latestVersion: updateInfo.latestVersion, currentVersion: updateInfo.currentVersion }}
+              components={{ strong: <strong /> }}
+            />
           </span>
           <button
             onClick={() => window.piDesktop.system.openExternal(updateInfo.url)}
             className="rounded bg-white/20 px-2 py-0.5 font-medium hover:bg-white/30 transition-colors"
           >
-            Download
+            {t('app.updateBanner.downloadButton')}
           </button>
           <button
             onClick={dismissUpdate}
             className="rounded p-0.5 text-white/80 hover:bg-white/20 hover:text-white transition-colors"
-            aria-label="Dismiss update notification"
-            title="Dismiss"
+            aria-label={t('app.updateBanner.dismissAriaLabel')}
+            title={t('common.dismiss')}
           >
             <X size={13} />
           </button>
@@ -138,8 +144,8 @@ export function App(): React.JSX.Element {
           type="button"
           onClick={toggleSidebar}
           className="absolute left-3 top-3 z-30 animate-fade-in rounded-md border border-border-strong bg-surface/95 p-1.5 text-muted shadow-sm backdrop-blur-sm transition-colors hover:bg-surface-hover hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-focus"
-          title="Show sidebar"
-          aria-label="Show sidebar"
+          title={t('common.showSidebar')}
+          aria-label={t('common.showSidebar')}
         >
           <PanelLeft size={16} />
         </button>

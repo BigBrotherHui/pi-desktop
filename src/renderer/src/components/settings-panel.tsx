@@ -513,7 +513,7 @@ export function SettingsPanel(): React.JSX.Element {
     const confirmed = await useAppStore.getState().requestConfirm({
       title: t('settings.permissionRules.removeWorkspaceConfirmTitle'),
       message: t('settings.permissionRules.removeWorkspaceConfirmMessage'),
-      confirmLabel: t('settings.permissionRules.removeWorkspaceConfirmLabel'),
+      confirmLabel: t('common.remove'),
       danger: true,
     })
     if (!confirmed) return

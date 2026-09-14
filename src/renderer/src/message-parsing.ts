@@ -1,3 +1,5 @@
+import { t } from '../../shared/i18n'
+
 export interface DisplayAttachment {
   kind: 'image'
   name: string
@@ -84,7 +86,7 @@ function extractImageAttachments(content: unknown): DisplayAttachment[] | undefi
     imageIndex += 1
     return [{
       kind: 'image' as const,
-      name: typeof b.name === 'string' && b.name.trim() ? b.name : `Image ${imageIndex}`,
+      name: typeof b.name === 'string' && b.name.trim() ? b.name : t('store.messages.imageFallbackName', { index: imageIndex }),
       mimeType: b.mimeType,
       data: b.data,
     }]

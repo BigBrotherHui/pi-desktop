@@ -11,7 +11,6 @@ const locales = readdirSync(LOCALES_DIR, { withFileTypes: true })
 // Component files that still hold hard-coded text. Each translation commit
 // removes its files; the interface-translation work is done when this is empty.
 const NOT_YET_TRANSLATED = [
-  'src/renderer/src/app.tsx',
   'src/renderer/src/components/chat-input.tsx',
   'src/renderer/src/components/chat-panel.tsx',
   'src/renderer/src/components/chat-project-picker.tsx',
@@ -21,7 +20,6 @@ const NOT_YET_TRANSLATED = [
   'src/renderer/src/components/custom-models-editor.tsx',
   'src/renderer/src/components/diagnostics-panel.tsx',
   'src/renderer/src/components/diff-viewer.tsx',
-  'src/renderer/src/components/error-boundary.tsx',
   'src/renderer/src/components/extension-ui-dialog.tsx',
   'src/renderer/src/components/file-tree.tsx',
   'src/renderer/src/components/git-conveyor-actions.tsx',
@@ -35,7 +33,6 @@ const NOT_YET_TRANSLATED = [
   'src/renderer/src/components/notes-panel.tsx',
   'src/renderer/src/components/package-browser.tsx',
   'src/renderer/src/components/permission-rules-editor.tsx',
-  'src/renderer/src/components/resize-handle.tsx',
   'src/renderer/src/components/review-rail.tsx',
   'src/renderer/src/components/session-panel.tsx',
   'src/renderer/src/components/sidebar.tsx',
@@ -51,7 +48,6 @@ const NOT_YET_TRANSLATED = [
   'src/renderer/src/components/thinking-level-selector.tsx',
   'src/renderer/src/components/timeline.tsx',
   'src/renderer/src/components/workflow-navigator.tsx',
-  'src/renderer/src/components/workspace-tabs.tsx',
 ]
 
 export default defineConfig({

@@ -1,4 +1,5 @@
 import type { WorkspaceActivity, WorkspaceActivityMap } from '../../../shared/ipc-contracts'
+import { t } from '../../../shared/i18n'
 
 /**
  * Pure helpers mapping the main-process workspace-activity map to sidebar
@@ -21,11 +22,11 @@ export function workspaceActivityIndicator(
 ): ActivityIndicator | null {
   switch (activity?.state) {
     case 'working':
-      return { colorClass: 'bg-accent', pulse: true, label: 'Pi is working' }
+      return { colorClass: 'bg-accent', pulse: true, label: t('activity.working') }
     case 'completed':
-      return { colorClass: 'bg-success', pulse: false, label: 'Finished in the background' }
+      return { colorClass: 'bg-success', pulse: false, label: t('activity.completed') }
     case 'failed':
-      return { colorClass: 'bg-error', pulse: false, label: 'Stopped with an error' }
+      return { colorClass: 'bg-error', pulse: false, label: t('activity.failed') }
     default:
       return null
   }
@@ -50,7 +51,7 @@ export function summarizeBackgroundActivity(
     if (rank > bestRank) {
       const indicator = workspaceActivityIndicator(activity)
       if (indicator) {
-        best = { ...indicator, label: `${indicator.label} in another workspace` }
+        best = { ...indicator, label: t('activity.inAnotherWorkspace', { label: indicator.label }) }
         bestRank = rank
       }
     }
