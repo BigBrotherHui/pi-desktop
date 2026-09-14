@@ -415,7 +415,7 @@ export function StatusPopover(): React.JSX.Element {
               className="flex items-center gap-1 hover:text-muted transition-colors"
             >
               <RefreshCw size={10} />
-              {t('status.refresh')}
+              {t('common.refresh')}
             </button>
           </div>
         </div>

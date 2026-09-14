@@ -1,4 +1,5 @@
 import type { PermissionRule } from '../../../shared/ipc-contracts'
+import { t } from '../../../shared/i18n'
 
 /**
  * Editor-level validation: the only invalid state the row UI can produce is
@@ -8,7 +9,7 @@ import type { PermissionRule } from '../../../shared/ipc-contracts'
 export function validateRuleList(rules: PermissionRule[]): string | null {
   for (let i = 0; i < rules.length; i++) {
     if (rules[i].tool.trim().length === 0) {
-      return `Rule ${i + 1}: tool is required (use * for any tool)`
+      return t('permissionRules.toolRequiredError', { index: i + 1 })
     }
   }
   return null

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { clsx } from 'clsx'
+import { useTranslation } from 'react-i18next'
+import { tEnglish, type Translate } from '../../../shared/i18n'
 import {
   AlertTriangle,
   CheckCircle2,
@@ -26,6 +28,21 @@ const TONE_TEXT: Record<Exclude<RowTone, 'plain'>, string> = {
 /** Newest log entries shown in the Recent Errors section. */
 const MAX_VISIBLE_LOG_ENTRIES = 30
 
+// Report content (ruling R15): rendered with the fixed-English translator, not
+// the interface one, so a copy-pasted bug report always reads in English. Each
+// takes `t` as a parameter (never renamed) so the extractor still finds the keys.
+function workspacePathMissingLabel(t: Translate): string {
+  return t('diagnostics.workspacePathMissing')
+}
+
+function workspaceTrustedLabel(t: Translate): string {
+  return t('diagnostics.workspaceTrustedBadge')
+}
+
+function providerModelCountLabel(count: number, t: Translate): string {
+  return t('diagnostics.providerModelCount', { count })
+}
+
 const KEY_STATE_LABELS: Record<string, { label: string; tone: RowTone }> = {
   literal: { label: 'key configured', tone: 'ok' },
   'env-set': { label: 'env var set', tone: 'ok' },
@@ -35,6 +52,7 @@ const KEY_STATE_LABELS: Record<string, { label: string; tone: RowTone }> = {
 }
 
 export function DiagnosticsPanel(): React.JSX.Element {
+  const { t } = useTranslation()
   const [report, setReport] = useState<DiagnosticsReport | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -63,7 +81,7 @@ export function DiagnosticsPanel(): React.JSX.Element {
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
           <Stethoscope size={16} className="text-muted" />
-          <h2 className="text-sm font-medium text-primary">Diagnostics</h2>
+          <h2 className="text-sm font-medium text-primary">{t('diagnostics.title')}</h2>
         </div>
         <div className="flex items-center gap-2">
           {report && (
@@ -74,8 +92,8 @@ export function DiagnosticsPanel(): React.JSX.Element {
           )}
           <button
             onClick={() => void load()}
-            title="Refresh"
-            aria-label="Refresh diagnostics"
+            title={t('common.refresh')}
+            aria-label={t('diagnostics.refreshAriaLabel')}
             className="rounded p-1.5 text-dim hover:bg-surface-hover hover:text-secondary transition-colors"
           >
             <RefreshCw size={14} />
@@ -91,26 +109,26 @@ export function DiagnosticsPanel(): React.JSX.Element {
         ) : loadError !== null ? (
           <div className="flex flex-col items-center justify-center py-12 text-dim">
             <AlertTriangle size={32} className="mb-3 text-warning" />
-            <p className="text-sm text-secondary">Couldn't build the report</p>
+            <p className="text-sm text-secondary">{t('diagnostics.loadErrorTitle')}</p>
             <p className="mt-1 max-w-md break-words px-4 text-center text-xs text-faint">{loadError}</p>
             <button
               onClick={() => void load()}
               className="mt-3 rounded bg-card px-3 py-1 text-xs text-secondary transition-colors hover:bg-surface-hover"
             >
-              Retry
+              {t('common.retry')}
             </button>
           </div>
         ) : report ? (
           <div className="mx-auto max-w-3xl space-y-6">
-            <DiagSection title="Application">
-              <DiagRow label="App version" value={report.app.version} />
-              <DiagRow label="Electron" value={report.app.electron} />
-              <DiagRow label="Chromium" value={report.app.chrome} />
-              <DiagRow label="Node" value={report.app.node} />
-              <DiagRow label="Platform" value={report.app.platform} />
+            <DiagSection title={t('diagnostics.sections.application')}>
+              <DiagRow label={t('diagnostics.fields.appVersion')} value={report.app.version} />
+              <DiagRow label={t('diagnostics.fields.electron')} value={report.app.electron} />
+              <DiagRow label={t('diagnostics.fields.chromium')} value={report.app.chrome} />
+              <DiagRow label={t('diagnostics.fields.node')} value={report.app.node} />
+              <DiagRow label={t('diagnostics.fields.platform')} value={report.app.platform} />
             </DiagSection>
 
-            <DiagSection title={`${engineLabel} Binary`}>
+            <DiagSection title={t('diagnostics.sections.binaryTitle', { agent: engineLabel })}>
               {report.piBinary.failureReason && (
                 <div className="mb-2 whitespace-pre-wrap rounded-md border border-border bg-error-bg px-3 py-2 text-xs text-error">
                   {report.piBinary.failureReason}
@@ -118,32 +136,32 @@ export function DiagnosticsPanel(): React.JSX.Element {
               )}
               {report.piBinary.rejectedOverride && (
                 <div className="mb-2 rounded-md border border-border bg-warning-bg px-3 py-2 text-xs text-warning">
-                  Configured path ignored (does not exist): {report.piBinary.rejectedOverride}
+                  {t('diagnostics.fields.rejectedOverride', { path: report.piBinary.rejectedOverride })}
                 </div>
               )}
               <DiagRow
-                label="Binary found"
+                label={t('diagnostics.fields.binaryFound')}
                 value={report.piBinary.found ? 'yes' : 'no'}
                 tone={report.piBinary.found ? 'ok' : 'fail'}
               />
-              <DiagRow label={`${engineLabel} version`} value={report.piVersion ?? 'unknown'} tone={report.piVersion ? 'plain' : 'warn'} />
-              <DiagRow label="Script" value={report.piBinary.script} mono />
-              <DiagRow label="Resolution source" value={report.piBinary.source} />
+              <DiagRow label={t('diagnostics.fields.engineVersion', { agent: engineLabel })} value={report.piVersion ?? 'unknown'} tone={report.piVersion ? 'plain' : 'warn'} />
+              <DiagRow label={t('diagnostics.fields.script')} value={report.piBinary.script} mono />
+              <DiagRow label={t('diagnostics.fields.resolutionSource')} value={report.piBinary.source} />
               {report.piBinary.useNode && (
                 <DiagRow
-                  label="Node binary"
+                  label={t('diagnostics.fields.nodeBinary')}
                   value={report.piBinary.nodeBinary}
                   mono
                   tone={report.piBinary.nodeFound ? 'plain' : 'fail'}
                 />
               )}
-              <DiagRow label="Needs shell" value={report.piBinary.needsShell ? 'yes' : 'no'} />
-              <DiagRow label="PATH entries searched" value={String(report.piBinary.pathEntryCount)} />
+              <DiagRow label={t('diagnostics.fields.needsShell')} value={report.piBinary.needsShell ? 'yes' : 'no'} />
+              <DiagRow label={t('diagnostics.fields.pathEntriesSearched')} value={String(report.piBinary.pathEntryCount)} />
             </DiagSection>
 
-            <DiagSection title="Workspaces">
+            <DiagSection title={t('diagnostics.sections.workspaces')}>
               {report.workspaces.length === 0 ? (
-                <p className="text-xs text-dim">No workspaces.</p>
+                <p className="text-xs text-dim">{t('diagnostics.noWorkspaces')}</p>
               ) : (
                 report.workspaces.map((ws) => (
                   <div key={ws.id} className="flex items-center gap-2 py-1 text-xs">
@@ -152,22 +170,22 @@ export function DiagnosticsPanel(): React.JSX.Element {
                     <span className="min-w-0 flex-1 truncate font-mono text-faint" title={ws.path}>
                       {ws.path}
                     </span>
-                    {!ws.pathExists && <span className="shrink-0 text-error">missing</span>}
-                    {ws.trusted && <span className="shrink-0 text-success">trusted</span>}
+                    {!ws.pathExists && <span className="shrink-0 text-error">{workspacePathMissingLabel(tEnglish)}</span>}
+                    {ws.trusted && <span className="shrink-0 text-success">{workspaceTrustedLabel(tEnglish)}</span>}
                     <span className="shrink-0 text-muted">{ws.piStatus}</span>
                   </div>
                 ))
               )}
             </DiagSection>
 
-            <DiagSection title="Providers">
+            <DiagSection title={t('diagnostics.sections.providers')}>
               {report.providersError ? (
                 <div className="flex items-center gap-2 text-xs text-warning">
                   <AlertTriangle size={13} className="shrink-0" />
                   <span className="min-w-0 flex-1 break-words">{report.providersError}</span>
                 </div>
               ) : !report.providers || report.providers.length === 0 ? (
-                <p className="text-xs text-dim">No custom providers configured (models.json).</p>
+                <p className="text-xs text-dim">{t('diagnostics.noCustomProviders')}</p>
               ) : (
                 report.providers.map((provider) => {
                   const keyInfo = KEY_STATE_LABELS[provider.keyState] ?? { label: provider.keyState, tone: 'plain' as RowTone }
@@ -176,7 +194,7 @@ export function DiagnosticsPanel(): React.JSX.Element {
                       <StatusGlyph tone={keyInfo.tone === 'plain' ? 'ok' : keyInfo.tone} />
                       <span className="shrink-0 text-secondary">{provider.name}</span>
                       <span className="shrink-0 text-faint">
-                        {provider.modelCount} model{provider.modelCount === 1 ? '' : 's'}
+                        {providerModelCountLabel(provider.modelCount, tEnglish)}
                       </span>
                       <span
                         className={clsx(
@@ -194,10 +212,10 @@ export function DiagnosticsPanel(): React.JSX.Element {
               )}
             </DiagSection>
 
-            <DiagSection title="Permissions">
-              <DiagRow label="Mode" value={report.permissions.mode} />
+            <DiagSection title={t('diagnostics.sections.permissions')}>
+              <DiagRow label={t('diagnostics.fields.mode')} value={report.permissions.mode} />
               <DiagRow
-                label="Global rules"
+                label={t('diagnostics.fields.globalRules')}
                 value={
                   report.permissions.globalRuleCount === null
                     ? `invalid file: ${report.permissions.globalRulesError ?? 'unknown error'}`
@@ -206,7 +224,7 @@ export function DiagnosticsPanel(): React.JSX.Element {
                 tone={report.permissions.globalRuleCount === null ? 'fail' : 'plain'}
               />
               <DiagRow
-                label="Workspace rules"
+                label={t('diagnostics.fields.workspaceRules')}
                 value={
                   report.permissions.workspace.hasWorkspaceRules
                     ? `present${report.permissions.workspace.hasAllowRules ? ', has allow rules' : ''}`
@@ -215,7 +233,7 @@ export function DiagnosticsPanel(): React.JSX.Element {
               />
               {report.permissions.workspace.workspacePath && (
                 <DiagRow
-                  label="Workspace trust"
+                  label={t('diagnostics.fields.workspaceTrust')}
                   value={report.permissions.workspace.trusted ? 'trusted' : 'not trusted'}
                   tone={
                     report.permissions.workspace.hasAllowRules && !report.permissions.workspace.trusted
@@ -226,20 +244,20 @@ export function DiagnosticsPanel(): React.JSX.Element {
               )}
             </DiagSection>
 
-            <DiagSection title="Storage">
-              <DiagRow label="GUI data dir" value={report.storage.guiDataDir} mono />
-              <DiagRow label="Settings file" value={report.storage.settingsPath} mono />
+            <DiagSection title={t('diagnostics.sections.storage')}>
+              <DiagRow label={t('diagnostics.fields.guiDataDir')} value={report.storage.guiDataDir} mono />
+              <DiagRow label={t('diagnostics.fields.settingsFile')} value={report.storage.settingsPath} mono />
               <DiagRow
-                label="Sessions root"
+                label={t('diagnostics.fields.sessionsRoot')}
                 value={report.storage.sessionsRoot}
                 mono
                 tone={report.storage.sessionsRootExists ? 'plain' : 'warn'}
               />
             </DiagSection>
 
-            <DiagSection title="Recent Errors">
+            <DiagSection title={t('diagnostics.sections.recentErrors')}>
               {report.recentErrors.length === 0 ? (
-                <p className="text-xs text-dim">No warnings or errors recorded this run.</p>
+                <p className="text-xs text-dim">{t('diagnostics.noRecentErrors')}</p>
               ) : (
                 <div className="space-y-1">
                   {report.recentErrors.slice(-MAX_VISIBLE_LOG_ENTRIES).map((entry, index) => (

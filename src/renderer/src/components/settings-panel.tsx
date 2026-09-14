@@ -34,7 +34,7 @@ import {
   setUserThemes,
   type ThemeKind,
 } from '../utils/theme'
-import { BUILTIN_THEME_IDS } from '../themes'
+import { BUILTIN_THEME_IDS, themeDisplayName } from '../themes'
 import { CustomModelsEditor } from './custom-models-editor'
 import { ThemeEditor } from './theme-editor'
 import { ThemeGallery } from './theme-gallery'
@@ -826,13 +826,13 @@ export function SettingsPanel(): React.JSX.Element {
                   onClick={handleImportTheme}
                   className="rounded-md border border-border-strong px-3 py-1.5 text-sm text-muted hover:bg-surface-hover transition-colors"
                 >
-                  {t('settings.themeActions.importButton')}
+                  {t('common.import')}
                 </button>
                 <button
                   onClick={handleExportTheme}
                   className="rounded-md border border-border-strong px-3 py-1.5 text-sm text-muted hover:bg-surface-hover transition-colors"
                 >
-                  {t('settings.themeActions.exportButton')}
+                  {t('common.export')}
                 </button>
                 <button
                   onClick={() => setGalleryOpen(true)}
@@ -1273,13 +1273,16 @@ function SelectField({
 
 // One <option> per registered theme, optionally only those of one kind.
 function ThemeOptions({ kind }: { kind?: ThemeKind }): React.JSX.Element {
+  // Subscribes this component to language changes so built-in theme names
+  // (translated by themeDisplayName, which uses the shared t) re-render.
+  useTranslation()
   return (
     <>
       {getRegisteredThemes()
         .filter((registeredTheme) => !kind || registeredTheme.file.kind === kind)
         .map((registeredTheme) => (
           <option key={registeredTheme.id} value={registeredTheme.id}>
-            {registeredTheme.file.name}
+            {themeDisplayName(registeredTheme.id, registeredTheme.file.name)}
           </option>
         ))}
     </>

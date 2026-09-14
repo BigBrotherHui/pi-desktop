@@ -12,20 +12,13 @@ const locales = readdirSync(LOCALES_DIR, { withFileTypes: true })
 // removes its files; the interface-translation work is done when this is empty.
 const NOT_YET_TRANSLATED = [
   'src/renderer/src/components/council-panels.tsx',
-  'src/renderer/src/components/custom-models-editor.tsx',
-  'src/renderer/src/components/diagnostics-panel.tsx',
   'src/renderer/src/components/diff-viewer.tsx',
   'src/renderer/src/components/file-tree.tsx',
   'src/renderer/src/components/git-conveyor-actions.tsx',
   'src/renderer/src/components/image-viewer.tsx',
-  'src/renderer/src/components/package-browser.tsx',
-  'src/renderer/src/components/permission-rules-editor.tsx',
   'src/renderer/src/components/review-rail.tsx',
-  'src/renderer/src/components/skills-panel.tsx',
   'src/renderer/src/components/stats-panel.tsx',
   'src/renderer/src/components/terminal.tsx',
-  'src/renderer/src/components/theme-editor.tsx',
-  'src/renderer/src/components/theme-gallery.tsx',
   'src/renderer/src/components/timeline.tsx',
   'src/renderer/src/components/workflow-navigator.tsx',
 ]

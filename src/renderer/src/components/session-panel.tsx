@@ -140,7 +140,7 @@ export function SessionPanel(): React.JSX.Element {
               onClick={refreshSessionList}
               className="rounded-md px-3 py-1.5 text-sm text-muted hover:text-primary transition-colors"
             >
-              {t('status.refresh')}
+              {t('common.refresh')}
             </button>
             <button
               onClick={createNewSession}

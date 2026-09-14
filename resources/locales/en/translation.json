@@ -170,6 +170,7 @@
   "common": {
     "attachFile": "Attach file",
     "cancel": "Cancel",
+    "close": "Close",
     "collapse": "Collapse",
     "confirm": "Confirm",
     "copied": "Copied",
@@ -180,10 +181,14 @@
     "export": "Export",
     "global": "Global",
     "hideSidebar": "Hide sidebar",
+    "import": "Import",
+    "install": "Install",
+    "installed": "Installed",
     "loading": "Loading…",
     "newSession": "New Session",
     "paste": "Paste",
     "project": "Project",
+    "refresh": "Refresh",
     "remove": "Remove",
     "retry": "Retry",
     "save": "Save",
@@ -191,6 +196,7 @@
     "send": "Send",
     "settings": "Settings",
     "showSidebar": "Show sidebar",
+    "skills": "Skills",
     "submit": "Submit",
     "thinking": "Thinking",
     "workflowRuns": "Workflow runs"
@@ -225,6 +231,78 @@
     },
     "unarchive": "Unarchive",
     "workflowRuns": "Workflow Runs"
+  },
+  "customModels": {
+    "addModelButton": "Add model",
+    "addProviderButton": "Add provider",
+    "apiKeyPlaceholder": "apiKey — literal, $ENV_VAR, or !shell-command",
+    "baseUrlPlaceholder": "baseUrl",
+    "capabilityHint": "Heads-up: imported models may load without capability flags set. If a model supports thinking, tick <reasoning>reasoning</reasoning>; if it accepts images, tick <vision>vision</vision>. Restart {{engine}} to apply.",
+    "contextWindowLabel": "ctx",
+    "defaultFileName": "models file",
+    "description": "Custom providers and models in <code>{{path}}</code>. Applied when {{engine}} restarts.",
+    "errors": {
+      "duplicateKeys": "Provider keys must be unique",
+      "emptyKey": "Every provider needs a non-empty key",
+      "saveFailed": "Save failed"
+    },
+    "loadError": {
+      "message": "Could not load {{fileName}} safely, so editing is disabled to avoid overwriting it."
+    },
+    "maxTokensLabel": "max",
+    "modelIdPlaceholder": "model id (required)",
+    "modelNamePlaceholder": "name",
+    "providerKeyPlaceholder": "provider-key (e.g. ollama)",
+    "reasoningLabel": "reasoning",
+    "removeModelTitle": "Remove model",
+    "removeProviderTitle": "Remove provider",
+    "saveButton": "Save {{fileName}}",
+    "savedRestartButton": "Saved — Restart {{engine}} to apply",
+    "supportsReasoningEffortLabel": "supports reasoning effort",
+    "visionLabel": "vision"
+  },
+  "diagnostics": {
+    "fields": {
+      "appVersion": "App version",
+      "binaryFound": "Binary found",
+      "chromium": "Chromium",
+      "electron": "Electron",
+      "engineVersion": "{{agent}} version",
+      "globalRules": "Global rules",
+      "guiDataDir": "GUI data dir",
+      "mode": "Mode",
+      "needsShell": "Needs shell",
+      "node": "Node",
+      "nodeBinary": "Node binary",
+      "pathEntriesSearched": "PATH entries searched",
+      "platform": "Platform",
+      "rejectedOverride": "Configured path ignored (does not exist): {{path}}",
+      "resolutionSource": "Resolution source",
+      "script": "Script",
+      "sessionsRoot": "Sessions root",
+      "settingsFile": "Settings file",
+      "workspaceRules": "Workspace rules",
+      "workspaceTrust": "Workspace trust"
+    },
+    "loadErrorTitle": "Couldn't build the report",
+    "noCustomProviders": "No custom providers configured (models.json).",
+    "noRecentErrors": "No warnings or errors recorded this run.",
+    "noWorkspaces": "No workspaces.",
+    "providerModelCount_one": "{{count}} model",
+    "providerModelCount_other": "{{count}} models",
+    "refreshAriaLabel": "Refresh diagnostics",
+    "sections": {
+      "application": "Application",
+      "binaryTitle": "{{agent}} Binary",
+      "permissions": "Permissions",
+      "providers": "Providers",
+      "recentErrors": "Recent Errors",
+      "storage": "Storage",
+      "workspaces": "Workspaces"
+    },
+    "title": "Diagnostics",
+    "workspacePathMissing": "missing",
+    "workspaceTrustedBadge": "trusted"
   },
   "dialogs": {
     "openFolder": {
@@ -554,6 +632,44 @@
     "needs-approval": "Pi is waiting for your approval.",
     "withSession": "{{body}} Click to open the finished session."
   },
+  "packages": {
+    "catalog": {
+      "emptyHint": "Visit <link>pi.dev/packages</link> to browse",
+      "emptyTitle": "No packages found",
+      "resultsCap": "Showing {{shown}} of {{total}} — refine your search to narrow results.",
+      "searchPlaceholder": "Search packages...",
+      "viewRepo": "View repo"
+    },
+    "installBar": {
+      "placeholder": "npm:package-name or git:github.com/user/repo"
+    },
+    "installed": {
+      "checkingUpdates": "Checking for updates…",
+      "checkUpdatesButton": "Check for updates",
+      "emptyHint": "Browse the catalog or use the install bar above",
+      "emptyTitle": "No packages installed",
+      "removeButton": "Remove package",
+      "updateAllButton": "Update all",
+      "updatePackageAria": "Update {{name}}",
+      "updatesAvailable_one": "{{count}} update available",
+      "updatesAvailable_other": "{{count}} updates available",
+      "updateToVersion": "Update to v{{version}}",
+      "versionUpdateArrow": "v{{from}} → v{{to}}"
+    },
+    "tabs": {
+      "catalog": "Catalog",
+      "installed": "Installed"
+    },
+    "title": "Packages & Skills",
+    "type": {
+      "extension": "extension",
+      "package": "package",
+      "prompt": "prompt",
+      "skill": "skill",
+      "theme": "theme"
+    },
+    "viewOnNpm": "View on npm"
+  },
   "palette": {
     "navigationHint": "↑↓ navigate · Enter/Tab run · / commands only · Esc close",
     "noMatches": "No matches",
@@ -581,6 +697,36 @@
       "description": "All Pi tools are enabled for workflows you trust.",
       "label": "Trusted"
     }
+  },
+  "permissionRules": {
+    "action": {
+      "allow": "Allow",
+      "deny": "Deny"
+    },
+    "addRuleButton": "Add rule",
+    "copyFromGlobalButton": "Copy from global",
+    "copyFromGlobalTitle": "Copy the global rules list into this workspace (replaces the list below until you save)",
+    "exportTitle": "Export the list below to a JSON file",
+    "importTitle": "Import rules from a JSON file (replaces the list below until you save)",
+    "legend": "Deny always wins, then allow, then the mode above decides. Use * as a wildcard.",
+    "loadErrorMessage": "Saved rules file is invalid and is being ignored: {{error}}",
+    "noRules": "No rules yet — the mode above decides everything.",
+    "patternPlaceholder": "pattern, e.g. npm test* (empty = any input)",
+    "removeRuleAria": "Remove rule {{index}}",
+    "removeRuleTitle": "Remove rule",
+    "removeWorkspaceRulesButton": "Remove workspace rules",
+    "removeWorkspaceRulesTitle": "Delete this workspace's .pi-desktop/permission-rules.json; global rules apply again",
+    "revokeTrustButton": "Revoke trust",
+    "rowActionAria": "Rule {{index}} action",
+    "rowPatternAria": "Rule {{index}} pattern",
+    "rowToolAria": "Rule {{index}} tool",
+    "toolPlaceholder": "tool (* = any)",
+    "toolRequiredError": "Rule {{index}}: tool is required (use * for any tool)",
+    "trustedMessage": "Trusted — this workspace's allow rules apply and HTML previews run scripts.",
+    "trustWorkspaceButton": "Trust workspace",
+    "untrustedMessage": "HTML previews for this workspace are static (scripts disabled). Trust it to enable interactive previews and any allow rules.",
+    "untrustedWithAllowRulesMessage": "This workspace's allow rules are inactive and HTML previews are static until you trust it. Its deny rules still apply. Trust only workspaces from a source you trust.",
+    "workspaceOverrideNotice": "This workspace has its own rules file (.pi-desktop/permission-rules.json). Its deny rules apply on top of these global rules; its allow rules apply only if you trust the workspace — see the This workspace tab."
   },
   "permissions": {
     "prompt": {
@@ -791,8 +937,6 @@
     "themeActions": {
       "browseGalleryButton": "Browse gallery",
       "description": "Import, export, or install a theme from a URL",
-      "exportButton": "Export",
-      "importButton": "Import",
       "installButton": "Install",
       "label": "Theme Actions"
     },
@@ -883,6 +1027,16 @@
       "triggerTitle": "Click to switch · double-click to rename · right-click for options"
     }
   },
+  "skills": {
+    "emptyHint": "Install skill packages or create skills in .pi/skills/",
+    "emptyOmp": "No skills found in ~/.omp/agent/skills, ~/.claude/skills, or project .omp/skills",
+    "emptyPi": "No skills found in ~/.pi/agent/skills or project .pi/skills",
+    "emptyTitle": "No skills found",
+    "providedByPlugin": "Provided by an installed plugin",
+    "refreshAriaLabel": "Refresh skills",
+    "runButton": "Run",
+    "selectPrompt": "Select a skill to view its SKILL.md"
+  },
   "status": {
     "agentSection": {
       "title": "{{agent}} Agent"
@@ -920,7 +1074,6 @@
     "promptTemplatesSection": {
       "title": "Prompt Templates"
     },
-    "refresh": "Refresh",
     "row": {
       "cost": "Cost",
       "error": "Error",
@@ -1069,6 +1222,63 @@
     "subtitle": "Start a fresh Pi session and send the task immediately.",
     "task": "Task",
     "taskPlaceholder": "Fix the failing tests, explain the root cause, and prepare the changes for review…"
+  },
+  "themes": {
+    "builtin": {
+      "breeze-claudius": "Breeze Claudius",
+      "breeze-dark": "Breeze Dark",
+      "breeze-light": "Breeze Light",
+      "dark": "Dark",
+      "gruvbox": "Gruvbox",
+      "light": "Light",
+      "nord": "Nord"
+    },
+    "editor": {
+      "advancedSummary": "Advanced",
+      "authorLabel": "Author (optional)",
+      "authorPlaceholder": "Shown in the gallery",
+      "copySuffix": "{{name}} Copy",
+      "createTitle": "Create theme",
+      "descriptionLabel": "Description (optional)",
+      "descriptionPlaceholder": "One or two sentences about the theme",
+      "editTitle": "Edit theme",
+      "kindLabel": "Kind",
+      "nameLabel": "Name",
+      "renameCleanupWarning": "Theme saved as \"{{name}}\", but the old version could not be removed and may still appear in the list.",
+      "resetToDerivedTitle": "Reset to derived value",
+      "savingLabel": "Saving…",
+      "seedLabels": {
+        "accent": "Accent",
+        "app": "App background",
+        "error": "Error",
+        "success": "Success",
+        "surface": "Surface",
+        "text": "Text",
+        "warning": "Warning"
+      },
+      "syntaxColorsSummary": "Syntax colors"
+    },
+    "gallery": {
+      "authorScreenshotLabel": "Author screenshot",
+      "backAriaLabel": "Back to all themes",
+      "detailSubtitle": "Live preview from the theme's real colors",
+      "empty": "No themes are available yet.",
+      "installingLabel": "Installing…",
+      "loadError": "Could not load the gallery: {{error}}",
+      "loading": "Loading themes…",
+      "screenshotAlt": "Screenshot of {{name}}",
+      "screenshotError": "Screenshot could not be loaded.",
+      "screenshotLoading": "Loading screenshot…",
+      "showMore_one": "Show more ({{count}})",
+      "showMore_other": "Show more ({{count}})",
+      "subtitle": "From the pi-desktop-themes gallery — click a theme for details",
+      "title": "Community themes",
+      "viewDetailsAria": "View {{name}} details"
+    },
+    "kind": {
+      "dark": "Dark",
+      "light": "Light"
+    }
   },
   "thinking": {
     "effort": "Effort",

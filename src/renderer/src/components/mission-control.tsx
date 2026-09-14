@@ -120,7 +120,7 @@ export function MissionControl(): React.JSX.Element {
               title={t('missionControl.refreshWorkflowRuns')}
             >
               <RefreshCw size={12} />
-              {t('status.refresh')}
+              {t('common.refresh')}
             </button>
             <button
               type="button"
