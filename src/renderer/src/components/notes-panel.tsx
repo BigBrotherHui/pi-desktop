@@ -48,7 +48,7 @@ export function NotesPanel(): React.JSX.Element {
 
   const scopeLabel = (scope: string): string =>
     scope === GLOBAL_SCOPE
-      ? t('notes.scope.global')
+      ? t('common.global')
       : scope === activeWorkspace?.id
         ? (activeWorkspace?.name ?? t('notes.scope.workspaceFallback'))
         : t('notes.scope.other')
@@ -379,7 +379,7 @@ function NoteForm({
         <div>
           <label className="mb-1 block text-xs font-medium text-muted">{t('notes.form.scopeLabel')}</label>
           <div className="flex gap-2">
-            <ScopeButton active={scope === GLOBAL_SCOPE} onClick={() => setScope(GLOBAL_SCOPE)} label={t('notes.scope.global')} />
+            <ScopeButton active={scope === GLOBAL_SCOPE} onClick={() => setScope(GLOBAL_SCOPE)} label={t('common.global')} />
             {workspaceId && (
               <ScopeButton
                 active={scope === workspaceId}

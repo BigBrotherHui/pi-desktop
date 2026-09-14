@@ -29,8 +29,6 @@
     "attach": {
       "allFilesFilter": "All Files",
       "attachFailed": "Could not attach file",
-      "buttonLabel": "Attach file",
-      "dialogTitle": "Attach file",
       "imagesFilter": "Images",
       "onlyImagesPasted": "Only images can be pasted into the composer",
       "pasteFailed": "Could not paste image",
@@ -128,8 +126,7 @@
       "diffViewer": "Diff viewer",
       "fileTree": "File tree",
       "reviewPanel": "Review panel",
-      "terminal": "Terminal",
-      "workflowRuns": "Workflow runs"
+      "terminal": "Terminal"
     },
     "toolCall": {
       "status": {
@@ -171,6 +168,7 @@
     }
   },
   "common": {
+    "attachFile": "Attach file",
     "cancel": "Cancel",
     "collapse": "Collapse",
     "confirm": "Confirm",
@@ -180,8 +178,10 @@
     "delete": "Delete",
     "dismiss": "Dismiss",
     "export": "Export",
+    "global": "Global",
     "hideSidebar": "Hide sidebar",
     "loading": "Loading…",
+    "newSession": "New Session",
     "paste": "Paste",
     "project": "Project",
     "remove": "Remove",
@@ -192,7 +192,8 @@
     "settings": "Settings",
     "showSidebar": "Show sidebar",
     "submit": "Submit",
-    "thinking": "Thinking"
+    "thinking": "Thinking",
+    "workflowRuns": "Workflow runs"
   },
   "composer": {
     "permissionMenu": {
@@ -391,8 +392,7 @@
     "actions": {
       "newSession": {
         "inWorkspace": "In {{project}}",
-        "pickFolderFirst": "Pick a folder first",
-        "title": "New Session"
+        "pickFolderFirst": "Pick a folder first"
       },
       "newTask": {
         "description": "Start work in a fresh Pi session",
@@ -541,7 +541,6 @@
       "searchPlaceholder": "Search saved notes to insert..."
     },
     "scope": {
-      "global": "Global",
       "other": "Other workspace",
       "workspaceFallback": "Workspace"
     },
@@ -619,7 +618,6 @@
       "sessionCount_one": "{{count}} session",
       "sessionCount_other": "{{count}} sessions"
     },
-    "newSessionButton": "New Session",
     "runtime": {
       "completed": "{{agent}} finished",
       "failed": "{{agent}} stopped with an error",
@@ -654,8 +652,7 @@
       "minutes_one": "{{count}}m ago",
       "minutes_other": "{{count}}m ago"
     },
-    "title": "Sessions",
-    "workflowRunsMenuItem": "Workflow runs"
+    "title": "Sessions"
   },
   "settings": {
     "actions": {
@@ -750,7 +747,6 @@
     "permissionRules": {
       "description": "Fine-grained per-tool overrides for the mode above",
       "exportFailed": "Export failed",
-      "globalScopeTab": "Global",
       "importFailed": "Import failed",
       "label": "Permission Rules",
       "removeWorkspaceConfirmMessage": "Delete this workspace's .pi-desktop/permission-rules.json? Global permission rules will apply again.",

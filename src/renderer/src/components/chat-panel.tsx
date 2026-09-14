@@ -226,7 +226,7 @@ export function ChatPanel(): React.JSX.Element {
                   else if (state.sessionState?.sessionId) state.openWorkflowRunsForSession(state.sessionState.sessionId)
                   else state.setWorkflowPanelOpen(true)
                 }}
-                title={t('chat.toolbar.workflowRuns')}
+                title={t('common.workflowRuns')}
               />
             </div>
           </div>

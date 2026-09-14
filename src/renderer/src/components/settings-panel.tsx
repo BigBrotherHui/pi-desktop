@@ -953,7 +953,7 @@ export function SettingsPanel(): React.JSX.Element {
                       : 'text-dim hover:text-primary'
                   )}
                 >
-                  {scope === 'global' ? t('settings.permissionRules.globalScopeTab') : t('settings.permissionRules.workspaceScopeTab')}
+                  {scope === 'global' ? t('common.global') : t('settings.permissionRules.workspaceScopeTab')}
                 </button>
               ))}
             </div>

@@ -366,7 +366,7 @@ function HomeScreenInfo(): React.JSX.Element {
           >
             <Plus size={18} className="shrink-0 text-muted" />
             <div className="min-w-0">
-              <div className="text-sm font-medium text-primary">{t('home.actions.newSession.title')}</div>
+              <div className="text-sm font-medium text-primary">{t('common.newSession')}</div>
               <div className="truncate text-xs text-dim">
                 {activeWorkspace
                   ? t('home.actions.newSession.inWorkspace', { project: activeWorkspace.name })

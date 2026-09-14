@@ -147,7 +147,7 @@ export function SessionPanel(): React.JSX.Element {
               className="flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-sm text-white hover:bg-accent-hover transition-colors"
             >
               <Plus size={14} />
-              {t('sessions.newSessionButton')}
+              {t('common.newSession')}
             </button>
           </div>
         </div>
@@ -627,7 +627,7 @@ function SessionEntry({
             }}
             className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-secondary hover:bg-surface-hover"
           >
-            <WorkflowIcon size={13} /> {t('sessions.workflowRunsMenuItem')}
+            <WorkflowIcon size={13} /> {t('common.workflowRuns')}
           </button>
           <button
             onClick={handleArchive}

@@ -316,7 +316,7 @@ export function ChatInput(): React.JSX.Element {
     setAttachError(null)
     try {
       const path = await window.piDesktop.system.openDialog({
-        title: t('chat.attach.dialogTitle'),
+        title: t('common.attachFile'),
         mode: 'file',
         filters: [
           { name: t('chat.attach.imagesFilter'), extensions: [...SUPPORTED_IMAGE_EXTENSIONS] },
@@ -638,8 +638,8 @@ export function ChatInput(): React.JSX.Element {
             onClick={handleAttachFile}
             disabled={isDisabled}
             className="hover:bg-highlight-strong flex items-center justify-center rounded-md p-1.5 text-dim hover:text-secondary transition-colors disabled:opacity-50"
-            title={t('chat.attach.buttonLabel')}
-            aria-label={t('chat.attach.buttonLabel')}
+            title={t('common.attachFile')}
+            aria-label={t('common.attachFile')}
           >
             <Paperclip size={15} />
           </button>
