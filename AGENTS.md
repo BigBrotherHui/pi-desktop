@@ -33,6 +33,15 @@ Project is currently in **Alpha**. APIs, IPC contracts, on-disk config formats, 
 - Per-workspace trust gate: an untrusted workspace's own `.pi-desktop/permission-rules.json` allow rules are ignored, and its HTML preview runs without scripts/network, until the user trusts the workspace
 - Attachment reads limited to picked or in-workspace paths; session deletion confined to the Pi sessions dir; package specs validated before the Pi CLI runs
 
+### Interface text
+
+- One i18next default instance per process (`src/shared/i18n`), starting in English; language files live in `resources/locales/<code>/translation.json`
+- Components call `useTranslation()` from `react-i18next`; other code imports `t` from `src/shared/i18n`. Text is built when called, never stored translated at module load
+- `tEnglish` (also from `src/shared/i18n`) is used instead of `t` for logs, `appLog.*`, and the diagnostics report, which stay English regardless of the interface language
+- Product names ("Pi Desktop", "Pi", "OMP") are never translation keys — they come from `agentEngineLabel()`, `councilAgentLabel()`, or a named constant, never from a language file
+- `npm run lint` runs `i18next-cli lint` and `i18next-cli extract --ci --dry-run`, so hard-coded text and stale keys fail CI
+- Code never decides behavior from a translated display string; it reads underlying values (failure codes, `kind`/`ToolKind` enums, error types) instead
+
 ## Project Structure
 
 Modules have colocated `*.test.ts` files; `resources/` has tests too. CI runs `npx tsx --test $(find src resources -name '*.test.ts')`.
@@ -362,6 +371,7 @@ Click the status icon in the sidebar header to see:
   - Trust posture: a workspace's `.pi-desktop/permission-rules.json` is repo content, so its allow rules take effect only after the user explicitly trusts the workspace (persisted in `trusted-workspaces.json`; surfaced as a trust prompt on open and a control in Settings). Until trusted, the repo can only add deny rules — it cannot suppress ask-mode prompts. Rule globs match raw tool input strings only (no path canonicalization, no command parsing), so rules are a guardrail against accidents, not a security sandbox.
 - Custom models & providers editor — edits the active engine's models file: `~/.pi/agent/models.json` (Pi) or `~/.omp/agent/models.yml` (OMP; a not-yet-migrated `models.json` is kept until OMP migrates it). Main reports the resolved file so the editor labels always match; applied on engine restart
 - All settings persisted to `~/.pi-desktop-gui/settings.json`; defaults come from the single shared `src/shared/default-settings.ts` (used to seed the file AND for the renderer's initial/Reset values)
+- Language (`language`, default `system`; resolved by `src/shared/i18n/resolve.ts` against `app.getPreferredSystemLanguages()`; applies on Save; `PI_DESKTOP_PSEUDO_LANGUAGE=1` offers the `en-XA` test language)
 
 ### Context Menu
 
@@ -412,6 +422,8 @@ data-dir migration the GUI's files live under the OS app-data dir
 | `~/.omp/plugins/` | OMP plugin store (listed via `omp plugin list --json`) |
 | `~/.omp/agent/mcp.json` | OMP MCP servers (read for the status popover) |
 | `~/.pi/workflows/` | Workflow runs and projects (Mission Control) |
+| `pi-desktop.boot-theme` (renderer `localStorage`) | Last-applied theme colors, painted before the first frame so it is not a flash of the default theme |
+| `pi-desktop.boot-language` (renderer `localStorage`) | Last-resolved interface language, shown before Settings loads for the same reason |
 
 ## Distribution
 

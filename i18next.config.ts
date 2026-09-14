@@ -8,10 +8,6 @@ const locales = readdirSync(LOCALES_DIR, { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
   .map((entry) => entry.name)
 
-// Component files that still hold hard-coded text. Each translation commit
-// removes its files; the interface-translation work is done when this is empty.
-const NOT_YET_TRANSLATED: string[] = []
-
 export default defineConfig({
   locales,
   extract: {
@@ -29,7 +25,6 @@ export default defineConfig({
     defaultValue: '',
   },
   lint: {
-    ignore: NOT_YET_TRANSLATED,
     // Code samples and commands are not interface text.
     ignoredTags: ['code', 'pre'],
     checkConcatenation: 'error',
