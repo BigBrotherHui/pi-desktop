@@ -8,6 +8,7 @@ import {
   buildPiInvocation,
   detectPiInstallations,
   PiRpcManager,
+  RpcTimeoutError,
   resolveStartCli,
   RpcFrameDecoder,
   setPiExecutableOverride,
@@ -415,4 +416,13 @@ test('detectPiInstallations serves a cached scan until a rescan forces a fresh o
     else process.env.SHELL = saved.SHELL
     rmSync(dir, { recursive: true, force: true })
   }
+})
+
+test('RpcTimeoutError is identified by class, not by message text', () => {
+  const error = new RpcTimeoutError('get_state', 30_000)
+  assert.ok(error instanceof RpcTimeoutError)
+  assert.ok(error instanceof Error)
+  assert.equal(error.name, 'RpcTimeoutError')
+  assert.equal(error.commandType, 'get_state')
+  assert.equal(error.message, 'Command get_state timed out after 30000ms')
 })

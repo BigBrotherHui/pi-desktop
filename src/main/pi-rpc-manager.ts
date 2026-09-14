@@ -651,6 +651,14 @@ interface PendingResponse {
   timer: ReturnType<typeof setTimeout>
 }
 
+/** A Pi RPC command got no response in time. Callers check the class, not the text. */
+export class RpcTimeoutError extends Error {
+  constructor(readonly commandType: string, timeoutMs: number) {
+    super(`Command ${commandType} timed out after ${timeoutMs}ms`)
+    this.name = 'RpcTimeoutError'
+  }
+}
+
 export class PiRpcManager extends EventEmitter {
   private process: ChildProcess | null = null
   private status: PiProcessStatus = 'stopped'
@@ -1026,7 +1034,7 @@ export class PiRpcManager extends EventEmitter {
 
       const timer = setTimeout(() => {
         this.pendingResponses.delete(id)
-        reject(new Error(`Command ${command.type} timed out after ${RESPONSE_TIMEOUT_MS}ms`))
+        reject(new RpcTimeoutError(String(command.type), RESPONSE_TIMEOUT_MS))
       }, RESPONSE_TIMEOUT_MS)
 
       this.pendingResponses.set(id, { resolve, reject, timer })

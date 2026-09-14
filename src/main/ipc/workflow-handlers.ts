@@ -3,6 +3,7 @@ import { IPC_CHANNELS, type WorkflowControlResult } from '../../shared/ipc-contr
 import { isWorkflowActionAllowed } from '../../shared/workflow-control'
 import { getWorkflowRun, listWorkflowRuns, resolveWorkflowWorkspaces, setWorkflowPersistence } from '../workflow-monitor'
 import { assertTrustedSender, isString } from './validation'
+import { RpcTimeoutError } from '../pi-rpc-manager'
 import type { PiRpcManager } from '../pi-rpc-manager'
 import type { IpcContext } from './context'
 
@@ -31,10 +32,6 @@ async function hasWorkflowsExtension(pi: PiRpcManager): Promise<boolean> {
   return response.data.commands.some(
     (candidate) => candidate?.name === 'workflows' && candidate?.source === 'extension'
   )
-}
-
-function isTimeoutError(error: unknown): boolean {
-  return error instanceof Error && /timed out/i.test(error.message)
 }
 
 export function registerWorkflowHandlers(ctx: IpcContext): void {
@@ -98,7 +95,7 @@ export function registerWorkflowHandlers(ctx: IpcContext): void {
         await pi.sendCommand({ type: 'prompt', message: `/workflows ${action} ${runId}` })
         return { action, runId, ok: true, dispatched: true }
       } catch (error) {
-        return fail(isTimeoutError(error) ? 'timeout' : 'dispatch-failed')
+        return fail(error instanceof RpcTimeoutError ? 'timeout' : 'dispatch-failed')
       }
     }
   )
