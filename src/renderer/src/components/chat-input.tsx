@@ -8,6 +8,8 @@ import { ComposerPermissionMenu } from './composer-permission-menu'
 import { CommandResults } from './command-results'
 import { SubagentProgress } from './subagent-progress'
 import { ModelSelector } from './model-selector'
+import { VoiceMicButton } from './voice-mic-button'
+import { applyInterim } from '../../../shared/voice-composer'
 import { ThinkingLevelSelector } from './thinking-level-selector'
 import { CornerDownLeft, Square, Paperclip, X, FileText, StickyNote, Users, Search } from 'lucide-react'
 import {
@@ -309,6 +311,44 @@ export function ChatInput(): React.JSX.Element {
       resizeTextarea(ta)
       ta.setSelectionRange(text.length, text.length)
     },
+    [resizeTextarea]
+  )
+
+  // Live voice dictation writes a running transcript into the composer. The
+  // textarea is uncontrolled, so track the insertion point (anchor) and the
+  // length of the interim text, and rewrite that region as speech arrives.
+  const voiceAnchor = useRef(0)
+  const voiceInterimLen = useRef(0)
+  const voiceHandlers = useMemo(
+    () => ({
+      onStart: () => {
+        const ta = textareaRef.current
+        voiceAnchor.current = ta?.selectionStart ?? ta?.value.length ?? 0
+        voiceInterimLen.current = 0
+      },
+      onInterim: (text: string) => {
+        const ta = textareaRef.current
+        if (!ta) return
+        const r = applyInterim(ta.value, voiceAnchor.current, voiceInterimLen.current, text)
+        ta.value = r.value
+        voiceInterimLen.current = r.interimLength
+        ta.focus()
+        ta.setSelectionRange(r.caret, r.caret)
+        resizeTextarea(ta)
+        historyIndex.current = -1
+      },
+      onFinal: (text: string) => {
+        const ta = textareaRef.current
+        if (!ta) return
+        const r = applyInterim(ta.value, voiceAnchor.current, voiceInterimLen.current, text)
+        ta.value = r.value
+        voiceInterimLen.current = 0
+        ta.focus()
+        ta.setSelectionRange(r.caret, r.caret)
+        resizeTextarea(ta)
+        historyIndex.current = -1
+      },
+    }),
     [resizeTextarea]
   )
 
@@ -643,6 +683,7 @@ export function ChatInput(): React.JSX.Element {
           >
             <Paperclip size={15} />
           </button>
+          <VoiceMicButton handlers={voiceHandlers} disabled={isDisabled} />
           <button
             onClick={() => setNotePickerOpen(true)}
             className="hover:bg-highlight-strong flex items-center justify-center rounded-md p-1.5 text-dim hover:text-secondary transition-colors"

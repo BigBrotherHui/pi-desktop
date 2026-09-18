@@ -36,4 +36,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   desktopNotifications: true,
   language: SYSTEM_LANGUAGE,
   council: DEFAULT_COUNCIL_CONFIG,
+  voiceModel: null,
+  voicePrecision: 'int8',
 }

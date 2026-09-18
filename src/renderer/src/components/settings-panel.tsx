@@ -18,6 +18,7 @@ import type {
   I18nEnvironment,
 } from '../../../shared/ipc-contracts'
 import type { ThemeFile } from '../../../shared/theme/theme-file'
+import { VoiceSettings } from './voice-settings'
 import { Settings, Save, RotateCcw, FolderOpen, RefreshCw, Check, ChevronDown } from 'lucide-react'
 import { DEFAULT_SETTINGS } from '../../../shared/default-settings'
 import { PermissionSelector } from './permission-selector'
@@ -1018,6 +1019,10 @@ export function SettingsPanel(): React.JSX.Element {
           >
             <Toggle checked={minimizeToTrayOnClose} onChange={(v) => { setMinimizeToTrayOnClose(v); void applyImmediate({ minimizeToTrayOnClose: v }) }} />
           </SettingsRow>
+        </SettingsSection>
+
+        <SettingsSection title={t('settings.sections.voiceDictation')}>
+          <VoiceSettings />
         </SettingsSection>
 
         {/* Multi-Agent Council Planning */}

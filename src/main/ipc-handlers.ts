@@ -23,6 +23,7 @@ import { registerGitConveyorHandlers } from './ipc/git-conveyor-handlers'
 import { registerSystemHandlers } from './ipc/system-handlers'
 import { registerUpdateHandlers } from './ipc/update-handlers'
 import { registerDiagnosticsHandlers } from './ipc/diagnostics-handlers'
+import { registerVoiceHandlers } from './ipc/voice-handlers'
 import { registerWorkflowHandlers } from './ipc/workflow-handlers'
 import { wireWorkspaceActivity, type WindowControls } from './ipc/workspace-activity-wiring'
 
@@ -67,6 +68,7 @@ export function registerIpcHandlers(
   registerUpdateHandlers()
   registerDiagnosticsHandlers(ctx)
   registerWorkflowHandlers(ctx)
+  registerVoiceHandlers(ctx)
 
   // ─── Extension UI Responses and Pi Event Forwarding ─────────────────────
 

@@ -135,6 +135,13 @@
         "running": "running"
       }
     },
+    "voice": {
+      "errorTitle": "Voice dictation failed: {{error}}",
+      "setUpTitle": "Set up voice dictation in Settings",
+      "startTitle": "Start voice dictation",
+      "stopTitle": "Stop and insert text",
+      "transcribing": "Transcribing your voice"
+    },
     "waitingForResponse": "Waiting for response..."
   },
   "commandGroups": {
@@ -1091,7 +1098,8 @@
       "appearance": "Appearance",
       "behavior": "Behavior",
       "customModels": "Custom Models",
-      "multiAgentCouncilPlanning": "Multi-Agent Council Planning"
+      "multiAgentCouncilPlanning": "Multi-Agent Council Planning",
+      "voiceDictation": "Voice dictation"
     },
     "showThinking": {
       "description": "Display model thinking blocks in responses",
@@ -1118,6 +1126,22 @@
     "uiFontSize": {
       "description": "Chat, panels, and sidebar — not the terminal or code editor",
       "label": "UI Font Size"
+    },
+    "voice": {
+      "downloading": "Downloading {{done}} of {{total}} files",
+      "englishOnly": "English only",
+      "install": "Install",
+      "intro": "Speak into the microphone and Pi Desktop turns your voice into text on your computer. Pick a model to download. No model is downloaded until you choose one.",
+      "multilingual": "Many languages",
+      "precision": {
+        "fp16": "Sharper (fp16)",
+        "int8": "Smaller (int8)"
+      },
+      "quality": "Quality",
+      "remove": "Remove",
+      "selected": "In use",
+      "sizeMb": "~{{mb}} MB",
+      "use": "Use"
     }
   },
   "sidebar": {
@@ -1600,6 +1624,34 @@
     "stillRunningTitle": "Pi Desktop is still running",
     "unavailableBody": "This desktop has no system tray, so Pi Desktop will close normally instead of minimizing to the tray.",
     "unavailableTitle": "System tray unavailable"
+  },
+  "voice": {
+    "models": {
+      "moonshine-base": {
+        "name": "Moonshine Base",
+        "note": "Small, fast English dictation. Good balance of size and accuracy."
+      },
+      "moonshine-tiny": {
+        "name": "Moonshine Tiny",
+        "note": "The smallest English model. Fastest on weak computers."
+      },
+      "parakeet-v2": {
+        "name": "Parakeet V2",
+        "note": "Very accurate English. Large download."
+      },
+      "parakeet-v3": {
+        "name": "Parakeet V3",
+        "note": "Most accurate. 25 languages with automatic detection. Large download."
+      },
+      "whisper-base": {
+        "name": "Whisper Base",
+        "note": "Small model that covers many languages."
+      },
+      "whisper-small": {
+        "name": "Whisper Small",
+        "note": "More accurate in many languages. Larger download."
+      }
+    }
   },
   "workflows": {
     "agentGrid": {

@@ -36,6 +36,9 @@ import type {
   CouncilArbiterRequest,
   CouncilArbiterResult,
   CouncilProgressEvent,
+  VoiceStatus,
+  VoiceInstallRequest,
+  VoiceProgressEvent,
   AttachmentReadResult,
   OpenDialogOptions,
   PathKindResult,
@@ -214,6 +217,16 @@ interface PiDesktopAPI {
     runConsultants(payload: CouncilRunRequest): Promise<CouncilRunResult>
     arbiter(payload: CouncilArbiterRequest): Promise<CouncilArbiterResult>
     onProgress(callback: (event: CouncilProgressEvent) => void): () => void
+  }
+
+  // Voice dictation: on-device speech-to-text models
+  voice: {
+    status(): Promise<VoiceStatus>
+    install(request: VoiceInstallRequest): Promise<VoiceStatus>
+    cancel(): Promise<void>
+    remove(modelId: string): Promise<VoiceStatus>
+    select(request: { modelId: string | null; precision: VoiceInstallRequest['precision'] }): Promise<VoiceStatus>
+    onProgress(callback: (event: VoiceProgressEvent) => void): () => void
   }
 
   // Skills, Commands, MCP, Tags
@@ -476,6 +489,19 @@ const api: PiDesktopAPI = {
       const handler = (_event: Electron.IpcRendererEvent, data: CouncilProgressEvent) => callback(data)
       ipcRenderer.on(IPC_CHANNELS.EVENT_COUNCIL_PROGRESS, handler)
       return () => ipcRenderer.removeListener(IPC_CHANNELS.EVENT_COUNCIL_PROGRESS, handler)
+    },
+  },
+
+  voice: {
+    status: () => ipcRenderer.invoke(IPC_CHANNELS.VOICE_STATUS),
+    install: (request) => ipcRenderer.invoke(IPC_CHANNELS.VOICE_INSTALL, request),
+    cancel: () => ipcRenderer.invoke(IPC_CHANNELS.VOICE_CANCEL),
+    remove: (modelId) => ipcRenderer.invoke(IPC_CHANNELS.VOICE_REMOVE, modelId),
+    select: (request) => ipcRenderer.invoke(IPC_CHANNELS.VOICE_SELECT, request),
+    onProgress: (callback) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: VoiceProgressEvent) => callback(data)
+      ipcRenderer.on(IPC_CHANNELS.EVENT_VOICE_PROGRESS, handler)
+      return () => ipcRenderer.removeListener(IPC_CHANNELS.EVENT_VOICE_PROGRESS, handler)
     },
   },
 
