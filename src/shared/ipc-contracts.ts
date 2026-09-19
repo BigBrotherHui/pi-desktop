@@ -195,6 +195,14 @@ export const IPC_CHANNELS = {
   EVENT_TERMINAL_DATA: 'event:terminal-data',
   EVENT_TERMINAL_EXIT: 'event:terminal-exit',
   EVENT_COUNCIL_PROGRESS: 'event:council-progress',
+  EVENT_VOICE_PROGRESS: 'event:voice-progress',
+
+  // Voice dictation
+  VOICE_STATUS: 'voice:status',
+  VOICE_INSTALL: 'voice:install',
+  VOICE_CANCEL: 'voice:cancel',
+  VOICE_REMOVE: 'voice:remove',
+  VOICE_SELECT: 'voice:select',
 } as const
 
 // ─── Pi Process Types ───────────────────────────────────────────────────────
@@ -946,6 +954,7 @@ export interface CouncilProgressEvent {
 
 import type { ModelsConfig as ModelsConfigType } from './models-config'
 import type { CouncilConfig } from './council-config'
+import type { VoicePrecision, VoiceModel, VoiceModelManifest, VoiceDownloadProgress } from './voice-models'
 /** Result of the MODELS_READ IPC call. */
 /**
  * Where the custom-models config was read from. Main resolves the engine and
@@ -1154,6 +1163,38 @@ export interface AppSettings {
   language: string
   // Multi-agent council planning configuration.
   council: CouncilConfig
+  // Voice dictation: the installed speech-to-text model to transcribe with, or
+  // null when the user has not chosen one. No model is downloaded automatically;
+  // the mic button is inert until a model is picked and installed.
+  voiceModel: string | null
+  // Precision of the voice model to install and load ('int8' smaller/faster,
+  // 'fp16' sharper, best with a GPU). Unknown values reset to 'int8' on load.
+  voicePrecision: VoicePrecision
+}
+
+// ─── Voice Dictation Types ──────────────────────────────────────────────────
+
+/** Snapshot of voice models: the catalog, what is installed, and the choice. */
+export interface VoiceStatus {
+  catalog: VoiceModel[]
+  installed: VoiceModelManifest[]
+  selectedModel: string | null
+  selectedPrecision: VoicePrecision
+}
+
+/** Request to download and install one model at one precision. */
+export interface VoiceInstallRequest {
+  modelId: string
+  precision: VoicePrecision
+}
+
+/** Streamed install progress (main → renderer on EVENT_VOICE_PROGRESS). */
+export interface VoiceProgressEvent {
+  modelId: string
+  precision: VoicePrecision
+  phase: 'downloading' | 'done' | 'error'
+  progress: VoiceDownloadProgress
+  error?: string
 }
 
 /** What the renderer needs to resolve the `language` setting like main does. */

@@ -23,3 +23,27 @@ test('normalizeStoredSettings fills missing keys from the defaults', () => {
   const settings = normalizeStoredSettings({}, LANGUAGES)
   assert.deepEqual(settings, DEFAULT_SETTINGS)
 })
+
+test('voice model defaults to none so nothing downloads automatically', () => {
+  assert.equal(DEFAULT_SETTINGS.voiceModel, null)
+  assert.equal(DEFAULT_SETTINGS.voicePrecision, 'int8')
+})
+
+test('normalizeStoredSettings keeps a known voice model and precision', () => {
+  const settings = normalizeStoredSettings(
+    { voiceModel: 'parakeet-v3', voicePrecision: 'fp16' },
+    LANGUAGES,
+  )
+  assert.equal(settings.voiceModel, 'parakeet-v3')
+  assert.equal(settings.voicePrecision, 'fp16')
+})
+
+test('normalizeStoredSettings resets an unknown voice model to none', () => {
+  const settings = normalizeStoredSettings({ voiceModel: 'ghost-model' }, LANGUAGES)
+  assert.equal(settings.voiceModel, null)
+})
+
+test('normalizeStoredSettings resets an invalid voice precision', () => {
+  const settings = normalizeStoredSettings({ voicePrecision: 'fp64' }, LANGUAGES)
+  assert.equal(settings.voicePrecision, DEFAULT_SETTINGS.voicePrecision)
+})
