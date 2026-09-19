@@ -66,7 +66,7 @@ async function loadParakeet(model: VoiceModel, precision: VoicePrecision): Promi
   const parakeet = await fromUrls({
     ...parakeetFileUrls(model.id, precision),
     backend: await resolveDevice(),
-    preprocessorBackend: 'js',
+    preprocessorBackend: 'onnx',
   })
 
   return async (audio: Float32Array) => {

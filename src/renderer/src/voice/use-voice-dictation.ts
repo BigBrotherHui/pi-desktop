@@ -10,8 +10,8 @@ export type VoicePhase = 'idle' | 'recording' | 'transcribing'
 // Live-dictation tuning.
 const TICK_MS = 250 // how often we check level and consider an interim pass
 const INTERIM_EVERY_MS = 1400 // minimum gap between running-transcript updates
-const SILENCE_LEVEL = 0.012 // RMS below this counts as silence
-const SILENCE_HOLD_MS = 2500 // stop after this much silence following speech
+const SILENCE_LEVEL = 0.008 // RMS below this counts as silence
+const SILENCE_HOLD_MS = 8000 // stop after this much silence following speech
 const MAX_RECORDING_MS = 60000 // hard cap so a stuck mic can't run forever
 
 export interface VoiceDictationHandlers {
@@ -46,6 +46,7 @@ export function useVoiceDictation(handlers: VoiceDictationHandlers): VoiceDictat
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const busyRef = useRef(false)
   const stoppedRef = useRef(false)
+  const lastTextRef = useRef('')
   const handlersRef = useRef(handlers)
   handlersRef.current = handlers
 
@@ -96,7 +97,10 @@ export function useVoiceDictation(handlers: VoiceDictationHandlers): VoiceDictat
         await new Promise((r) => setTimeout(r, 100))
       }
       const pcm = await recorder.stop()
-      const text = pcm.length > 0 ? await transcribeAudio(pcm, model, status.selectedPrecision) : ''
+      const full = pcm.length > 0 ? await transcribeAudio(pcm, model, status.selectedPrecision) : ''
+      // Prefer the full-clip result; fall back to the best interim so a blank
+      // final pass never wipes text that was already recognized.
+      const text = full.trim() || lastTextRef.current
       handlersRef.current.onFinal(text)
     } catch (err) {
       console.error('[voice] transcription failed', err)
@@ -111,6 +115,7 @@ export function useVoiceDictation(handlers: VoiceDictationHandlers): VoiceDictat
     setError(null)
     stoppedRef.current = false
     busyRef.current = false
+    lastTextRef.current = ''
     try {
       const recorder = new VoiceRecorder()
       await recorder.start()
@@ -137,7 +142,12 @@ export function useVoiceDictation(handlers: VoiceDictationHandlers): VoiceDictat
           const pcm = recorder.getPcm16k()
           void transcribeAudio(pcm, model, status.selectedPrecision)
             .then((text) => {
-              if (!stoppedRef.current) handlersRef.current.onInterim(text)
+              // Ignore empty passes (e.g. a silent chunk) so they never wipe
+              // text already shown.
+              if (!stoppedRef.current && text.trim()) {
+                lastTextRef.current = text.trim()
+                handlersRef.current.onInterim(text.trim())
+              }
             })
             .catch(() => {
               /* interim errors are non-fatal; the final pass reports failures */

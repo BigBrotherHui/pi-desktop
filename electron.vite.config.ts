@@ -82,9 +82,18 @@ export default defineConfig({
       __APP_VERSION__: JSON.stringify(version),
     },
     resolve: {
-      alias: {
-        '@': resolve(__dirname, 'src/renderer/src')
-      }
+      alias: [
+        { find: '@', replacement: resolve(__dirname, 'src/renderer/src') },
+        // Force one onnxruntime-web instance for both voice engines. parakeet.js
+        // bundles its own copy and only loads WASM from a CDN (blocked by the
+        // CSP); sharing the top-level copy lets the local WASM path we set apply
+        // to it too. Anchored so subpath imports (onnxruntime-web/webgpu) still
+        // resolve through the package's own exports.
+        {
+          find: /^onnxruntime-web$/,
+          replacement: resolve(__dirname, 'node_modules/onnxruntime-web'),
+        },
+      ]
     }
   }
 })
