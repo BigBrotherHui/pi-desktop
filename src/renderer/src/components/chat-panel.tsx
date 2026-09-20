@@ -24,7 +24,7 @@ import { FileTree, FileSearch, FilePreview } from './file-tree'
 import { ImageViewer } from './image-viewer'
 import { DiffViewer } from './diff-viewer'
 import { TerminalPanel } from './terminal'
-import { useChatScroll, useGlobalWorkflowOpen } from '../hooks'
+import { useChatScroll, useChatVisible } from '../hooks'
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
@@ -96,13 +96,11 @@ export function ChatPanel(): React.JSX.Element {
     return () => clearInterval(id)
   }, [])
 
-  const currentView = useAppStore((state) => state.currentView)
-  // The global workflow view replaces the main pane while this panel stays
-  // mounted behind `display: none`, so "chat is on screen" needs both checks.
-  // Without the second one the scroll hook never sees the hidden→shown edge and
-  // cannot re-anchor the reading position when the workflow view closes.
-  const globalWorkflowOpen = useGlobalWorkflowOpen()
-  const chatVisible = currentView === 'chat' && !globalWorkflowOpen
+  // This panel stays mounted behind `display: none` when another view or the
+  // global workflow panel takes over, so useChatVisible — not the view alone —
+  // decides whether chat is on screen. Without it the scroll hook never sees
+  // the hidden→shown edge and cannot re-anchor the reading position.
+  const chatVisible = useChatVisible()
   const { scrollRef, onScroll, atBottom, scrollToBottom } = useChatScroll(chatVisible)
 
   // In-conversation search (Ctrl/Cmd+F while in chat). The nonce bumps on every

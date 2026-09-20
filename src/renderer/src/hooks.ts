@@ -144,6 +144,19 @@ export function useGlobalWorkflowOpen(): boolean {
   return useAppStore(isGlobalWorkflowOpen)
 }
 
+/**
+ * Whether the chat pane is actually on screen. ChatPanel stays mounted behind
+ * `display: none` when another view or the global workflow panel takes over,
+ * so both checks are needed. Shared by everything that must react to the
+ * hidden -> shown edge (scroll re-anchoring, the disk-watch demand, and the
+ * file tree's catch-up reload), which must all agree on one definition.
+ */
+export function useChatVisible(): boolean {
+  const currentView = useAppStore((state) => state.currentView)
+  const globalWorkflowOpen = useGlobalWorkflowOpen()
+  return currentView === 'chat' && !globalWorkflowOpen
+}
+
 // Distance (px) from the bottom within which we consider the user "at bottom"
 // and keep following new content.
 const AT_BOTTOM_THRESHOLD = 48
