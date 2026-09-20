@@ -165,6 +165,20 @@ export function ChatPanel(): React.JSX.Element {
     maxFilePaneWidth,
   } = resolveSidePanelMetrics({ showFileTree, showEditor, showImage }, sidePanelWidth, filePaneWidth)
 
+  // Disk watching is demand-driven: the main process only attaches chokidar
+  // while a visible files panel consumes change events. Without this, cold
+  // start and the Home view would pay the full workspace-watch cost for a
+  // tree nobody is looking at — and ChatPanel stays mounted (just hidden)
+  // when navigating away, so visibility has to be part of the demand. The
+  // tree still loads on open, and FileTree reloads once when Chat becomes
+  // visible again, with the safety poll + focus refresh covering the rest.
+  useEffect(() => {
+    void window.piDesktop.files.setWatchDemand(showFileTree && chatVisible).catch(() => {})
+    return () => {
+      void window.piDesktop.files.setWatchDemand(false).catch(() => {})
+    }
+  }, [showFileTree, chatVisible])
+
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <div className="flex flex-1 overflow-hidden">
