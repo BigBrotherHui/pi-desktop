@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../store'
+import { useGlobalWorkflowOpen } from '../hooks'
 import { createDebouncedBuffer } from '../utils/debounced-buffer'
 import { createStaleGuard } from '../utils/stale-guard'
 import { toPreviewLoadError, type PreviewLoadError } from '../utils/preview-load-error'
@@ -132,6 +133,21 @@ export function FileTree(): React.JSX.Element {
       window.removeEventListener('focus', handleFocus)
     }
   }, [loadTree, workspaceKey])
+
+  // The disk watcher only runs while this panel is visible (see ChatPanel's
+  // watch-demand effect): navigating away stops it, so coming back can land
+  // on a stale tree. Treat the return as a focus event and reload once — the
+  // 15s safety poll would otherwise be the only refresh for up to 15s. The
+  // same chatVisible test as ChatPanel: this panel stays mounted (just
+  // hidden) when navigating away.
+  const currentView = useAppStore((state) => state.currentView)
+  const globalWorkflowOpen = useGlobalWorkflowOpen()
+  const chatVisible = currentView === 'chat' && !globalWorkflowOpen
+  const wasChatVisible = useRef(chatVisible)
+  useEffect(() => {
+    if (chatVisible && !wasChatVisible.current) void loadTree(false)
+    wasChatVisible.current = chatVisible
+  }, [chatVisible, loadTree])
 
   const handleFileClick = useCallback(async (path: string, relativePath: string) => {
     // Open the preview first (images route to the image viewer); a dirty
