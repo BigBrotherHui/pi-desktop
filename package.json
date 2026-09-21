@@ -1,18 +1,21 @@
 {
   "name": "pi-desktop",
   "version": "0.1.8-alpha",
-  "description": "Desktop GUI frontend for the Pi coding agent",
+  "description": "Desktop GUI for the Pi and oh-my-pi coding agents",
   "main": "out/main/index.js",
   "desktopName": "pi-desktop.desktop",
   "author": "Pi Desktop GUI Contributors",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/FaqFirebase/pi-desktop",
+  "homepage": "https://pi-desktop.com",
   "repository": {
     "type": "git",
     "url": "https://github.com/FaqFirebase/pi-desktop"
   },
   "keywords": [
     "pi",
+    "oh-my-pi",
+    "omp",
+    "gui",
     "coding-agent",
     "ai",
     "electron",
