@@ -4,13 +4,17 @@ import { applyLanguageSetting } from './i18n'
 import { t } from '../../shared/i18n'
 import { buildPlanningPrompt } from './utils/planning-prompt'
 import { parseAgentMessage, type DisplayAttachment, type DisplayMessage } from '../../shared/chat/message-parsing'
+import type { SubagentProgress } from '../../shared/chat/subagent-progress'
 import {
-  aggregateSubagentDetails,
-  isSubagentTool,
-  subagentAgentName,
-  subagentTaskText,
-  type SubagentProgress,
-} from '../../shared/chat/subagent-progress'
+  applyMessageUpdate,
+  applyToolEnd,
+  applyToolStart,
+  applyToolUpdate,
+  applyTurnComplete,
+  turnErrorText,
+  type ChatStreamClock,
+  type StreamingToolCall,
+} from '../../shared/chat/chat-stream'
 import type { PiCommand } from '../../shared/pi-command'
 import { normalizeForkMessages, type ForkPoint } from '../../shared/fork-point'
 import { buildLineageTree, type LineageNode } from '../../shared/session-lineage'
@@ -250,10 +254,7 @@ interface AppState {
   promptHistory: string[]
   streamingContent: string
   streamingThinking: string
-  streamingToolCalls: Map<
-    string,
-    { name: string; args: string; result?: string; isExecuting: boolean; isError?: boolean; startedAt?: number; durationMs?: number }
-  >
+  streamingToolCalls: Map<string, StreamingToolCall>
   isStreaming: boolean
   /**
    * The renderer attached to a turn already in flight (workspace switch-back
@@ -601,6 +602,9 @@ let messageCounter = 0
 function generateId(): string {
   return `msg-${Date.now()}-${++messageCounter}`
 }
+
+/** Real time and ids for the shared, pure stream assembly. */
+const chatClock: ChatStreamClock = { now: () => Date.now(), generateId }
 
 function normalizePiCommands(raw: unknown): PiCommand[] {
   if (!Array.isArray(raw)) return []
@@ -1993,12 +1997,12 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
       }
 
       case 'message_update':
-        handleMessageUpdate(event as PiMessageUpdateEvent, set)
+        set((state) => applyMessageUpdate(state, event as PiMessageUpdateEvent, chatClock))
         break
 
       case 'message_end': {
         const endedMessage = (event as { message?: Record<string, unknown> }).message
-        handleTurnComplete(set, endedMessage)
+        set((state) => applyTurnComplete(state, endedMessage, state.sessionState?.model, chatClock))
         // turn_end re-delivers the same message, so errors surface only here.
         const turnError = turnErrorText(endedMessage)
         if (turnError) {
@@ -2040,7 +2044,14 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
       }
 
       case 'turn_end':
-        handleTurnComplete(set, (event as { message?: Record<string, unknown> }).message)
+        set((state) =>
+          applyTurnComplete(
+            state,
+            (event as { message?: Record<string, unknown> }).message,
+            state.sessionState?.model,
+            chatClock,
+          ),
+        )
         break
 
       case 'agent_start':
@@ -2083,7 +2094,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
         break
 
       case 'tool_execution_start':
-        handleToolStart(event as PiToolExecutionStartEvent, set)
+        set((state) => applyToolStart(state, event as PiToolExecutionStartEvent, chatClock))
         get().addTimelineEvent({
           id: generateId(),
           type: 'tool_start',
@@ -2096,11 +2107,11 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
         break
 
       case 'tool_execution_update':
-        handleToolUpdate(event as PiToolExecutionUpdateEvent, set)
+        set((state) => applyToolUpdate(state, event as PiToolExecutionUpdateEvent))
         break
 
       case 'tool_execution_end': {
-        handleToolEnd(event as PiToolExecutionEndEvent, set)
+        set((state) => applyToolEnd(state, event as PiToolExecutionEndEvent, chatClock))
         const toolEvent = event as PiToolExecutionEndEvent
         set((state) => ({
           // Close out the matching tool_start entry (paired by toolCallId)
@@ -3196,294 +3207,6 @@ useAppStore.subscribe((state, prev) => {
 
 // Zustand set supports both object and callback forms
 type ZustandSet = (partial: Partial<AppState> | ((state: AppState) => Partial<AppState>)) => void
-
-function handleMessageUpdate(
-  event: PiMessageUpdateEvent,
-  set: ZustandSet
-): void {
-  const { assistantMessageEvent } = event
-
-  switch (assistantMessageEvent.type) {
-    case 'text_delta':
-      set((state) => ({
-        streamingContent: state.streamingContent + (assistantMessageEvent.delta ?? ''),
-      }))
-      break
-
-    case 'text_end':
-      // Content is finalized in message_end
-      break
-
-    case 'thinking_delta':
-      set((state) => ({
-        streamingThinking: state.streamingThinking + (assistantMessageEvent.delta ?? ''),
-      }))
-      break
-
-    case 'thinking_end':
-      break
-
-    case 'toolcall_start': {
-      const toolCall = assistantMessageEvent.toolCall as Record<string, unknown> | undefined
-      if (toolCall) {
-        const callId = String(toolCall.id ?? '')
-        set((state) => {
-          const newMap = new Map(state.streamingToolCalls)
-          newMap.set(callId, {
-            name: String(toolCall.name ?? 'unknown'),
-            args: '',
-            isExecuting: true,
-            startedAt: Date.now(),
-          })
-          return { streamingToolCalls: newMap }
-        })
-      }
-      break
-    }
-
-    case 'toolcall_delta': {
-      const toolCall = assistantMessageEvent.toolCall as Record<string, unknown> | undefined
-      if (toolCall?.id) {
-        set((state) => {
-          const newMap = new Map(state.streamingToolCalls)
-          const existing = newMap.get(String(toolCall.id))
-          if (existing) {
-            newMap.set(String(toolCall.id), {
-              ...existing,
-              args: existing.args + (assistantMessageEvent.delta ?? ''),
-            })
-          }
-          return { streamingToolCalls: newMap }
-        })
-      }
-      break
-    }
-
-    case 'toolcall_end': {
-      const toolCall = assistantMessageEvent.toolCall as Record<string, unknown> | undefined
-      if (toolCall?.id) {
-        set((state) => {
-          const newMap = new Map(state.streamingToolCalls)
-          const existing = newMap.get(String(toolCall.id))
-          if (existing) {
-            newMap.set(String(toolCall.id), {
-              ...existing,
-              isExecuting: false,
-              args: JSON.stringify(toolCall.arguments ?? existing.args),
-              durationMs: existing.startedAt ? Date.now() - existing.startedAt : undefined,
-            })
-          }
-          return { streamingToolCalls: newMap }
-        })
-      }
-      break
-    }
-  }
-}
-
-// Pi reports a generic abort with exactly this text; anything else on an
-// aborted turn is a specific reason worth showing (mirrors Pi's own TUI). Not
-// translated: it is compared against Pi's own (English) output, never shown.
-const GENERIC_ABORT_MESSAGE = 'Request was aborted'
-
-/**
- * Error text to surface in chat for a finished assistant message, or null.
- * A provider that rejects before streaming (e.g. HTTP 402) yields an
- * assistant message with stopReason 'error', empty content, and the provider
- * error in errorMessage — without this, the chat shows nothing at all.
- */
-function turnErrorText(message?: Record<string, unknown>): string | null {
-  if (!message || message.role !== 'assistant') return null
-  const errorMessage = typeof message.errorMessage === 'string' ? message.errorMessage : ''
-  if (message.stopReason === 'error') return errorMessage || t('store.messages.unknownError')
-  if (message.stopReason === 'aborted' && errorMessage && errorMessage !== GENERIC_ABORT_MESSAGE) {
-    return errorMessage
-  }
-  return null
-}
-
-function handleTurnComplete(
-  set: ZustandSet,
-  message?: Record<string, unknown>
-): void {
-  set((state) => {
-    const newMessages = [...state.messages]
-
-    // Commit streaming content as assistant message
-    if (state.streamingContent || state.streamingThinking || state.streamingToolCalls.size > 0) {
-      const entries = Array.from(state.streamingToolCalls.entries())
-      const toolCalls = entries.map(([id, tc]) => ({
-        id,
-        name: tc.name,
-        arguments: tc.args,
-        result: tc.result,
-        isError: tc.isError,
-        isExecuting: false,
-        durationMs: tc.durationMs,
-      }))
-
-      // Prefer the model/provider Pi records on this specific message (the
-      // authoritative source, robust to mid-turn model switches); fall back to
-      // the currently-selected model when the event omits them.
-      const activeModel = state.sessionState?.model
-      const model = typeof message?.model === 'string' ? message.model : activeModel?.id
-      const provider = typeof message?.provider === 'string' ? message.provider : activeModel?.provider
-      newMessages.push({
-        id: generateId(),
-        role: 'assistant',
-        content: state.streamingContent,
-        timestamp: Date.now(),
-        thinking: state.streamingThinking || undefined,
-        toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-        model,
-        provider,
-      })
-
-      for (const [id, tc] of entries) {
-        if (!tc.result) continue
-        newMessages.push({
-          id: `${id}-result`,
-          role: 'toolResult',
-          content: tc.result,
-          timestamp: Date.now(),
-          toolCallId: id,
-          toolName: tc.name,
-        })
-      }
-    }
-
-    return {
-      messages: newMessages,
-      streamingContent: '',
-      streamingThinking: '',
-      streamingToolCalls: new Map(),
-      subagentProgress: [],
-    }
-  })
-}
-
-function handleToolStart(
-  event: PiToolExecutionStartEvent,
-  set: ZustandSet
-): void {
-  set((state) => {
-    const newMap = new Map(state.streamingToolCalls)
-    newMap.set(event.toolCallId, {
-      name: event.toolName,
-      args: JSON.stringify(event.args),
-      isExecuting: true,
-      startedAt: Date.now(),
-    })
-    // Track subagent calls in subagentProgress
-    if (isSubagentTool(event.toolName)) {
-      const args = event.args as Record<string, unknown>
-      const agent = subagentAgentName(args)
-      const task = subagentTaskText(args)
-      const newProgress = {
-        toolCallId: event.toolCallId,
-        agent,
-        status: 'running',
-        task: task.slice(0, 120),
-        toolCount: 0,
-        tokens: 0,
-        durationMs: 0,
-      }
-      return {
-        streamingToolCalls: newMap,
-        subagentProgress: [...state.subagentProgress, newProgress],
-      }
-    }
-    return { streamingToolCalls: newMap }
-  })
-}
-
-function handleToolUpdate(
-  event: PiToolExecutionUpdateEvent,
-  set: ZustandSet
-): void {
-  const text = event.partialResult.content
-    .filter((c) => c.type === 'text')
-    .map((c) => c.text ?? '')
-    .join('')
-
-  set((state) => {
-    const newMap = new Map(state.streamingToolCalls)
-    const existing = newMap.get(event.toolCallId)
-    if (existing) {
-      newMap.set(event.toolCallId, {
-        ...existing,
-        result: text || existing.result,
-      })
-    }
-
-    // Update subagent progress from details
-    if (isSubagentTool(event.toolName)) {
-      const details = event.partialResult.details as Record<string, unknown> | undefined
-      const progressList = details?.progress as Array<Record<string, unknown>> | undefined
-      const results = details?.results as Array<Record<string, unknown>> | undefined
-      if (progressList || results) {
-        const newProgress = state.subagentProgress.map((p) => {
-          if (p.toolCallId !== event.toolCallId) return p
-          return {
-            ...p,
-            ...aggregateSubagentDetails(p, progressList, results),
-          }
-        })
-        return { streamingToolCalls: newMap, subagentProgress: newProgress }
-      }
-    }
-
-    return { streamingToolCalls: newMap }
-  })
-}
-
-function handleToolEnd(
-  event: PiToolExecutionEndEvent,
-  set: ZustandSet
-): void {
-  const resultText = event.result.content
-    .filter((c) => c.type === 'text')
-    .map((c) => c.text ?? '')
-    .join('')
-
-  set((state) => {
-    const newMap = new Map(state.streamingToolCalls)
-    const existing = newMap.get(event.toolCallId)
-    if (existing) {
-      newMap.set(event.toolCallId, {
-        ...existing,
-        isExecuting: false,
-        isError: event.isError,
-        result: resultText || existing.result,
-        durationMs: existing.startedAt ? Date.now() - existing.startedAt : existing.durationMs,
-      })
-    }
-
-    // Finalize subagent progress: mark done and capture final stats
-    const newProgress = state.subagentProgress.map((p) => {
-      if (p.toolCallId !== event.toolCallId) return p
-      const details = isSubagentTool(event.toolName)
-        ? (event.result.details as Record<string, unknown> | undefined)
-        : undefined
-      const progressList = details?.progress as Array<Record<string, unknown>> | undefined
-      const results = details?.results as Array<Record<string, unknown>> | undefined
-      const agg = aggregateSubagentDetails(p, progressList, results)
-      const elapsed =
-        agg.durationMs ||
-        (p.durationMs > 0 ? p.durationMs : existing?.startedAt ? Date.now() - existing.startedAt : 0)
-
-      return {
-        ...p,
-        ...agg,
-        status: event.isError ? 'error' : 'done',
-        durationMs: elapsed,
-        currentTool: undefined,
-      }
-    })
-
-    return { streamingToolCalls: newMap, subagentProgress: newProgress }
-  })
-}
 
 function handleQueueUpdate(
   event: PiQueueUpdateEvent,
