@@ -13,6 +13,7 @@ Still in alpha, so expect rough edges.
 - Composer file mentions (type `@` to insert a path reference for Pi to read) and `Up`/`Down` to recall prompts sent in the current session
 - Home dashboard with usage stats: messages, tokens, active-day streaks, peak hour, and a per-model breakdown
 - [Multi-Agent Council Planning](#multi-agent-council-planning), where Pi, Claude, and Codex plan together and reach consensus before Pi builds (opt-in)
+- [TypeSafe Jev](#typesafe-jev): save your TypeSafe API key once and install the Jev skill, so Pi and OMP can use TypeSafe without asking for the key (opt-in)
 - Quick switcher (`Ctrl/Cmd+K`) for skills, prompt templates, built-in commands, workspaces, sessions, and files; `/` in the composer for commands
 - Skills browser, session fork/branch tree, and one-click context compaction
 - Session naming (read from Pi) with inline rename, and a themed in-app confirmation for delete
@@ -145,6 +146,19 @@ There are two consensus modes:
 A per-member timeout (10 to 600 seconds, default 240) bounds each member. A member that times out or errors is dropped, and the run proceeds as long as at least one plan was produced.
 
 To use it, type your request with the feature enabled and click **Plan with Council** in the composer. Review each member's plan and Pi's merged consensus plan. If you want changes, type feedback in **Request changes to the plan…** and Pi revises the consensus; repeat as needed. When you're happy, click **Implement this** and Pi builds it. The panel collapses once a plan is ready so the output stays readable.
+
+## TypeSafe Jev
+
+[Jev](https://docs.typesafe.ai/introduction) is TypeSafe's judgment model. It does not write text: it answers typed questions with yes/no probabilities, scores, and choices that code can use directly.
+
+Nothing happens until you set it up in **Settings → TypeSafe Jev**:
+
+- **API key**: paste a key from the [TypeSafe console](https://console.typesafe.ai/keys). It is saved in its own file in the app's data folder that only your user account can read, never in `settings.json`. Every new Pi or OMP session gets it as `TYPESAFE_API_KEY`; a value already set in the environment Pi Desktop started with wins. Restart an open session to give it the key.
+- **Jev skill**: installs TypeSafe's official [agent skill](https://docs.typesafe.ai/agent-skill) into `~/.agents/skills`, where both Pi and OMP find it. The files come from a pinned release and are checked before they are installed.
+
+Then ask the agent to use TypeSafe. Pi Desktop never calls TypeSafe itself.
+
+To learn more, see the TypeSafe [quickstart](https://docs.typesafe.ai/introduction/quickstart), [models and pricing](https://docs.typesafe.ai/models), and [API reference](https://docs.typesafe.ai/api).
 
 ## Getting started
 
