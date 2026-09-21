@@ -1,9 +1,9 @@
-import type { DisplayMessage } from './store'
+import type { DisplayMessage } from './message-parsing'
 // Aliased: every helper below takes its translator as a parameter named `t`
 // (shadowing this import inside the function body) so `i18next-cli`'s
 // static extractor — which looks for calls on an identifier named `t` —
 // still finds and keeps these keys.
-import { t as sharedT, type Translate } from '../../shared/i18n'
+import { t as sharedT, type Translate } from '../i18n'
 
 // A single chat item to render: either a lone message or a collapsed group of
 // consecutive tool-activity messages.

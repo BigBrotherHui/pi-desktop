@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MarkdownRenderer } from './markdown-renderer'
-import { toolLabel, toolCallStatusLabel } from '../message-grouping'
+import { toolLabel, toolCallStatusLabel } from '../../../shared/chat/message-grouping'
 import { toolCallIconFor } from './tool-call-icon'
 import { useAppStore } from '../store'
 import { DEFAULT_SETTINGS } from '../../../shared/default-settings'

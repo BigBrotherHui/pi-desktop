@@ -3,7 +3,7 @@ import { applyThemeSettings, rememberBootTheme, setUserThemes, watchSystemTheme 
 import { applyLanguageSetting } from './i18n'
 import { t } from '../../shared/i18n'
 import { buildPlanningPrompt } from './utils/planning-prompt'
-import { parseAgentMessage, type DisplayAttachment, type DisplayMessage } from './message-parsing'
+import { parseAgentMessage, type DisplayAttachment, type DisplayMessage } from '../../shared/chat/message-parsing'
 import type { PiCommand } from '../../shared/pi-command'
 import { normalizeForkMessages, type ForkPoint } from '../../shared/fork-point'
 import { buildLineageTree, type LineageNode } from '../../shared/session-lineage'
@@ -63,7 +63,7 @@ import type {
   ModelsFileInfo,
 } from '../../shared/ipc-contracts'
 
-export type { DisplayAttachment, DisplayMessage } from './message-parsing'
+export type { DisplayAttachment, DisplayMessage } from '../../shared/chat/message-parsing'
 
 // ─── Preview Target ──────────────────────────────────────────────────────────
 

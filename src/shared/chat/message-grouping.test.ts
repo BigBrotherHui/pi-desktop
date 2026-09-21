@@ -13,8 +13,8 @@ import {
   type ChatRenderItem,
 } from './message-grouping'
 import type { DisplayMessage } from './message-parsing'
-import { i18n, t } from '../../shared/i18n'
-import { PSEUDO_LANGUAGE, SOURCE_LANGUAGE } from '../../shared/i18n/languages'
+import { i18n, t } from '../i18n'
+import { PSEUDO_LANGUAGE, SOURCE_LANGUAGE } from '../i18n/languages'
 
 let idCounter = 0
 function assistant(over: Partial<DisplayMessage> = {}): DisplayMessage {

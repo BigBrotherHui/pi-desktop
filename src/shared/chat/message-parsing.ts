@@ -1,4 +1,4 @@
-import { t } from '../../shared/i18n'
+import { t } from '../i18n'
 
 export interface DisplayAttachment {
   kind: 'image'

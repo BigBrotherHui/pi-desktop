@@ -18,7 +18,7 @@ import {
   resolveSidePanelMetrics,
 } from './chat-panel-widths'
 
-import { groupToolMessages, prepareChatMessages } from '../message-grouping'
+import { groupToolMessages, prepareChatMessages } from '../../../shared/chat/message-grouping'
 import { NowContext } from '../utils/relative-time'
 import { FileTree, FileSearch, FilePreview } from './file-tree'
 import { ImageViewer } from './image-viewer'
