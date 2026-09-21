@@ -204,6 +204,13 @@ export const IPC_CHANNELS = {
   VOICE_CANCEL: 'voice:cancel',
   VOICE_REMOVE: 'voice:remove',
   VOICE_SELECT: 'voice:select',
+
+  // TypeSafe (Jev): API key storage and agent skill install
+  TYPESAFE_STATUS: 'typesafe:status',
+  TYPESAFE_SAVE_KEY: 'typesafe:save-key',
+  TYPESAFE_CLEAR_KEY: 'typesafe:clear-key',
+  TYPESAFE_INSTALL_SKILL: 'typesafe:install-skill',
+  TYPESAFE_REMOVE_SKILL: 'typesafe:remove-skill',
 } as const
 
 // ─── Pi Process Types ───────────────────────────────────────────────────────
@@ -1197,6 +1204,35 @@ export interface VoiceProgressEvent {
   progress: VoiceDownloadProgress
   error?: string
 }
+
+// ─── TypeSafe (Jev) Types ───────────────────────────────────────────────────
+
+/**
+ * Where the TypeSafe agent skill stands in the shared `~/.agents/skills` root.
+ * `installed-elsewhere` means a copy exists that Pi Desktop did not put there
+ * (for example from `npx skills add`); Pi Desktop leaves it alone.
+ */
+export type TypeSafeSkillState = 'not-installed' | 'installed' | 'installed-elsewhere'
+
+export interface TypeSafeSkillStatus {
+  state: TypeSafeSkillState
+  /** Release tag of a copy Pi Desktop installed; null otherwise. */
+  installedVersion: string | null
+  /** The pinned release tag this build downloads and installs. */
+  pinnedVersion: string
+  directory: string
+}
+
+/** Never carries the key itself — only whether one exists and where from. */
+export interface TypeSafeStatus {
+  savedKey: boolean
+  /** TYPESAFE_API_KEY is set in the app's own environment; it wins over a saved key. */
+  environmentKey: boolean
+  skill: TypeSafeSkillStatus
+}
+
+/** `ok: false` means the value was not a valid API key and nothing was saved. */
+export type TypeSafeSaveKeyResult = { ok: true; status: TypeSafeStatus } | { ok: false }
 
 /** What the renderer needs to resolve the `language` setting like main does. */
 export interface I18nEnvironment {

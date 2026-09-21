@@ -37,6 +37,8 @@ import type {
   CouncilArbiterResult,
   CouncilProgressEvent,
   VoiceStatus,
+  TypeSafeStatus,
+  TypeSafeSaveKeyResult,
   VoiceInstallRequest,
   VoiceProgressEvent,
   AttachmentReadResult,
@@ -227,6 +229,16 @@ interface PiDesktopAPI {
     remove(modelId: string): Promise<VoiceStatus>
     select(request: { modelId: string | null; precision: VoiceInstallRequest['precision'] }): Promise<VoiceStatus>
     onProgress(callback: (event: VoiceProgressEvent) => void): () => void
+  }
+
+  // TypeSafe (Jev): saved API key and the agent skill. The key goes in once
+  // and never comes back out.
+  typesafe: {
+    status(): Promise<TypeSafeStatus>
+    saveKey(key: string): Promise<TypeSafeSaveKeyResult>
+    clearKey(): Promise<TypeSafeStatus>
+    installSkill(): Promise<TypeSafeStatus>
+    removeSkill(): Promise<TypeSafeStatus>
   }
 
   // Skills, Commands, MCP, Tags
@@ -508,6 +520,14 @@ const api: PiDesktopAPI = {
       ipcRenderer.on(IPC_CHANNELS.EVENT_VOICE_PROGRESS, handler)
       return () => ipcRenderer.removeListener(IPC_CHANNELS.EVENT_VOICE_PROGRESS, handler)
     },
+  },
+
+  typesafe: {
+    status: () => ipcRenderer.invoke(IPC_CHANNELS.TYPESAFE_STATUS),
+    saveKey: (key) => ipcRenderer.invoke(IPC_CHANNELS.TYPESAFE_SAVE_KEY, key),
+    clearKey: () => ipcRenderer.invoke(IPC_CHANNELS.TYPESAFE_CLEAR_KEY),
+    installSkill: () => ipcRenderer.invoke(IPC_CHANNELS.TYPESAFE_INSTALL_SKILL),
+    removeSkill: () => ipcRenderer.invoke(IPC_CHANNELS.TYPESAFE_REMOVE_SKILL),
   },
 
   skills: {

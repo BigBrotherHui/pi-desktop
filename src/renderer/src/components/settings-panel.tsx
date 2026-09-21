@@ -19,6 +19,7 @@ import type {
 } from '../../../shared/ipc-contracts'
 import type { ThemeFile } from '../../../shared/theme/theme-file'
 import { VoiceSettings } from './voice-settings'
+import { TypeSafeSettings } from './typesafe-settings'
 import { Settings, Save, RotateCcw, FolderOpen, RefreshCw, Check, ChevronDown } from 'lucide-react'
 import { DEFAULT_SETTINGS } from '../../../shared/default-settings'
 import { PermissionSelector } from './permission-selector'
@@ -1023,6 +1024,10 @@ export function SettingsPanel(): React.JSX.Element {
 
         <SettingsSection title={t('settings.sections.voiceDictation')}>
           <VoiceSettings />
+        </SettingsSection>
+
+        <SettingsSection title={t('settings.sections.typesafe')}>
+          <TypeSafeSettings />
         </SettingsSection>
 
         {/* Multi-Agent Council Planning */}

@@ -580,6 +580,11 @@
       "unknownKey": "{{label}} has unknown key \"{{key}}\"",
       "unsupportedSchema": "unsupported $schema (expected {{expected}})"
     },
+    "typesafe": {
+      "skillChecksumMismatch": "{{file}} did not match its expected checksum, so Pi Desktop did not install it.",
+      "skillDownloadFailed": "Could not download {{file}} (HTTP {{status}}).",
+      "skillInstalledElsewhere": "A TypeSafe skill that Pi Desktop did not install is already at {{directory}}. Pi Desktop did not change it."
+    },
     "workflow": {
       "runNotFound": "Workflow run not found"
     },
@@ -1099,6 +1104,7 @@
       "behavior": "Behavior",
       "customModels": "Custom Models",
       "multiAgentCouncilPlanning": "Multi-Agent Council Planning",
+      "typesafe": "TypeSafe Jev",
       "voiceDictation": "Voice dictation"
     },
     "showThinking": {
@@ -1122,6 +1128,34 @@
       "browseGalleryButton": "Browse gallery",
       "description": "Import, export, or install a theme from a URL",
       "label": "Theme Actions"
+    },
+    "typesafe": {
+      "apiKey": {
+        "environment": "TYPESAFE_API_KEY is already set in the environment Pi Desktop started with. Pi and OMP use that value.",
+        "invalid": "That is not a valid API key. Paste it again with no spaces.",
+        "label": "API key",
+        "nextSession": "New sessions get the key. Restart an open session to give it the key.",
+        "placeholder": "Paste your TypeSafe API key",
+        "remove": "Remove key",
+        "save": "Save",
+        "saved": "Saved. Only your user account can read it."
+      },
+      "intro": "Jev is TypeSafe's judgment model. Save your API key and install the Jev skill here. Pi and OMP then use the key without asking for it. Pi Desktop does not call TypeSafe itself.",
+      "links": {
+        "agentSkill": "Jev skill guide",
+        "apiKeys": "Get an API key",
+        "introduction": "TypeSafe docs"
+      },
+      "skill": {
+        "install": "Install",
+        "installed": "Installed ({{version}})",
+        "installedElsewhere": "Installed outside Pi Desktop. Manage it with the tool you installed it with.",
+        "label": "Jev skill",
+        "location": "Location: {{directory}}",
+        "notInstalled": "Not installed. It teaches Pi and OMP how to use TypeSafe.",
+        "remove": "Remove skill",
+        "update": "Update to {{version}}"
+      }
     },
     "uiFontSize": {
       "description": "Chat, panels, and sidebar — not the terminal or code editor",
