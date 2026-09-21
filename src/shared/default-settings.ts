@@ -32,6 +32,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   openToHomeOnLaunch: true,
   runOnStartup: false,
   minimizeToTrayOnClose: false,
+  keepSystemAwake: false,
   hasSeenTrayHint: false,
   desktopNotifications: true,
   language: SYSTEM_LANGUAGE,

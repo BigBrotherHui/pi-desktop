@@ -1056,6 +1056,11 @@
       "description": "Notify when Pi finishes, fails, or waits for approval in a workspace you are not looking at",
       "label": "Desktop Notifications"
     },
+    "keepSystemAwake": {
+      "description": "Stop this computer from going to sleep while Pi Desktop runs. The screen can still turn off. A closed laptop lid still puts the computer to sleep.",
+      "label": "Keep This Computer Awake",
+      "unsupported": "Pi Desktop cannot block sleep on this system. It found no power manager and no systemd sleep lock."
+    },
     "language": {
       "description": "Language of menus, buttons, and messages",
       "label": "Language",
