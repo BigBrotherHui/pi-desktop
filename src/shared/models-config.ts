@@ -165,3 +165,36 @@ export function modelDisplayName(modelId: string, config: ModelsConfig | null): 
   }
   return modelId
 }
+
+// ─── Remote model discovery & connectivity test ────────────────────────────
+// Shared wire types for models:fetch-remote / models:test. Main derives the
+// capability fields; the editor only renders and imports them.
+
+/** One model as advertised by a provider's /models endpoint (metadata optional). */
+export interface RemoteModelInfo {
+  id: string
+  reasoning?: boolean
+  input?: string[]
+  contextWindow?: number
+  maxTokens?: number
+}
+
+export interface ModelsRemoteQuery {
+  baseUrl: string
+  apiKey?: string
+}
+
+export type ModelsFetchResult =
+  | { ok: true; models: RemoteModelInfo[]; url: string }
+  | { ok: false; error: string }
+
+export interface ModelsTestQuery {
+  baseUrl: string
+  apiKey?: string
+  api?: string
+  model: string
+}
+
+export type ModelsTestResult =
+  | { ok: true; latencyMs: number }
+  | { ok: false; error: string }

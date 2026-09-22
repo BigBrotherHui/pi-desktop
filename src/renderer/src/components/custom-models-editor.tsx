@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { clsx } from 'clsx'
 import { Trans, useTranslation } from 'react-i18next'
-import { Plus, Trash2, Save, RefreshCw, AlertTriangle } from 'lucide-react'
+import { Download, Plus, Trash2, Save, RefreshCw, AlertTriangle, Play, Loader2, Check } from 'lucide-react'
 import { useAppStore } from '../store'
 import { withImageInput } from '../../../shared/models-config'
-import type { ModelsConfig, ProviderConfig, CustomModel } from '../../../shared/models-config'
+import type { ModelsConfig, ProviderConfig, CustomModel, RemoteModelInfo } from '../../../shared/models-config'
 import { agentEngineLabel, DEFAULT_AGENT_ENGINE_LABEL } from '../../../shared/agent-engine-label'
 
 const API_OPTIONS = [
@@ -21,6 +21,22 @@ interface ProviderRow {
   apiKey: string
   compat: ProviderConfig['compat']
   models: CustomModel[]
+}
+
+/** Per-provider state of the "Fetch models" flow. */
+interface FetchState {
+  loading: boolean
+  error?: string
+  items: RemoteModelInfo[]
+  selected: Set<string>
+  imported?: { added: number; skipped: number }
+}
+
+/** Per-model connectivity-test state, keyed by "providerIndex:modelIndex". */
+interface TestState {
+  loading: boolean
+  ok?: boolean
+  label: string
 }
 
 function configToRows(config: ModelsConfig | null): ProviderRow[] {
@@ -66,6 +82,8 @@ export function CustomModelsEditor(): React.JSX.Element {
   const [rows, setRows] = useState<ProviderRow[]>([])
   const [errors, setErrors] = useState<string[]>([])
   const [saved, setSaved] = useState(false)
+  const [fetchStates, setFetchStates] = useState<Record<number, FetchState>>({})
+  const [testStates, setTestStates] = useState<Record<string, TestState>>({})
 
   useEffect(() => {
     loadCustomModels()
@@ -99,6 +117,88 @@ export function CustomModelsEditor(): React.JSX.Element {
 
   const removeModel = (pi: number, mi: number): void =>
     patchProvider(pi, { models: rows[pi].models.filter((_, idx) => idx !== mi) })
+
+  // ─── Remote model discovery ────────────────────────────────────────────────
+
+  const patchFetch = (pi: number, patch: Partial<FetchState>): void =>
+    setFetchStates((prev) => {
+      const base: FetchState = { loading: false, items: [], selected: new Set() }
+      return { ...prev, [pi]: { ...base, ...prev[pi], ...patch } }
+    })
+
+  const handleFetch = async (pi: number): Promise<void> => {
+    const row = rows[pi]
+    if (!row.baseUrl.trim()) return
+    patchFetch(pi, { loading: true, error: undefined, imported: undefined })
+    const result = await window.piDesktop.models.fetchRemote({ baseUrl: row.baseUrl, apiKey: row.apiKey })
+    if (result.ok) {
+      // Existing ids start unchecked so the default action imports only what
+      // the provider does not already list.
+      const existing = new Set(row.models.map((m) => m.id))
+      patchFetch(pi, {
+        loading: false,
+        items: result.models,
+        selected: new Set(result.models.filter((m) => !existing.has(m.id)).map((m) => m.id)),
+      })
+    } else {
+      patchFetch(pi, { loading: false, error: result.error })
+    }
+  }
+
+  const toggleFetched = (pi: number, id: string): void => {
+    const state = fetchStates[pi]
+    if (!state) return
+    const selected = new Set(state.selected)
+    if (selected.has(id)) selected.delete(id)
+    else selected.add(id)
+    patchFetch(pi, { selected, imported: undefined })
+  }
+
+  const handleImport = (pi: number): void => {
+    const state = fetchStates[pi]
+    const row = rows[pi]
+    if (!state) return
+    const existing = new Set(row.models.map((m) => m.id))
+    const incoming = state.items.filter((item) => state.selected.has(item.id) && !existing.has(item.id))
+    if (incoming.length === 0) return
+    const importedModels: CustomModel[] = incoming.map((item) => ({
+      id: item.id,
+      ...(item.reasoning !== undefined ? { reasoning: item.reasoning } : {}),
+      ...(item.input !== undefined ? { input: item.input } : {}),
+      ...(item.contextWindow !== undefined ? { contextWindow: item.contextWindow } : {}),
+      ...(item.maxTokens !== undefined ? { maxTokens: item.maxTokens } : {}),
+    }))
+    patchProvider(pi, { models: [...row.models, ...importedModels] })
+    patchFetch(pi, {
+      imported: { added: importedModels.length, skipped: state.selected.size - importedModels.length },
+      items: [],
+      selected: new Set(),
+    })
+  }
+
+  // ─── Connectivity test ─────────────────────────────────────────────────────
+
+  const patchTest = (key: string, patch: Partial<TestState>): void =>
+    setTestStates((prev) => {
+      const base: TestState = { loading: false, label: '' }
+      return { ...prev, [key]: { ...base, ...prev[key], ...patch } }
+    })
+
+  const handleTest = async (pi: number, mi: number): Promise<void> => {
+    const row = rows[pi]
+    const model = row.models[mi]
+    if (!row.baseUrl.trim() || !model.id?.trim()) return
+    const key = `${pi}:${mi}`
+    patchTest(key, { loading: true, label: t('customModels.testing') })
+    const result = await window.piDesktop.models.testModel({
+      baseUrl: row.baseUrl,
+      apiKey: row.apiKey,
+      api: row.api,
+      model: model.id,
+    })
+    if (result.ok) patchTest(key, { loading: false, ok: true, label: t('customModels.testLatency', { ms: result.latencyMs }) })
+    else patchTest(key, { loading: false, ok: false, label: result.error.slice(0, 120) })
+  }
 
   const handleSave = async (): Promise<void> => {
     // Duplicate/empty provider keys collapse in object form, so check here.
@@ -154,140 +254,247 @@ export function CustomModelsEditor(): React.JSX.Element {
         />
       </p>
 
-      {rows.map((row, pi) => (
-        <div key={pi} className="rounded-md border border-border p-3">
-          <div className="flex items-center gap-2">
-            <input
-              value={row.key}
-              onChange={(e) => patchProvider(pi, { key: e.target.value })}
-              placeholder={t('customModels.providerKeyPlaceholder')}
-              className="flex-1 rounded border border-border-strong bg-surface px-2 py-1 text-sm text-primary focus:border-focus focus:outline-none"
-            />
-            <button
-              onClick={() => removeProvider(pi)}
-              className="rounded p-1 text-dim hover:bg-surface-hover hover:text-error"
-              title={t('customModels.removeProviderTitle')}
-            >
-              <Trash2 size={14} />
-            </button>
-          </div>
+      {rows.map((row, pi) => {
+        const fetchState = fetchStates[pi]
+        const existingIds = new Set(row.models.map((m) => m.id))
+        return (
+          <div key={pi} className="rounded-md border border-border p-3">
+            <div className="flex items-center gap-2">
+              <input
+                value={row.key}
+                onChange={(e) => patchProvider(pi, { key: e.target.value })}
+                placeholder={t('customModels.providerKeyPlaceholder')}
+                className="flex-1 rounded border border-border-strong bg-surface px-2 py-1 text-sm text-primary focus:border-focus focus:outline-none"
+              />
+              <button
+                onClick={() => removeProvider(pi)}
+                className="rounded p-1 text-dim hover:bg-surface-hover hover:text-error"
+                title={t('customModels.removeProviderTitle')}
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
 
-          <div className="mt-2 grid grid-cols-2 gap-2">
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <input
+                value={row.baseUrl}
+                onChange={(e) => patchProvider(pi, { baseUrl: e.target.value })}
+                placeholder={t('customModels.baseUrlPlaceholder')}
+                className="rounded border border-border-strong bg-surface px-2 py-1 text-sm text-primary focus:border-focus focus:outline-none"
+              />
+              <select
+                value={row.api}
+                onChange={(e) => patchProvider(pi, { api: e.target.value })}
+                className="rounded border border-border-strong bg-surface px-2 py-1 text-sm text-primary focus:border-focus focus:outline-none"
+              >
+                {API_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+            </div>
+            <label className="mt-2 flex items-center gap-2 text-[11px] text-dim">
+              <input
+                type="checkbox"
+                checked={row.compat?.supportsReasoningEffort ?? false}
+                onChange={(e) => patchProviderCompat(pi, { supportsReasoningEffort: e.target.checked })}
+                className="accent-accent"
+              />
+              {t('customModels.supportsReasoningEffortLabel')}
+            </label>
             <input
-              value={row.baseUrl}
-              onChange={(e) => patchProvider(pi, { baseUrl: e.target.value })}
-              placeholder={t('customModels.baseUrlPlaceholder')}
-              className="rounded border border-border-strong bg-surface px-2 py-1 text-sm text-primary focus:border-focus focus:outline-none"
+              value={row.apiKey}
+              onChange={(e) => patchProvider(pi, { apiKey: e.target.value })}
+              placeholder={t('customModels.apiKeyPlaceholder')}
+              className="mt-2 w-full rounded border border-border-strong bg-surface px-2 py-1 text-sm text-primary focus:border-focus focus:outline-none"
             />
-            <select
-              value={row.api}
-              onChange={(e) => patchProvider(pi, { api: e.target.value })}
-              className="rounded border border-border-strong bg-surface px-2 py-1 text-sm text-primary focus:border-focus focus:outline-none"
-            >
-              {API_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
-              ))}
-            </select>
-          </div>
-          <label className="mt-2 flex items-center gap-2 text-[11px] text-dim">
-            <input
-              type="checkbox"
-              checked={row.compat?.supportsReasoningEffort ?? false}
-              onChange={(e) => patchProviderCompat(pi, { supportsReasoningEffort: e.target.checked })}
-              className="accent-accent"
-            />
-            {t('customModels.supportsReasoningEffortLabel')}
-          </label>
-          <input
-            value={row.apiKey}
-            onChange={(e) => patchProvider(pi, { apiKey: e.target.value })}
-            placeholder={t('customModels.apiKeyPlaceholder')}
-            className="mt-2 w-full rounded border border-border-strong bg-surface px-2 py-1 text-sm text-primary focus:border-focus focus:outline-none"
-          />
 
-          <div className="mt-3 space-y-2">
-            {row.models.map((model, mi) => (
-              <div key={mi} className="rounded border border-border bg-surface/50 p-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    value={model.id ?? ''}
-                    onChange={(e) => patchModel(pi, mi, { id: e.target.value })}
-                    placeholder={t('customModels.modelIdPlaceholder')}
-                    className="flex-1 rounded border border-border-strong bg-surface px-2 py-1 text-xs text-primary focus:border-focus focus:outline-none"
-                  />
-                  <input
-                    value={model.name ?? ''}
-                    onChange={(e) => patchModel(pi, mi, { name: e.target.value })}
-                    placeholder={t('customModels.modelNamePlaceholder')}
-                    className="flex-1 rounded border border-border-strong bg-surface px-2 py-1 text-xs text-primary focus:border-focus focus:outline-none"
-                  />
+            {/* Fetch models from the provider and import with derived capabilities. */}
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => handleFetch(pi)}
+                disabled={!row.baseUrl.trim() || (fetchState?.loading ?? false)}
+                className={clsx(
+                  'flex items-center gap-1.5 rounded border border-border-strong px-2.5 py-1 text-xs',
+                  'text-secondary hover:bg-surface-hover transition-colors',
+                  (!row.baseUrl.trim() || (fetchState?.loading ?? false)) && 'cursor-not-allowed opacity-50'
+                )}
+              >
+                {fetchState?.loading ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
+                {fetchState?.loading ? t('customModels.fetching') : t('customModels.fetchModelsButton')}
+              </button>
+              {fetchState?.error && (
+                <span className="min-w-0 flex-1 truncate text-xs text-error" title={fetchState.error}>
+                  {t('customModels.fetchFailed', { detail: fetchState.error })}
+                </span>
+              )}
+              {fetchState?.imported && (
+                <span className="text-xs text-success">
+                  {t('customModels.imported', { added: fetchState.imported.added, skipped: fetchState.imported.skipped })}
+                </span>
+              )}
+            </div>
+
+            {fetchState && fetchState.items.length > 0 && (
+              <div className="mt-2 rounded border border-border bg-surface/40 p-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] text-dim">
+                    {t('customModels.fetchedCount', { count: fetchState.items.length })}
+                  </span>
                   <button
-                    onClick={() => removeModel(pi, mi)}
-                    className="rounded p-1 text-dim hover:bg-surface-hover hover:text-error"
-                    title={t('customModels.removeModelTitle')}
+                    onClick={() => handleImport(pi)}
+                    disabled={fetchState.selected.size === 0}
+                    className={clsx(
+                      'flex items-center gap-1 rounded bg-accent px-2 py-0.5 text-xs text-white hover:bg-accent-hover transition-colors',
+                      fetchState.selected.size === 0 && 'cursor-not-allowed opacity-50'
+                    )}
                   >
-                    <Trash2 size={12} />
+                    <Check size={11} />
+                    {t('customModels.importSelected', { count: fetchState.selected.size })}
                   </button>
                 </div>
-                <div className="mt-2 grid grid-cols-4 gap-2">
-                  <label className="flex items-center gap-1 text-[11px] text-dim">
-                    {t('customModels.contextWindowLabel')}
-                    <input
-                      type="number"
-                      value={model.contextWindow ?? ''}
-                      onChange={(e) =>
-                        patchModel(pi, mi, {
-                          contextWindow: e.target.value === '' ? undefined : Number(e.target.value),
-                        })
-                      }
-                      className="w-full rounded border border-border-strong bg-surface px-1 py-0.5 text-xs text-primary focus:border-focus focus:outline-none"
-                    />
-                  </label>
-                  <label className="flex items-center gap-1 text-[11px] text-dim">
-                    {t('customModels.maxTokensLabel')}
-                    <input
-                      type="number"
-                      value={model.maxTokens ?? ''}
-                      onChange={(e) =>
-                        patchModel(pi, mi, {
-                          maxTokens: e.target.value === '' ? undefined : Number(e.target.value),
-                        })
-                      }
-                      className="w-full rounded border border-border-strong bg-surface px-1 py-0.5 text-xs text-primary focus:border-focus focus:outline-none"
-                    />
-                  </label>
-                  <label className="flex items-center gap-1 text-[11px] text-dim">
-                    <input
-                      type="checkbox"
-                      checked={model.reasoning ?? false}
-                      onChange={(e) => patchModel(pi, mi, { reasoning: e.target.checked })}
-                      className="accent-accent"
-                    />
-                    {t('customModels.reasoningLabel')}
-                  </label>
-                  <label className="flex items-center gap-1 text-[11px] text-dim">
-                    <input
-                      type="checkbox"
-                      checked={model.input?.includes('image') ?? false}
-                      onChange={(e) =>
-                        patchModel(pi, mi, { input: withImageInput(model.input, e.target.checked) })
-                      }
-                      className="accent-accent"
-                    />
-                    {t('customModels.visionLabel')}
-                  </label>
+                <div className="mt-1.5 max-h-44 space-y-0.5 overflow-y-auto">
+                  {fetchState.items.map((item) => (
+                    <label
+                      key={item.id}
+                      className="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-xs hover:bg-surface-hover"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={fetchState.selected.has(item.id)}
+                        onChange={() => toggleFetched(pi, item.id)}
+                        className="accent-accent"
+                      />
+                      <span className="min-w-0 flex-1 truncate text-primary" title={item.id}>{item.id}</span>
+                      {existingIds.has(item.id) && (
+                        <span className="shrink-0 text-[10px] text-faint">{t('customModels.alreadyInList')}</span>
+                      )}
+                      {item.reasoning === true && (
+                        <span className="shrink-0 text-[10px] text-muted">{t('customModels.reasoningLabel')}</span>
+                      )}
+                      {item.input?.includes('image') && (
+                        <span className="shrink-0 text-[10px] text-muted">{t('customModels.visionLabel')}</span>
+                      )}
+                      {item.contextWindow !== undefined && (
+                        <span className="shrink-0 text-[10px] text-faint">
+                          {Math.round(item.contextWindow / 1000)}k
+                        </span>
+                      )}
+                    </label>
+                  ))}
                 </div>
               </div>
-            ))}
-            <button
-              onClick={() => addModel(pi)}
-              className="flex items-center gap-1 text-xs text-muted hover:text-primary"
-            >
-              <Plus size={12} /> {t('customModels.addModelButton')}
-            </button>
+            )}
+
+            <div className="mt-3 space-y-2">
+              {row.models.map((model, mi) => {
+                const testState = testStates[`${pi}:${mi}`]
+                return (
+                  <div key={mi} className="rounded border border-border bg-surface/50 p-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        value={model.id ?? ''}
+                        onChange={(e) => patchModel(pi, mi, { id: e.target.value })}
+                        placeholder={t('customModels.modelIdPlaceholder')}
+                        className="flex-1 rounded border border-border-strong bg-surface px-2 py-1 text-xs text-primary focus:border-focus focus:outline-none"
+                      />
+                      <input
+                        value={model.name ?? ''}
+                        onChange={(e) => patchModel(pi, mi, { name: e.target.value })}
+                        placeholder={t('customModels.modelNamePlaceholder')}
+                        className="flex-1 rounded border border-border-strong bg-surface px-2 py-1 text-xs text-primary focus:border-focus focus:outline-none"
+                      />
+                      <button
+                        onClick={() => handleTest(pi, mi)}
+                        disabled={!row.baseUrl.trim() || !model.id?.trim() || (testState?.loading ?? false)}
+                        className={clsx(
+                          'rounded p-1 text-dim hover:bg-surface-hover hover:text-primary',
+                          (!row.baseUrl.trim() || !model.id?.trim() || (testState?.loading ?? false)) && 'cursor-not-allowed opacity-50'
+                        )}
+                        title={t('customModels.testTitle')}
+                      >
+                        {testState?.loading ? <Loader2 size={12} className="animate-spin" /> : <Play size={12} />}
+                      </button>
+                      <button
+                        onClick={() => removeModel(pi, mi)}
+                        className="rounded p-1 text-dim hover:bg-surface-hover hover:text-error"
+                        title={t('customModels.removeModelTitle')}
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                    {testState && !testState.loading && (
+                      <p
+                        className={clsx(
+                          'mt-1 truncate text-[11px]',
+                          testState.ok === true && 'text-success',
+                          testState.ok === false && 'text-error'
+                        )}
+                        title={testState.label}
+                      >
+                        {testState.label}
+                      </p>
+                    )}
+                    <div className="mt-2 grid grid-cols-4 gap-2">
+                      <label className="flex items-center gap-1 text-[11px] text-dim">
+                        {t('customModels.contextWindowLabel')}
+                        <input
+                          type="number"
+                          value={model.contextWindow ?? ''}
+                          onChange={(e) =>
+                            patchModel(pi, mi, {
+                              contextWindow: e.target.value === '' ? undefined : Number(e.target.value),
+                            })
+                          }
+                          className="w-full rounded border border-border-strong bg-surface px-1 py-0.5 text-xs text-primary focus:border-focus focus:outline-none"
+                        />
+                      </label>
+                      <label className="flex items-center gap-1 text-[11px] text-dim">
+                        {t('customModels.maxTokensLabel')}
+                        <input
+                          type="number"
+                          value={model.maxTokens ?? ''}
+                          onChange={(e) =>
+                            patchModel(pi, mi, {
+                              maxTokens: e.target.value === '' ? undefined : Number(e.target.value),
+                            })
+                          }
+                          className="w-full rounded border border-border-strong bg-surface px-1 py-0.5 text-xs text-primary focus:border-focus focus:outline-none"
+                        />
+                      </label>
+                      <label className="flex items-center gap-1 text-[11px] text-dim">
+                        <input
+                          type="checkbox"
+                          checked={model.reasoning ?? false}
+                          onChange={(e) => patchModel(pi, mi, { reasoning: e.target.checked })}
+                          className="accent-accent"
+                        />
+                        {t('customModels.reasoningLabel')}
+                      </label>
+                      <label className="flex items-center gap-1 text-[11px] text-dim">
+                        <input
+                          type="checkbox"
+                          checked={model.input?.includes('image') ?? false}
+                          onChange={(e) =>
+                            patchModel(pi, mi, { input: withImageInput(model.input, e.target.checked) })
+                          }
+                          className="accent-accent"
+                        />
+                        {t('customModels.visionLabel')}
+                      </label>
+                    </div>
+                  </div>
+                )
+              })}
+              <button
+                onClick={() => addModel(pi)}
+                className="flex items-center gap-1 text-xs text-muted hover:text-primary"
+              >
+                <Plus size={12} /> {t('customModels.addModelButton')}
+              </button>
+            </div>
           </div>
-        </div>
-      ))}
+        )
+      })}
 
       <button
         onClick={addProvider}

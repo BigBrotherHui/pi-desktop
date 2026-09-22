@@ -15,6 +15,7 @@ import { registerWorkspaceHandlers } from './ipc/workspace-handlers'
 import { registerPackageHandlers } from './ipc/package-handlers'
 import { registerSkillsMcpHandlers } from './ipc/skills-mcp-handlers'
 import { registerModelsConfigHandlers } from './ipc/models-config-handlers'
+import { registerModelsRemoteHandlers } from './ipc/models-remote-handlers'
 import { registerCouncilHandlers } from './ipc/council-handlers'
 import { registerTagHandlers } from './ipc/tag-handlers'
 import { registerNotesHandlers } from './ipc/notes-handlers'
@@ -58,6 +59,7 @@ export function registerIpcHandlers(
   registerPackageHandlers(ctx)
   registerSkillsMcpHandlers(ctx)
   registerModelsConfigHandlers(ctx)
+  registerModelsRemoteHandlers(ctx)
   registerCouncilHandlers(ctx)
   registerTagHandlers(ctx)
   registerNotesHandlers(ctx)

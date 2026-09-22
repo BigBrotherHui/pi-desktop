@@ -30,6 +30,10 @@ import type {
   SessionLineageRecord,
   ModelsConfig,
   ModelsReadResult,
+  ModelsFetchResult,
+  ModelsTestResult,
+  ModelsRemoteQuery,
+  ModelsTestQuery,
   CouncilDetectResult,
   CouncilRunRequest,
   CouncilRunResult,
@@ -203,10 +207,12 @@ interface PiDesktopAPI {
     fetchCatalog(query?: string): Promise<CatalogPackage[]>
   }
 
-  // Models config (read/write ~/.pi/agent/models.json)
+  // Models config (read/write the engine's models.yml / models.json)
   models: {
     read(): Promise<ModelsReadResult>
     write(config: ModelsConfig): Promise<{ success: boolean; error?: string }>
+    fetchRemote(query: ModelsRemoteQuery): Promise<ModelsFetchResult>
+    testModel(query: ModelsTestQuery): Promise<ModelsTestResult>
   }
 
   council: {
@@ -466,6 +472,8 @@ const api: PiDesktopAPI = {
   models: {
     read: () => ipcRenderer.invoke(IPC_CHANNELS.MODELS_READ),
     write: (config) => ipcRenderer.invoke(IPC_CHANNELS.MODELS_WRITE, config),
+    fetchRemote: (query) => ipcRenderer.invoke(IPC_CHANNELS.MODELS_FETCH_REMOTE, query),
+    testModel: (query) => ipcRenderer.invoke(IPC_CHANNELS.MODELS_TEST, query),
   },
 
   council: {

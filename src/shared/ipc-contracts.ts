@@ -129,6 +129,8 @@ export const IPC_CHANNELS = {
   // Models config
   MODELS_READ: 'models:read',
   MODELS_WRITE: 'models:write',
+  MODELS_FETCH_REMOTE: 'models:fetch-remote',
+  MODELS_TEST: 'models:test',
 
   // Council planning
   COUNCIL_DETECT: 'council:detect',
@@ -887,6 +889,7 @@ export interface PathKindResult {
 
 export type { SessionLineageRecord } from './session-lineage'
 export type { ModelsConfig, ProviderConfig, CustomModel } from './models-config'
+export type { RemoteModelInfo, ModelsRemoteQuery, ModelsFetchResult, ModelsTestQuery, ModelsTestResult } from './models-config'
 export type {
   CouncilConfig,
   CouncilAgentId,
