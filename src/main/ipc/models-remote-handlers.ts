@@ -244,13 +244,20 @@ async function testModel(query: ModelsTestQuery): Promise<ModelsTestResult> {
   const started = Date.now()
   const attempts: string[] = []
 
-  for (const leaf of query.api === 'openai-responses'
-    ? ['responses']
+  // The test must mirror what the agent will actually call — no endpoint
+  // guessing here, or a test could pass while chat 404s (and vice versa).
+  // Only Anthropic keeps candidate probing, since its base-URL convention
+  // varies between "/v1/messages" and "/messages" layouts.
+  const leaf = query.api === 'openai-responses'
+    ? 'responses'
     : query.api === 'anthropic-messages'
-      ? ['v1/messages']
-      : ['chat/completions']) {
-    const urls = endpointCandidates(base, leaf)
-    for (const url of urls) {
+      ? 'v1/messages'
+      : 'chat/completions'
+  const urls = query.api === 'anthropic-messages'
+    ? endpointCandidates(base, leaf)
+    : [`${base.replace(/\/+$/, '')}/${leaf}`]
+
+  for (const url of urls) {
       const headers = query.api === 'anthropic-messages'
         ? authHeaders(apiKey, { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' })
         : authHeaders(apiKey)
@@ -267,7 +274,6 @@ async function testModel(query: ModelsTestQuery): Promise<ModelsTestResult> {
       } catch (err) {
         attempts.push(err instanceof Error ? err.message : String(err))
       }
-    }
   }
   return { ok: false, error: attempts[0] ?? 'No endpoint responded' }
 }

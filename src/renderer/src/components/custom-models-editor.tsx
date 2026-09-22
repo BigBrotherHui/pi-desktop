@@ -132,6 +132,16 @@ export function CustomModelsEditor(): React.JSX.Element {
     patchFetch(pi, { loading: true, error: undefined, imported: undefined })
     const result = await window.piDesktop.models.fetchRemote({ baseUrl: row.baseUrl, apiKey: row.apiKey })
     if (result.ok) {
+      // Align the base URL with the endpoint that actually answered. The agent
+      // calls {baseUrl}/chat/completions (or /responses) verbatim, so a base
+      // that only worked because fetch probed /v1/models would 404 in chat.
+      if (result.url.endsWith('/models')) {
+        const working = result.url.slice(0, -'/models'.length)
+        const current = row.baseUrl.trim().replace(/\/+$/, '')
+        if (working.toLowerCase() !== current.toLowerCase()) {
+          patchProvider(pi, { baseUrl: working })
+        }
+      }
       // Existing ids start unchecked so the default action imports only what
       // the provider does not already list.
       const existing = new Set(row.models.map((m) => m.id))
