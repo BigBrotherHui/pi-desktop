@@ -337,7 +337,8 @@
     "errors": {
       "duplicateKeys": "Provider keys must be unique",
       "emptyKey": "Every provider needs a non-empty key",
-      "saveFailed": "Save failed"
+      "saveFailed": "Save failed",
+      "defaultProviderMissing": "Provider \"{{key}}\" is missing, but it is the default provider in Settings — agents would fail to start. Re-add it or change the default model first."
     },
     "loadError": {
       "message": "Could not load {{fileName}} safely, so editing is disabled to avoid overwriting it."

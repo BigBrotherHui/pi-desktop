@@ -73,6 +73,7 @@ export function CustomModelsEditor(): React.JSX.Element {
   const saveCustomModels = useAppStore((s) => s.saveCustomModels)
   const restartPi = useAppStore((s) => s.restartPi)
   const requestConfirm = useAppStore((s) => s.requestConfirm)
+  const settings = useAppStore((s) => s.settings)
   // Main resolves which engine and file the editor targets; the labels show
   // exactly that so they can never name a file the save does not touch.
   const modelsFile = useAppStore((s) => s.customModelsFile)
@@ -258,16 +259,19 @@ export function CustomModelsEditor(): React.JSX.Element {
     const localErrors: string[] = []
     if (keys.some((k) => k.length === 0)) localErrors.push(t('customModels.errors.emptyKey'))
     if (new Set(keys).size !== keys.length) localErrors.push(t('customModels.errors.duplicateKeys'))
-    if (localErrors.length > 0) {
-      setErrors(localErrors)
-      return
+    // Removing the default provider is a legitimate fresh-start move, so it
+    // must not block the save — but the agents spawn with that provider until
+    // Settings points elsewhere, so warn loudly instead.
+    const defaultProvider = settings?.defaultProvider
+    if (typeof defaultProvider === 'string' && defaultProvider && !keys.includes(defaultProvider)) {
+      localErrors.push(t('customModels.errors.defaultProviderMissing', { key: defaultProvider }))
     }
     const result = await saveCustomModels(rowsToConfig(rows))
     if (result.ok) {
-      setErrors([])
+      setErrors(localErrors)
       setSaved(true)
     } else {
-      setErrors(result.errors ?? [t('customModels.errors.saveFailed')])
+      setErrors([...localErrors, ...(result.errors ?? [t('customModels.errors.saveFailed')])])
     }
   }
 
