@@ -130,6 +130,12 @@ export function CustomModelsEditor(): React.JSX.Element {
   const handleFetch = async (pi: number): Promise<void> => {
     const row = rows[pi]
     if (!row.baseUrl.trim()) return
+    // The most costly misfill: the API key pasted into the provider NAME
+    // field (both start with "sk-"). Catch it before the request goes out.
+    if (!row.apiKey.trim() && /^sk-[A-Za-z0-9_-]{16,}$/.test(row.key.trim())) {
+      patchFetch(pi, { loading: false, error: t('customModels.keyInNameHint') })
+      return
+    }
     patchFetch(pi, { loading: true, error: undefined, imported: undefined })
     const result = await window.piDesktop.models.fetchRemote({ baseUrl: row.baseUrl, apiKey: row.apiKey })
     if (result.ok) {
@@ -311,7 +317,9 @@ export function CustomModelsEditor(): React.JSX.Element {
                 onChange={(e) => patchProvider(pi, { key: e.target.value })}
                 placeholder={t('customModels.providerKeyPlaceholder')}
                 className="flex-1 rounded border border-border-strong bg-surface px-2 py-1 text-sm text-primary focus:border-focus focus:outline-none"
+                aria-label={t('customModels.nameLabel')}
               />
+              <span className="shrink-0 text-[11px] text-faint">{t('customModels.nameLabel')}</span>
               <button
                 onClick={() => clearProviderModels(pi)}
                 disabled={row.models.length === 0}
@@ -337,6 +345,7 @@ export function CustomModelsEditor(): React.JSX.Element {
                 value={row.baseUrl}
                 onChange={(e) => patchProvider(pi, { baseUrl: e.target.value })}
                 placeholder={t('customModels.baseUrlPlaceholder')}
+                aria-label={t('customModels.baseUrlLabel')}
                 className="rounded border border-border-strong bg-surface px-2 py-1 text-sm text-primary focus:border-focus focus:outline-none"
               />
               <select
@@ -362,8 +371,13 @@ export function CustomModelsEditor(): React.JSX.Element {
               value={row.apiKey}
               onChange={(e) => patchProvider(pi, { apiKey: e.target.value })}
               placeholder={t('customModels.apiKeyPlaceholder')}
+              aria-label={t('customModels.apiKeyLabel')}
               className="mt-2 w-full rounded border border-border-strong bg-surface px-2 py-1 text-sm text-primary focus:border-focus focus:outline-none"
             />
+            <div className="mt-1 flex items-center justify-end gap-3 text-[11px] text-faint">
+              <span>{t('customModels.baseUrlLabel')}</span>
+              <span>{t('customModels.apiKeyLabel')}</span>
+            </div>
 
             {/* Fetch models from the provider and import with derived capabilities. */}
             <div className="mt-2 flex flex-wrap items-center gap-2">

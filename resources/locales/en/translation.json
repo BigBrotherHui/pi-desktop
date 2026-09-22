@@ -345,7 +345,7 @@
     "maxTokensLabel": "max",
     "modelIdPlaceholder": "model id (required)",
     "modelNamePlaceholder": "name",
-    "providerKeyPlaceholder": "provider-key (e.g. ollama)",
+    "providerKeyPlaceholder": "short name, e.g. dli / wb2a",
     "reasoningLabel": "reasoning",
     "removeModelTitle": "Remove model",
     "removeProviderTitle": "Remove provider",
@@ -359,7 +359,11 @@
     "clearModelsTitle": "Clear this provider’s model list",
     "clearConfirmTitle": "Clear models",
     "clearConfirmMessage": "Remove all {{count}} models from provider \"{{key}}\" in the editor? Nothing is saved until you press Save.",
-    "clearConfirmLabel": "Clear"
+    "clearConfirmLabel": "Clear",
+    "nameLabel": "Name",
+    "baseUrlLabel": "API URL",
+    "apiKeyLabel": "API Key",
+    "keyInNameHint": "The name field looks like an API key (sk-…). Put the key in the API Key field and use a short name here (e.g. dli)."
   },
   "diagnostics": {
     "fields": {
