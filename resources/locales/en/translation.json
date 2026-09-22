@@ -352,7 +352,14 @@
     "saveButton": "Save {{fileName}}",
     "savedRestartButton": "Saved — Restart {{engine}} to apply",
     "supportsReasoningEffortLabel": "supports reasoning effort",
-    "visionLabel": "vision"
+    "visionLabel": "vision",
+    "selectAll": "All",
+    "selectNone": "None",
+    "selectInvert": "Invert",
+    "clearModelsTitle": "Clear this provider’s model list",
+    "clearConfirmTitle": "Clear models",
+    "clearConfirmMessage": "Remove all {{count}} models from provider \"{{key}}\" in the editor? Nothing is saved until you press Save.",
+    "clearConfirmLabel": "Clear"
   },
   "diagnostics": {
     "fields": {

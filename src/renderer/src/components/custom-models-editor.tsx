@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { clsx } from 'clsx'
 import { Trans, useTranslation } from 'react-i18next'
-import { Download, Plus, Trash2, Save, RefreshCw, AlertTriangle, Play, Loader2, Check } from 'lucide-react'
+import { Download, Plus, Trash2, Save, RefreshCw, AlertTriangle, Play, Loader2, Check, Eraser } from 'lucide-react'
 import { useAppStore } from '../store'
 import { withImageInput } from '../../../shared/models-config'
 import type { ModelsConfig, ProviderConfig, CustomModel, RemoteModelInfo } from '../../../shared/models-config'
@@ -72,6 +72,7 @@ export function CustomModelsEditor(): React.JSX.Element {
   const loadCustomModels = useAppStore((s) => s.loadCustomModels)
   const saveCustomModels = useAppStore((s) => s.saveCustomModels)
   const restartPi = useAppStore((s) => s.restartPi)
+  const requestConfirm = useAppStore((s) => s.requestConfirm)
   // Main resolves which engine and file the editor targets; the labels show
   // exactly that so they can never name a file the save does not touch.
   const modelsFile = useAppStore((s) => s.customModelsFile)
@@ -142,14 +143,10 @@ export function CustomModelsEditor(): React.JSX.Element {
           patchProvider(pi, { baseUrl: working })
         }
       }
-      // Existing ids start unchecked so the default action imports only what
-      // the provider does not already list.
-      const existing = new Set(row.models.map((m) => m.id))
-      patchFetch(pi, {
-        loading: false,
-        items: result.models,
-        selected: new Set(result.models.filter((m) => !existing.has(m.id)).map((m) => m.id)),
-      })
+      // Nothing selected by default: the user picks exactly the models they
+      // want (existing ids are marked in the list). The header shortcuts cover
+      // select-all / invert / none.
+      patchFetch(pi, { loading: false, items: result.models, selected: new Set() })
     } else {
       patchFetch(pi, { loading: false, error: result.error })
     }
@@ -162,6 +159,45 @@ export function CustomModelsEditor(): React.JSX.Element {
     if (selected.has(id)) selected.delete(id)
     else selected.add(id)
     patchFetch(pi, { selected, imported: undefined })
+  }
+
+  const applySelection = (pi: number, mode: 'all' | 'none' | 'invert'): void => {
+    const state = fetchStates[pi]
+    if (!state) return
+    if (mode === 'none') {
+      patchFetch(pi, { selected: new Set() })
+      return
+    }
+    const selected = new Set(
+      mode === 'all' ? state.items.map((item) => item.id) : []
+    )
+    if (mode === 'invert') {
+      for (const item of state.items) {
+        if (!state.selected.has(item.id)) selected.add(item.id)
+      }
+    }
+    patchFetch(pi, { selected })
+  }
+
+  const clearProviderModels = async (pi: number): Promise<void> => {
+    const row = rows[pi]
+    if (row.models.length === 0) return
+    const confirmed = await requestConfirm({
+      title: t('customModels.clearConfirmTitle'),
+      message: t('customModels.clearConfirmMessage', { count: row.models.length, key: row.key }),
+      confirmLabel: t('customModels.clearConfirmLabel'),
+      cancelLabel: t('common.cancel'),
+      danger: true,
+    })
+    if (!confirmed) return
+    patchProvider(pi, { models: [] })
+    setTestStates((prev) => {
+      const next: typeof prev = {}
+      for (const [key, value] of Object.entries(prev)) {
+        if (!key.startsWith(`${pi}:`)) next[key] = value
+      }
+      return next
+    })
   }
 
   const handleImport = (pi: number): void => {
@@ -277,6 +313,17 @@ export function CustomModelsEditor(): React.JSX.Element {
                 className="flex-1 rounded border border-border-strong bg-surface px-2 py-1 text-sm text-primary focus:border-focus focus:outline-none"
               />
               <button
+                onClick={() => clearProviderModels(pi)}
+                disabled={row.models.length === 0}
+                className={clsx(
+                  'rounded p-1 text-dim hover:bg-surface-hover hover:text-error',
+                  row.models.length === 0 && 'cursor-not-allowed opacity-40'
+                )}
+                title={t('customModels.clearModelsTitle')}
+              >
+                <Eraser size={14} />
+              </button>
+              <button
                 onClick={() => removeProvider(pi)}
                 className="rounded p-1 text-dim hover:bg-surface-hover hover:text-error"
                 title={t('customModels.removeProviderTitle')}
@@ -347,9 +394,24 @@ export function CustomModelsEditor(): React.JSX.Element {
             {fetchState && fetchState.items.length > 0 && (
               <div className="mt-2 rounded border border-border bg-surface/40 p-2">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] text-dim">
-                    {t('customModels.fetchedCount', { count: fetchState.items.length })}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-dim">
+                      {t('customModels.fetchedCount', { count: fetchState.items.length })}
+                    </span>
+                    {(['all', 'invert', 'none'] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        onClick={() => applySelection(pi, mode)}
+                        className="text-[11px] text-muted hover:text-primary"
+                      >
+                        {mode === 'all'
+                          ? t('customModels.selectAll')
+                          : mode === 'invert'
+                            ? t('customModels.selectInvert')
+                            : t('customModels.selectNone')}
+                      </button>
+                    ))}
+                  </div>
                   <button
                     onClick={() => handleImport(pi)}
                     disabled={fetchState.selected.size === 0}
