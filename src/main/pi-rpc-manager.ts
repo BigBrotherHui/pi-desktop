@@ -1028,6 +1028,12 @@ export class PiRpcManager extends EventEmitter {
       throw new Error(t('errors.pi.processNotRunning'))
     }
 
+    // Delivery trace: when a prompt lands late or in the wrong session, this
+    // names the exact child that received it (paired with the spawn log above).
+    if (command.type === 'prompt' || command.type === 'steer' || command.type === 'follow_up') {
+      appLog.info('pi', `Delivering ${command.type} to Pi pid ${this.process.pid}`)
+    }
+
     const id = `req-${this.nextRequestId++}`
     const cmdWithId = { ...command, id }
     const line = JSON.stringify(cmdWithId) + JSONL_NEWLINE

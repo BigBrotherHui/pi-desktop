@@ -241,6 +241,14 @@ interface AppState {
   // Shell-style recall of prompts sent this session (oldest→newest); reset per
   // session in clearMessages. Recorded raw (before attachment inlining).
   promptHistory: string[]
+  /**
+   * A prompt typed while the active runtime was not running and could not
+   * start synchronously (still starting after startPi). Held here and
+   * delivered by flushQueuedPrompt once the runtime reports running, so a
+   * prompt sent into a restarting session is never silently dropped.
+   * View-scoped: clearMessages discards it with the rest of the chat.
+   */
+  queuedPrompt: { message: string; options?: { images?: PromptImage[]; attachments?: DisplayAttachment[] } } | null
   streamingContent: string
   streamingThinking: string
   streamingToolCalls: Map<
@@ -426,6 +434,12 @@ interface AppActions {
 
   // Prompts
   sendPrompt: (message: string, options?: { images?: PromptImage[]; attachments?: DisplayAttachment[] }) => Promise<void>
+  /**
+   * Deliver a prompt held by sendPrompt while the runtime was starting. Runs
+   * only when the active runtime is running; a no-op otherwise (the prompt
+   * stays queued for the next running event).
+   */
+  flushQueuedPrompt: () => Promise<void>
   sendSteer: (message: string) => Promise<void>
   sendFollowUp: (message: string) => Promise<void>
   runCouncil: (request: string) => Promise<void>
@@ -883,6 +897,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
 
   messages: [],
   promptHistory: [],
+  queuedPrompt: null,
   streamingContent: '',
   streamingThinking: '',
   streamingToolCalls: new Map(),
@@ -968,8 +983,18 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
     // Don't start if already running
     if (get().piStatus === 'running') return
 
+    // A prompt sent into a tab whose runtime died must reopen the session the
+    // user is looking at. Without this, startPiForWorkspace falls back to a
+    // fresh sessionPath=null runtime (or --continue's newest file), so the tab
+    // silently binds a different session and the typed prompt lands nowhere.
+    const sessionFile = get().sessionState?.sessionFile
+    const startOptions =
+      options?.sessionPath === undefined && typeof sessionFile === 'string' && sessionFile
+        ? { ...options, sessionPath: sessionFile }
+        : options
+
     try {
-      const status = await window.piDesktop.pi.start(options as Record<string, unknown> | undefined)
+      const status = await window.piDesktop.pi.start(startOptions as Record<string, unknown> | undefined)
       set({ piStatus: status.status, piStartupPhase: status.startupPhase ?? null, piPid: status.pid, piError: status.error, piEngine: status.engine ?? 'pi' })
 
       if (status.status === 'running') {
@@ -1023,7 +1048,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
   // so its streaming state and queue counters go too — otherwise the newly
   // loaded session inherits a stuck spinner and a stale "queued steers" badge.
   clearMessages: () =>
-    set({ messages: [], promptHistory: [], subagentProgress: [], ...idleTurnState() }),
+    set({ messages: [], promptHistory: [], queuedPrompt: null, subagentProgress: [], ...idleTurnState() }),
 
   // Append a sent prompt to the recall history. Ignores blanks and consecutive
   // duplicates (shell-style), and caps the list so it can't grow unbounded.
@@ -1055,7 +1080,45 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
     // conversation; a fresh one gets a new session.
     if (get().piStatus !== 'running') {
       await get().startPi()
-      if (get().piStatus !== 'running') return
+    }
+    if (get().piStatus !== 'running') {
+      // The runtime could not serve the prompt right now (still starting, or
+      // start failed). Dropping the message silently — the old behavior — made
+      // a dead session tab look permanently broken: the user types, nothing
+      // ever appears, nothing explains why. Queue while startup is in flight
+      // (flushQueuedPrompt delivers on the running event); surface an error
+      // otherwise, with the user bubble kept so the message stays visible.
+      const status = get().piStatus
+      if (status === 'starting' || status === 'stopped') {
+        // No user bubble here: flushQueuedPrompt re-enters sendPrompt once the
+        // runtime is running, and that path renders the bubble exactly once —
+        // a bubble added now would either double up or be wiped by the
+        // hydration reload that fires on the same running event.
+        set({ queuedPrompt: { message, options } })
+        get().addMessage({
+          id: generateId(),
+          role: 'system',
+          content: t('store.messages.promptQueuedWhileStarting'),
+          timestamp: Date.now(),
+        })
+      } else {
+        get().addMessage({
+          id: generateId(),
+          role: 'user',
+          content: message,
+          timestamp: Date.now(),
+          attachments: options?.attachments,
+        })
+        get().addMessage({
+          id: generateId(),
+          role: 'system',
+          content: t('store.messages.promptStartFailed', {
+            detail: get().piError ?? t('store.messages.error', { detail: status }),
+          }),
+          timestamp: Date.now(),
+        })
+      }
+      return
     }
 
     const { isStreaming, sessionState, settings } = get()
@@ -1103,6 +1166,13 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
       })
       set({ isStreaming: false })
     }
+  },
+
+  flushQueuedPrompt: async () => {
+    const queued = get().queuedPrompt
+    if (!queued || get().piStatus !== 'running') return
+    set({ queuedPrompt: null })
+    await get().sendPrompt(queued.message, queued.options)
   },
 
   sendSteer: async (message) => {
@@ -1564,6 +1634,12 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
     // flash the empty new-session view between the click and startup.
     if (get().piStatus !== 'running') return
 
+    // A prompt queued on the not-running path delivers after this hydration:
+    // clearMessages below would otherwise wipe both it and any bubble rendered
+    // before the reload, so it is captured now and sent once history is shown.
+    const queued = get().queuedPrompt
+    if (queued) set({ queuedPrompt: null })
+
     get().clearMessages()
     set({ sessionLoading: true })
     void get().refreshSessionState()
@@ -1610,6 +1686,11 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
       if (refreshList) scheduleSessionListRefresh(get)
     } catch {
       if (gen === sessionLoadGeneration) set({ sessionLoading: false })
+    }
+    // History is on screen (or hydration failed visibly) — the queued prompt
+    // can now render its bubble and go out without being wiped.
+    if (queued && gen === sessionLoadGeneration && get().piStatus === 'running') {
+      await get().sendPrompt(queued.message, queued.options)
     }
   },
 
@@ -2354,6 +2435,17 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
         ...(runtime.status === 'error' || runtime.status === 'stopped' ? { sessionLoading: false } : {}),
       } : {}),
     }))
+    // A prompt queued while this runtime was not running delivers the moment
+    // the runtime reports running — BEFORE the history reload below. The old
+    // order (flush after hydration) let a slow or timed-out get_messages
+    // roundtrip hold the user's message for its whole timeout. The prompt is
+    // written to Pi's stdin here, ahead of any later get_messages request, so
+    // by the time hydration reads the session the user bubble is already in
+    // history. flushQueuedPrompt nulls queuedPrompt synchronously, so the
+    // reload's own capture below can never double-deliver.
+    if (runtime.active && runtime.status === 'running') {
+      void get().flushQueuedPrompt()
+    }
     // A newly-created session is intentionally empty, so its renderer stays
     // in sessionLoading until Pi reports the generated session path. Hydrate
     // that expected active runtime even though loading is still true; the old

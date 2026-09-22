@@ -1408,7 +1408,9 @@
       "updatedAllPackages": "Updated packages. Restart Pi to load them.",
       "updatedPackage": "Updated {{spec}}. Restart Pi to load it.",
       "updatePackageFailed": "Update failed",
-      "writeFailed": "Write failed"
+      "writeFailed": "Write failed",
+      "promptQueuedWhileStarting": "Pi is starting — the prompt is queued and will be sent automatically once it is ready.",
+      "promptStartFailed": "Could not start Pi, so the prompt was not sent: {{detail}}"
     },
     "promptsWaiting_one": "{{count}} Pi prompt waiting",
     "promptsWaiting_other": "{{count}} Pi prompts waiting"
