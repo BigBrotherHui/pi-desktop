@@ -83,6 +83,7 @@ export function CustomModelsEditor(): React.JSX.Element {
 
   const [rows, setRows] = useState<ProviderRow[]>([])
   const [errors, setErrors] = useState<string[]>([])
+  const [warnings, setWarnings] = useState<string[]>([])
   const [saved, setSaved] = useState(false)
   const [fetchStates, setFetchStates] = useState<Record<number, FetchState>>({})
   const [testStates, setTestStates] = useState<Record<string, TestState>>({})
@@ -269,9 +270,11 @@ export function CustomModelsEditor(): React.JSX.Element {
     const result = await saveCustomModels(rowsToConfig(rows))
     if (result.ok) {
       setErrors(localErrors)
+      setWarnings(result.warnings ?? [])
       setSaved(true)
     } else {
       setErrors([...localErrors, ...(result.errors ?? [t('customModels.errors.saveFailed')])])
+      setWarnings([])
     }
   }
 
@@ -597,6 +600,13 @@ export function CustomModelsEditor(): React.JSX.Element {
         <ul className="space-y-1 text-xs text-error">
           {errors.map((e, i) => (
             <li key={i}>• {e}</li>
+          ))}
+        </ul>
+      )}
+      {warnings.length > 0 && (
+        <ul className="space-y-1 text-xs text-warning">
+          {warnings.map((w, i) => (
+            <li key={i}>• {w}</li>
           ))}
         </ul>
       )}

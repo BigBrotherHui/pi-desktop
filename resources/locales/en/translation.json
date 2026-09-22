@@ -1433,7 +1433,8 @@
       "updatePackageFailed": "Update failed",
       "writeFailed": "Write failed",
       "promptQueuedWhileStarting": "Pi is starting — the prompt is queued and will be sent automatically once it is ready.",
-      "promptStartFailed": "Could not start Pi, so the prompt was not sent: {{detail}}"
+      "promptStartFailed": "Could not start Pi, so the prompt was not sent: {{detail}}",
+      "defaultModelRepointed": "Default model {{from}} no longer exists — switched to {{to}}. Agents would otherwise fail to start."
     },
     "promptsWaiting_one": "{{count}} Pi prompt waiting",
     "promptsWaiting_other": "{{count}} Pi prompts waiting"

@@ -48,7 +48,7 @@ function removeToolArgs(args: string[]): string[] {
  * other engine is opened — and Pi's `find`/`ls` do not exist in OMP, which
  * silently strips plan mode of the tools it is meant to allow.
  */
-function engineForStartOptions(options: PiStartOptions): AgentEngineKind {
+export function engineForStartOptions(options: PiStartOptions): AgentEngineKind {
   return options.engine ?? engineForBoundSession(options) ?? getPiCli().kind ?? 'pi'
 }
 

@@ -575,7 +575,7 @@ interface AppActions {
 
   // Custom models config
   loadCustomModels: () => Promise<void>
-  saveCustomModels: (edited: ModelsConfig) => Promise<{ ok: boolean; errors?: string[] }>
+  saveCustomModels: (edited: ModelsConfig) => Promise<{ ok: boolean; errors?: string[]; warnings?: string[] }>
 
   // File preview. Resolves false when a dirty-editor discard was declined and
   // the target was left unchanged.
@@ -3020,7 +3020,30 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
     const result = await window.piDesktop.models.write(merged)
     if (!result.success) return { ok: false, errors: [result.error ?? t('store.messages.writeFailed')] }
     await get().loadCustomModels()
-    return { ok: true }
+
+    // The models file and the default-model setting are two sources of truth;
+    // a save that removes the provider the default points at would brick every
+    // agent spawn ("Unknown provider"). Repoint to the first survivor and say
+    // so, instead of leaving a reference the app itself will reject.
+    const warnings: string[] = []
+    const settings = get().settings
+    const providerIds = Object.keys(merged.providers ?? {})
+    if (settings?.defaultProvider && !providerIds.includes(settings.defaultProvider)) {
+      const first = providerIds.find((id) => (merged.providers?.[id]?.models ?? []).length > 0) ?? providerIds[0]
+      const firstModel = first ? merged.providers?.[first]?.models?.[0]?.id : undefined
+      if (first) {
+        const saved = await window.piDesktop.settings.save({
+          defaultProvider: first,
+          ...(firstModel ? { defaultModel: firstModel } : {}),
+        })
+        set({ settings: saved })
+        warnings.push(t('store.messages.defaultModelRepointed', {
+          from: settings.defaultProvider,
+          to: firstModel ? `${first} / ${firstModel}` : first,
+        }))
+      }
+    }
+    return { ok: true, ...(warnings.length > 0 ? { warnings } : {}) }
   },
 
   setPreviewTarget: async (target) => {

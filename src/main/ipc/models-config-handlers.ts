@@ -12,6 +12,9 @@ import {
   type ModelsFileLocation,
 } from '../models-file'
 import { activeEngineKind } from './active-engine'
+import { appLog } from '../app-log'
+import type { PiStartOptions } from '../../shared/ipc-contracts'
+import { engineForStartOptions } from './pi-start-options'
 import type { IpcContext } from './context'
 
 function modelsFileLocation(engine: AgentEngineKind): ModelsFileLocation {
@@ -55,6 +58,32 @@ export async function readModelsConfigFile(engine: AgentEngineKind): Promise<Mod
       detail: err instanceof Error ? err.message : String(err),
     }, raw)
   }
+}
+
+/**
+ * The models file and the saved default model are two sources of truth. A
+ * provider removed from the file (editor save or an external rewrite) leaves
+ * every spawn holding a dead reference — omp exits with "Unknown provider"
+ * before becoming ready. When the requested provider no longer exists, fall
+ * back to the first provider that still has a model, so the agent starts on
+ * something real instead of dying.
+ */
+export async function applyKnownProviderFallback(options: PiStartOptions): Promise<PiStartOptions> {
+  if (!options.provider) return options
+  const engine = engineForStartOptions(options)
+  const read = await readModelsConfigFile(engine)
+  if (!('config' in read)) return options
+  const providers = read.config.providers ?? {}
+  const entry = providers[options.provider]
+  if (entry && (entry.models ?? []).length > 0) return options
+  const firstKey = Object.keys(providers).find((key) => (providers[key].models ?? []).length > 0)
+  if (!firstKey) return options
+  const firstModel = providers[firstKey].models?.[0]?.id
+  appLog.warn(
+    'pi',
+    `Provider "${options.provider}" is not in the models file; falling back to ${firstKey}/${firstModel ?? '(default)'}`
+  )
+  return { ...options, provider: firstKey, ...(firstModel ? { model: firstModel } : {}) }
 }
 
 export function registerModelsConfigHandlers(ctx: IpcContext): void {

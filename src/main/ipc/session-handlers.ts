@@ -24,6 +24,7 @@ import { existsSync } from 'fs'
 import { moveToTrash } from '../session-trash'
 import { assertTrustedSender, isObject, isString } from './validation'
 import { applyResumePreference, applyPermissionModeToStartOptions } from './pi-start-options'
+import { applyKnownProviderFallback } from './models-config-handlers'
 import { loadAppSettings } from './settings'
 import type { IpcContext } from './context'
 import { t } from '../../shared/i18n'
@@ -82,9 +83,11 @@ export function registerSessionHandlers(ctx: IpcContext): void {
       provider: settings.defaultProvider ?? undefined,
       model: settings.defaultModel ?? undefined,
     }
-    await workspaceManager.startSessionRuntime(runtime.runtimeId, applyPermissionModeToStartOptions(
-      sessionPath ? applyResumePreference(options, settings) : options,
-      settings
+    await workspaceManager.startSessionRuntime(runtime.runtimeId, await applyKnownProviderFallback(
+      applyPermissionModeToStartOptions(
+        sessionPath ? applyResumePreference(options, settings) : options,
+        settings
+      )
     ))
   }
 

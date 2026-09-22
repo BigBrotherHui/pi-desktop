@@ -3,6 +3,7 @@ import { IPC_CHANNELS } from '../../shared/ipc-contracts'
 import { access } from 'fs/promises'
 import { isString, isObject } from './validation'
 import { validateStartOptions, applyResumePreference, applyPermissionModeToStartOptions } from './pi-start-options'
+import { applyKnownProviderFallback } from './models-config-handlers'
 import { loadAppSettings } from './settings'
 import type { IpcContext } from './context'
 import { detectPiInstallations, getConfiguredEngineKind } from '../pi-rpc-manager'
@@ -36,7 +37,9 @@ export function registerPiHandlers(ctx: IpcContext): void {
     }
     await workspaceManager.startPiForWorkspace(
       activeWs.id,
-      applyPermissionModeToStartOptions(applyResumePreference(withDefaults, settings), settings)
+      await applyKnownProviderFallback(
+        applyPermissionModeToStartOptions(applyResumePreference(withDefaults, settings), settings)
+      )
     )
     const pi = workspaceManager.getPiManager(activeWs.id)
     if (!pi) throw new Error(t('errors.pi.failedToCreateManager'))
