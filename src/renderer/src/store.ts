@@ -1618,6 +1618,10 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
           content: t('store.messages.switchSessionError', { detail: err instanceof Error ? err.message : String(err) }),
           timestamp: Date.now(),
         })
+        // A failed switch is usually a stale row (the session file was
+        // pruned or trashed after the list was rendered). Refresh so the
+        // dead entry disappears instead of erroring on every click.
+        void get().refreshSessionList()
       }
     }
 

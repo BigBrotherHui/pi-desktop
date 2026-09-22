@@ -188,9 +188,10 @@ function extractModelList(payload: unknown): unknown[] | null {
 }
 
 async function fetchRemoteModels(query: ModelsRemoteQuery): Promise<ModelsFetchResult> {
-  const base = query.baseUrl?.trim() ?? ''
-  if (!/^https?:\/\//i.test(base)) {
-    return { ok: false, error: 'Base URL must start with http:// or https://' }
+  // cc-switch tolerates bare hostnames ("us-v1.dli.li"); accept them too.
+  const base = normalizeBaseUrl(query.baseUrl)
+  if (!base) {
+    return { ok: false, error: 'Base URL is required' }
   }
 
   let lastError = 'No endpoint responded'
@@ -230,10 +231,10 @@ async function fetchRemoteModels(query: ModelsRemoteQuery): Promise<ModelsFetchR
  * empty content, which still proves URL, key, and model name all work.
  */
 async function testModel(query: ModelsTestQuery): Promise<ModelsTestResult> {
-  const base = query.baseUrl?.trim() ?? ''
+  const base = normalizeBaseUrl(query.baseUrl)
   const model = query.model?.trim() ?? ''
-  if (!/^https?:\/\//i.test(base)) {
-    return { ok: false, error: 'Base URL must start with http:// or https://' }
+  if (!base) {
+    return { ok: false, error: 'Base URL is required' }
   }
   if (!model) return { ok: false, error: 'Model id is required' }
   if (query.api === 'google-generative-ai') {
@@ -276,6 +277,16 @@ async function testModel(query: ModelsTestQuery): Promise<ModelsTestResult> {
       }
   }
   return { ok: false, error: attempts[0] ?? 'No endpoint responded' }
+}
+
+/**
+ * Accept whatever the user pasted: bare hostnames default to https, trailing
+ * slashes are dropped. Empty after trimming → null.
+ */
+function normalizeBaseUrl(input: string | undefined): string | null {
+  const trimmed = (input ?? '').trim().replace(/\/+$/, '')
+  if (!trimmed) return null
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
 }
 
 function parseRemoteQuery(value: unknown): ModelsRemoteQuery | null {
