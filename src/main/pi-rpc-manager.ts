@@ -924,6 +924,10 @@ export class PiRpcManager extends EventEmitter {
 
       proc.on('exit', (code, signal) => {
         console.log('[Pi] Process exited with code:', code, 'signal:', signal, 'pid:', proc.pid)
+        // Silent agent deaths (no stderr, no crash record) have been observed
+        // on session agents mid-conversation. Always land the exit details in
+        // the app log so a dead agent leaves a forensic trail.
+        appLog.warn('pi', `Pi process exited (pid ${proc.pid}, code ${code}, signal ${signal ?? 'none'}, state ${this.status})${this.stderrBuffer ? ` | stderr tail: ${this.stderrBuffer.slice(-400)}` : ''}`)
         if (this.status === 'running') {
           // Exited after becoming ready → normal lifecycle stop.
           this.setStatus('stopped')
