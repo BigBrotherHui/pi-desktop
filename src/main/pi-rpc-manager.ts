@@ -43,6 +43,7 @@ const NO_SESSION_FLAG = '--no-session'
 const MODE_FLAG = '--mode'
 const PROVIDER_FLAG = '--provider'
 const MODEL_FLAG = '--model'
+const APPEND_SYSTEM_PROMPT_FLAG = '--append-system-prompt'
 const SESSION_FLAG = '--session'
 const FORK_FLAG = '--fork'
 const CONTINUE_FLAG = '--continue'
@@ -544,6 +545,10 @@ export function buildPiArgs(options: PiStartOptions): string[] {
 
   if (options.model) {
     args.push(MODEL_FLAG, options.model)
+  }
+
+  if (options.appendSystemPrompt && options.appendSystemPrompt.trim().length > 0) {
+    args.push(APPEND_SYSTEM_PROMPT_FLAG, options.appendSystemPrompt.trim())
   }
 
   if (options.forkSessionPath) {

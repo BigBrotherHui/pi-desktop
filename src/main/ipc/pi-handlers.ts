@@ -34,6 +34,7 @@ export function registerPiHandlers(ctx: IpcContext): void {
       cwd,
       provider: opts.provider ?? settings.defaultProvider ?? undefined,
       model: opts.model ?? settings.defaultModel ?? undefined,
+      appendSystemPrompt: settings.appendSystemPrompt ?? undefined,
     }
     await workspaceManager.startPiForWorkspace(
       activeWs.id,
@@ -73,7 +74,10 @@ export function registerPiHandlers(ctx: IpcContext): void {
     const runtimeId = workspaceManager.runtimeIdFor(pi)
     const runtime = runtimeId ? workspaceManager.getSessionRuntime(runtimeId) : null
     const startOptions = applyPermissionModeToStartOptions(
-      applyResumePreference({ cwd: activeWs.path, ...opts }, settings),
+      applyResumePreference(
+        { cwd: activeWs.path, ...opts, appendSystemPrompt: settings.appendSystemPrompt ?? undefined },
+        settings
+      ),
       settings
     )
     if (runtime) {

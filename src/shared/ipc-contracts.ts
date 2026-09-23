@@ -320,6 +320,12 @@ export interface PiStartOptions {
   engine?: AgentEngineKind
   args?: string[]
   env?: Record<string, string>
+  /**
+   * Text appended to the engine's system prompt for this session (--append-
+   * system-prompt). Used for deterministic language/behavior rules that must
+   * outrank tool-output context; absent means the engine default prompt only.
+   */
+  appendSystemPrompt?: string
 }
 
 // ─── Terminal Types ─────────────────────────────────────────────────────────
@@ -1113,6 +1119,12 @@ export interface AppSettings {
   systemDarkTheme: string
   defaultModel: string | null
   defaultProvider: string | null
+  /**
+   * Appended verbatim to every agent spawn's system prompt (--append-system-
+   * prompt). Empty/absent means no addition. Lets the user pin rules — e.g.
+   * reply language — at the strongest prompt position.
+   */
+  appendSystemPrompt?: string
   defaultCwd: string | null
   // UI font size in px (chat, panels, sidebar). Applied to the document root.
   fontSize: number

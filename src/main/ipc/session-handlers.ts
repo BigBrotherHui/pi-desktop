@@ -82,6 +82,7 @@ export function registerSessionHandlers(ctx: IpcContext): void {
       ...(sessionPath ? { sessionPath } : {}),
       provider: settings.defaultProvider ?? undefined,
       model: settings.defaultModel ?? undefined,
+      appendSystemPrompt: settings.appendSystemPrompt ?? undefined,
     }
     await workspaceManager.startSessionRuntime(runtime.runtimeId, await applyKnownProviderFallback(
       applyPermissionModeToStartOptions(
