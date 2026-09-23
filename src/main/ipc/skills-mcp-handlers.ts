@@ -35,7 +35,36 @@ export function registerSkillsMcpHandlers(ctx: IpcContext): void {
 
   ipcMain.handle(IPC_CHANNELS.MCP_SERVERS_LIST, async () => {
     const ws = workspaceManager.getActiveWorkspace()
-    return listMcpServers(ws?.path)
+    const servers = await listMcpServers(ws?.path)
+
+    // Merge LIVE connection state from the running agent: its tool list
+    // contains mcp__<server>_<tool> entries only for MCP servers that
+    // actually connected and loaded tools. Without an agent there is no
+    // ground truth, so every server stays neutral (live undefined).
+    try {
+      const pi = ctx.getActivePi()
+      if (pi.getStatus().status === 'running') {
+        const state = await pi.sendCommand({ type: 'get_state' })
+        const data = (state as { data?: { dumpTools?: Array<{ name?: unknown }> } } | null)?.data
+        const counts = new Map<string, number>()
+        for (const tool of data?.dumpTools ?? []) {
+          const name = typeof tool?.name === 'string' ? tool.name : ''
+          if (!name.startsWith('mcp__')) continue
+          const rest = name.slice('mcp__'.length)
+          const sep = rest.indexOf('_')
+          const serverName = sep > 0 ? rest.slice(0, sep) : rest
+          counts.set(serverName, (counts.get(serverName) ?? 0) + 1)
+        }
+        for (const server of servers) {
+          const count = counts.get(sanitizeServerKey(server.name))
+          server.live = (count ?? 0) > 0
+          server.toolCount = count ?? 0
+        }
+      }
+    } catch {
+      // Agent stopped, starting, or busy — neutral display is honest here.
+    }
+    return servers
   })
 }
 
@@ -70,6 +99,19 @@ interface McpServerInfo {
   env: Record<string, string>
   source: 'global' | 'project'
   status: 'configured' | 'unknown'
+  /** True when the running agent currently exposes tools from this server. */
+  live?: boolean
+  /** Number of live tools the running agent loaded from this server. */
+  toolCount?: number
+}
+
+/**
+ * Mirror omp's MCP tool-name sanitizer (tool-bridge.ts): server names are
+ * lowercased and non-alphanumerics collapse to underscores, so a config
+ * entry "ai-memory" surfaces in tool names as "mcp__ai_memory_<tool>".
+ */
+function sanitizeServerKey(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '')
 }
 
 async function listMcpServers(wsPath?: string): Promise<McpServerInfo[]> {

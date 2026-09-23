@@ -1333,7 +1333,13 @@
     },
     "workspaceSection": {
       "title": "Workspace"
-    }
+    },
+    "mcpLive": "Connected — tools loaded into the agent",
+    "mcpNotLoaded": "Agent is running but this server loaded no tools",
+    "mcpNotLoadedShort": "no tools",
+    "mcpUnknown": "Agent not running — live status unavailable",
+    "mcpToolCount_one": "{{count}} tool",
+    "mcpToolCount_other": "{{count}} tools"
   },
   "statusBar": {
     "compact": "compact",

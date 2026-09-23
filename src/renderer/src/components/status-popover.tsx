@@ -33,6 +33,8 @@ interface CommandInfo {
 }
 
 interface McpServer {
+  live?: boolean
+  toolCount?: number
   name: string
   command: string
   args: string[]
@@ -342,11 +344,33 @@ export function StatusPopover(): React.JSX.Element {
               ) : (
                 mcpServers.map((server) => (
                   <div key={server.name} className="flex items-center gap-2 py-1">
-                    <div className="h-1.5 w-1.5 rounded-full bg-success shrink-0" />
+                    <div
+                      className={clsx(
+                        'h-1.5 w-1.5 rounded-full shrink-0',
+                        server.live === true && 'bg-success',
+                        server.live === false && 'bg-warning',
+                        server.live === undefined && 'bg-faint'
+                      )}
+                      title={
+                        server.live === true
+                          ? t('status.mcpLive')
+                          : server.live === false
+                            ? t('status.mcpNotLoaded')
+                            : t('status.mcpUnknown')
+                      }
+                    />
                     <div className="min-w-0 flex-1">
                       <div className="text-xs text-secondary font-medium">{server.name}</div>
                       <div className="text-[10px] text-faint truncate">{server.command} {server.args.join(' ')}</div>
                     </div>
+                    {server.live === true && typeof server.toolCount === 'number' && (
+                      <span className="shrink-0 text-[10px] text-success">
+                        {t('status.mcpToolCount', { count: server.toolCount })}
+                      </span>
+                    )}
+                    {server.live === false && (
+                      <span className="shrink-0 text-[10px] text-warning">{t('status.mcpNotLoadedShort')}</span>
+                    )}
                     <span className={clsx(
                       'text-[10px] px-1 rounded',
                       server.source === 'global'
