@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import { pathToFileURL } from 'url'
 import { isTrustedRendererUrl } from './renderer-origin'
 
 const INDEX = '/opt/app/resources/renderer/index.html'
@@ -18,8 +19,11 @@ test('dev: rejects a look-alike host that only shares a prefix', () => {
 
 test('prod: accepts the packaged index file, ignoring hash routing', () => {
   const opts = { rendererIndexPath: INDEX }
-  assert.equal(isTrustedRendererUrl('file:///opt/app/resources/renderer/index.html', opts), true)
-  assert.equal(isTrustedRendererUrl('file:///opt/app/resources/renderer/index.html#/settings', opts), true)
+  // Build the frame URL the way the platform's loadFile produces it
+  // (Windows pathToFileURL injects the drive letter into the pathname).
+  const indexUrl = pathToFileURL(INDEX).href
+  assert.equal(isTrustedRendererUrl(indexUrl, opts), true)
+  assert.equal(isTrustedRendererUrl(`${indexUrl}#/settings`, opts), true)
 })
 
 test('prod: rejects any other local file', () => {
