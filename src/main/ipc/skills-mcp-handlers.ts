@@ -46,19 +46,16 @@ export function registerSkillsMcpHandlers(ctx: IpcContext): void {
       if (pi.getStatus().status === 'running') {
         const state = await pi.sendCommand({ type: 'get_state' })
         const data = (state as { data?: { dumpTools?: Array<{ name?: unknown }> } } | null)?.data
-        const counts = new Map<string, number>()
-        for (const tool of data?.dumpTools ?? []) {
-          const name = typeof tool?.name === 'string' ? tool.name : ''
-          if (!name.startsWith('mcp__')) continue
-          const rest = name.slice('mcp__'.length)
-          const sep = rest.indexOf('_')
-          const serverName = sep > 0 ? rest.slice(0, sep) : rest
-          counts.set(serverName, (counts.get(serverName) ?? 0) + 1)
-        }
+        const toolNames = (data?.dumpTools ?? [])
+          .map(tool => (typeof tool?.name === 'string' ? tool.name : ''))
         for (const server of servers) {
-          const count = counts.get(sanitizeServerKey(server.name))
-          server.live = (count ?? 0) > 0
-          server.toolCount = count ?? 0
+          // Prefix match on omp's sanitized tool naming
+          // (mcp__<sanitized-server>_<tool>) — hyphenated config keys such as
+          // "ai-memory" surface as "mcp__ai_memory_<tool>".
+          const prefix = `mcp__${sanitizeServerKey(server.name)}_`
+          const count = toolNames.filter(name => name.startsWith(prefix)).length
+          server.live = count > 0
+          server.toolCount = count
         }
       }
     } catch {
