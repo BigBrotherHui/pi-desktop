@@ -139,7 +139,15 @@ export function CustomModelsEditor(): React.JSX.Element {
       return
     }
     patchFetch(pi, { loading: true, error: undefined, imported: undefined })
-    const result = await window.piDesktop.models.fetchRemote({ baseUrl: row.baseUrl, apiKey: row.apiKey })
+    let result
+    try {
+      result = await window.piDesktop.models.fetchRemote({ baseUrl: row.baseUrl, apiKey: row.apiKey })
+    } catch (err) {
+      // Without this a rejected invoke (handler crash, IPC failure) leaves the
+      // row loading forever — the button looks dead with no explanation.
+      patchFetch(pi, { loading: false, error: err instanceof Error ? err.message : String(err) })
+      return
+    }
     if (result.ok) {
       // Align the base URL with the endpoint that actually answered. The agent
       // calls {baseUrl}/chat/completions (or /responses) verbatim, so a base
@@ -244,12 +252,18 @@ export function CustomModelsEditor(): React.JSX.Element {
     if (!row.baseUrl.trim() || !model.id?.trim()) return
     const key = `${pi}:${mi}`
     patchTest(key, { loading: true, label: t('customModels.testing') })
-    const result = await window.piDesktop.models.testModel({
-      baseUrl: row.baseUrl,
-      apiKey: row.apiKey,
-      api: row.api,
-      model: model.id,
-    })
+    let result
+    try {
+      result = await window.piDesktop.models.testModel({
+        baseUrl: row.baseUrl,
+        apiKey: row.apiKey,
+        api: row.api,
+        model: model.id,
+      })
+    } catch (err) {
+      patchTest(key, { loading: false, ok: false, label: err instanceof Error ? err.message : String(err) })
+      return
+    }
     if (result.ok) patchTest(key, { loading: false, ok: true, label: t('customModels.testLatency', { ms: result.latencyMs }) })
     else patchTest(key, { loading: false, ok: false, label: result.error.slice(0, 120) })
   }

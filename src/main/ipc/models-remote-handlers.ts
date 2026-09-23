@@ -8,6 +8,7 @@ import type {
   RemoteModelInfo,
 } from '../../shared/models-config'
 import type { IpcContext } from './context'
+import { appLog } from '../app-log'
 import { assertTrustedSender, isObject, isString } from './validation'
 
 /**
@@ -188,6 +189,7 @@ function extractModelList(payload: unknown): unknown[] | null {
 }
 
 async function fetchRemoteModels(query: ModelsRemoteQuery): Promise<ModelsFetchResult> {
+  appLog.info('pi', `Fetch models requested from ${(query.baseUrl ?? '').slice(0, 100)}`)
   // cc-switch tolerates bare hostnames ("us-v1.dli.li"); accept them too.
   const base = normalizeBaseUrl(query.baseUrl)
   if (!base) {
@@ -215,11 +217,13 @@ async function fetchRemoteModels(query: ModelsRemoteQuery): Promise<ModelsFetchR
       const models = list
         .map(deriveRemoteModel)
         .filter((entry): entry is RemoteModelInfo => entry !== null)
+      appLog.info('pi', `Fetch models OK: ${models.length} models from ${url}`)
       return { ok: true, models, url }
     } catch (err) {
       lastError = err instanceof Error ? err.message : String(err)
     }
   }
+  appLog.warn('pi', `Fetch models failed: ${lastError.slice(0, 200)}`)
   return { ok: false, error: lastError }
 }
 
@@ -244,6 +248,7 @@ async function testModel(query: ModelsTestQuery): Promise<ModelsTestResult> {
   const apiKey = query.apiKey?.trim() ?? ''
   const started = Date.now()
   const attempts: string[] = []
+  appLog.info('pi', `Test model requested: ${model} @ ${(query.baseUrl ?? '').slice(0, 100)} (${query.api ?? 'openai-completions'})`)
 
   // The test must mirror what the agent will actually call — no endpoint
   // guessing here, or a test could pass while chat 404s (and vice versa).
