@@ -98,6 +98,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.7.0",
     "i18next-cli": "^1.73.2",
+    "onnxruntime-web": "^1.30.0",
     "parakeet.js": "^1.4.4",
     "tailwindcss": "^4.1.7",
     "tsx": "^4.23.8",
