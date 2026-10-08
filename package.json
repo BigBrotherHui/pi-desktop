@@ -1,6 +1,6 @@
 {
   "name": "pi-desktop",
-  "version": "0.1.8-alpha",
+  "version": "0.1.9-alpha",
   "description": "Desktop GUI for the Pi and oh-my-pi coding agents",
   "main": "out/main/index.js",
   "desktopName": "pi-desktop.desktop",
@@ -86,6 +86,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@huggingface/transformers": "^4.3.0",
     "@tailwindcss/vite": "^4.1.7",
     "@types/react": "^19.1.4",
     "@types/react-dom": "^19.1.5",
@@ -97,6 +98,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.7.0",
     "i18next-cli": "^1.73.2",
+    "parakeet.js": "^1.4.4",
     "tailwindcss": "^4.1.7",
     "tsx": "^4.23.8",
     "typescript": "^5.8.3",
