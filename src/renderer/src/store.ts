@@ -61,6 +61,7 @@ import type {
   SessionLaunchTaskOptions,
   SessionDeleteResult,
   ModelsFileInfo,
+  ModelInfo,
 } from '../../shared/ipc-contracts'
 
 export type { DisplayAttachment, DisplayMessage } from './message-parsing'
@@ -226,6 +227,10 @@ interface AppState {
   piError: string | null
   /** Which engine the live process actually is, so the UI names it correctly. */
   piEngine: AgentEngineKind
+  availableModels: ModelInfo[]
+  availableModelsLoading: boolean
+  availableModelsError: string | null
+  availableModelsEngine: AgentEngineKind | null
 
   // Session
   sessionState: SessionState | null
@@ -471,8 +476,12 @@ interface AppActions {
   cloneBranch: () => Promise<void>
 
   // Model
+  availableModels: ModelInfo[]
+  availableModelsLoading: boolean
+  availableModelsError: string | null
   setModel: (provider: string, modelId: string) => Promise<void>
   cycleModel: () => Promise<void>
+  loadAvailableModels: (options?: { force?: boolean }) => Promise<ModelInfo[]>
   listModels: () => Promise<void>
 
   // Thinking
@@ -878,6 +887,8 @@ async function runPackageMutation(
 // Only the newest update check may write its result: a check started before an
 // update finished would otherwise overwrite the fresh one with stale versions.
 let latestPackageUpdateCheck = 0
+let availableModelsInFlight: Promise<ModelInfo[]> | null = null
+let availableModelsRequestEngine: AgentEngineKind | null = null
 
 export const useAppStore = create<AppState & AppActions>((set, get) => ({
   // ─── Initial State ────────────────────────────────────────────────────
@@ -887,6 +898,10 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
   piPid: null,
   piError: null,
   piEngine: 'pi',
+  availableModels: [],
+  availableModelsLoading: false,
+  availableModelsError: null,
+  availableModelsEngine: null,
 
   sessionState: null,
   sessionStats: null,
@@ -1001,6 +1016,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
         await get().refreshSessionState()
         await get().refreshSessionStats()
         await get().refreshSessionList()
+        await get().loadAvailableModels({ force: true })
         await get().maybeWarnWorkspacePermissionRules()
       }
     } catch (err) {
@@ -1873,12 +1889,46 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
     }
   },
 
-  listModels: async () => {
-    try {
-      await window.piDesktop.model.listAvailable()
-    } catch {
-      // Silent failure
+  loadAvailableModels: async (options) => {
+    const engine = get().piEngine
+    if (get().piStatus !== 'running') return get().availableModels
+    if (!options?.force && get().availableModelsEngine === engine && get().availableModels.length > 0) {
+      return get().availableModels
     }
+    if (availableModelsInFlight && availableModelsRequestEngine === engine) return availableModelsInFlight
+
+    availableModelsRequestEngine = engine
+    set({ availableModelsLoading: true, availableModelsError: null })
+    availableModelsInFlight = (async () => {
+      try {
+        const response = await window.piDesktop.model.listAvailable() as {
+          success?: boolean
+          data?: { models?: ModelInfo[] }
+        } | null
+        const models = response?.success && Array.isArray(response.data?.models)
+          ? response.data.models
+          : []
+        set({
+          availableModels: models,
+          availableModelsEngine: engine,
+          availableModelsLoading: false,
+          availableModelsError: response?.success === false ? t('models.selector.loadFailed') : null,
+        })
+        return models
+      } catch (err) {
+        const error = err instanceof Error ? err.message : String(err)
+        set({ availableModelsLoading: false, availableModelsError: error })
+        return get().availableModels
+      } finally {
+        availableModelsInFlight = null
+        availableModelsRequestEngine = null
+      }
+    })()
+    return availableModelsInFlight
+  },
+
+  listModels: async () => {
+    await get().loadAvailableModels({ force: true })
   },
 
   // ─── Thinking ─────────────────────────────────────────────────────────
@@ -2345,6 +2395,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
         if (statusEvent.status === 'running') {
           get().loadCommands()
           get().loadSkills()
+          void get().loadAvailableModels({ force: true })
         }
         break
       }

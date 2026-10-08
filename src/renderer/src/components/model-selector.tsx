@@ -21,17 +21,15 @@ export function ModelSelector({ className, compact = false }: ModelSelectorProps
   const sessionState = useAppStore((state) => state.sessionState)
   const setModel = useAppStore((state) => state.setModel)
   const piStatus = useAppStore((state) => state.piStatus)
+  const availableModels = useAppStore((state) => state.availableModels)
+  const availableModelsLoading = useAppStore((state) => state.availableModelsLoading)
+  const availableModelsError = useAppStore((state) => state.availableModelsError)
+  const loadAvailableModels = useAppStore((state) => state.loadAvailableModels)
   const engineLabel = useAppStore((state) => agentEngineLabel(state.piEngine) ?? DEFAULT_AGENT_ENGINE_LABEL)
   const settings = useAppStore((state) => state.settings)
 
   const [isOpen, setIsOpen] = useState(false)
-  const [models, setModels] = useState<ModelInfo[]>([])
-  const [loading, setLoading] = useState(false)
   const [query, setQuery] = useState('')
-  // A flag, not the translated message itself: loadModels must stay
-  // reference-stable across a language change (it is called from an effect
-  // keyed on isOpen/piStatus, not on the interface language).
-  const [loadError, setLoadError] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
@@ -47,28 +45,6 @@ export function ModelSelector({ className, compact = false }: ModelSelectorProps
   const close = (): void => {
     setIsOpen(false)
     setQuery('')
-    setLoadError(false)
-  }
-
-  const loadModels = async (): Promise<void> => {
-    setLoading(true)
-    setLoadError(false)
-    try {
-      const response = (await window.piDesktop.model.listAvailable()) as {
-        success?: boolean
-        data?: { models?: ModelInfo[] }
-      } | null
-      if (response?.success && response.data?.models) {
-        setModels(response.data.models)
-      } else {
-        setModels([])
-      }
-    } catch {
-      setModels([])
-      setLoadError(true)
-    } finally {
-      setLoading(false)
-    }
   }
 
   const open = async (): Promise<void> => {
@@ -78,14 +54,14 @@ export function ModelSelector({ className, compact = false }: ModelSelectorProps
     }
     setIsOpen(true)
     if (useAppStore.getState().piStatus === 'running') {
-      void loadModels()
+      void loadAvailableModels()
     }
   }
 
   useEffect(() => {
     if (!isOpen || piStatus !== 'running') return
-    void loadModels()
-  }, [isOpen, piStatus])
+    void loadAvailableModels()
+  }, [isOpen, piStatus, loadAvailableModels])
 
   useEffect(() => {
     if (!isOpen) return
@@ -104,7 +80,7 @@ export function ModelSelector({ className, compact = false }: ModelSelectorProps
     return () => document.removeEventListener('mousedown', handleClick)
   }, [isOpen])
 
-  const filteredModels = useMemo(() => filterModels(models, query), [models, query])
+  const filteredModels = useMemo(() => filterModels(availableModels, query), [availableModels, query])
 
   const handleSelect = async (model: ModelInfo): Promise<void> => {
     if (useAppStore.getState().piStatus === 'running') {
@@ -174,16 +150,16 @@ export function ModelSelector({ className, compact = false }: ModelSelectorProps
                 />
               </div>
               <div className="max-h-56 overflow-y-auto py-1">
-                {loading && (
+                {(availableModelsLoading || (availableModels.length === 0 && !availableModelsError)) && (
                   <div className="flex items-center gap-2 px-3 py-2 text-xs text-dim">
                     <Loader2 size={12} className="animate-spin" />
                     {t('common.loading')}
                   </div>
                 )}
-                {loadError && (
-                  <div className="px-3 py-2 text-xs text-error">{t('models.selector.loadFailed')}</div>
+                {availableModelsError && (
+                  <div className="px-3 py-2 text-xs text-error">{availableModelsError}</div>
                 )}
-                {!loading && !loadError && filteredModels.length === 0 && (
+                {!availableModelsLoading && !availableModelsError && filteredModels.length === 0 && (
                   <div className="px-3 py-2 text-xs text-dim">{t('models.selector.noModelsMatch')}</div>
                 )}
                 {filteredModels.map((model) => {

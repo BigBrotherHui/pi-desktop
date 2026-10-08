@@ -553,13 +553,10 @@ export function useInitialize(): void {
       void useAppStore.getState().loadCustomModels()
       void useAppStore.getState().checkForUpdates()
 
-      if (openToHome) {
-        // Pi starts lazily on first action from Home.
-        return
-      }
-
-      // Boot Pi in the background. The shell is already interactive; the
-      // session-runtime running event hydrates Chat when the process is ready.
+      // Boot the active workspace's Pi/OMP runtime in the background even on
+      // Home. This warms the agent and its model catalog before the user sends
+      // the first prompt; Home remains the visible view.
+      if (!useAppStore.getState().activeWorkspace) return
       void startPi().then(() => refreshSessionStats()).catch(() => undefined)
       void window.piDesktop.workspace.getActivity()
         .then((activity) => useAppStore.getState().handleWorkspaceActivity(activity))
