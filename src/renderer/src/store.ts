@@ -694,6 +694,8 @@ let switchCoalesceTimer: ReturnType<typeof setTimeout> | null = null
 let switchCoalesceResolve: (() => void) | null = null
 // Only one get_messages/switch pipeline at a time (Pi + IPC can't keep up).
 let switchPipeline: Promise<void> = Promise.resolve()
+let activeSessionHydrationToken = 0
+let activeSessionHydration: { key: string; token: number; promise: Promise<void> } | null = null
 
 // Attach backfills ride the same pipeline as session switches so their
 // get_messages can never run concurrently with a switch's (each response is a
@@ -1646,71 +1648,91 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
   },
 
   reloadActiveSession: async (options) => {
-    const gen = sessionLoadGeneration
-    const refreshList = options?.refreshList ?? true
+    const state = get()
+    if (state.piStatus !== 'running') return
+    const runtime = state.activeSessionRuntimeId
+      ? state.sessionRuntimes[state.activeSessionRuntimeId]
+      : null
+    const targetKey = `${runtime?.runtimeId ?? 'path'}::${runtime?.sessionPath ?? state.sessionState?.sessionFile ?? 'active'}`
+    if (activeSessionHydration?.key === targetKey) {
+      await activeSessionHydration.promise
+      return
+    }
+    const hydrationToken = ++activeSessionHydrationToken
+    const promise = (async (): Promise<void> => {
 
-    // A runtime that has not finished starting cannot answer get_messages —
-    // its 'running' event re-runs this. Ending the loading state here would
-    // flash the empty new-session view between the click and startup.
-    if (get().piStatus !== 'running') return
+      const gen = sessionLoadGeneration
+      const refreshList = options?.refreshList ?? true
 
-    // A prompt queued on the not-running path delivers after this hydration:
-    // clearMessages below would otherwise wipe both it and any bubble rendered
-    // before the reload, so it is captured now and sent once history is shown.
-    const queued = get().queuedPrompt
-    if (queued) set({ queuedPrompt: null })
+      // A runtime that has not finished starting cannot answer get_messages —
+      // its 'running' event re-runs this. Ending the loading state here would
+      // flash the empty new-session view between the click and startup.
+      if (get().piStatus !== 'running') return
 
-    get().clearMessages()
-    set({ sessionLoading: true })
-    void get().refreshSessionState()
-    void get().refreshSessionStats()
+      // A prompt queued on the not-running path delivers after this hydration:
+      // clearMessages below would otherwise wipe both it and any bubble rendered
+      // before the reload, so it is captured now and sent once history is shown.
+      const queued = get().queuedPrompt
+      if (queued) set({ queuedPrompt: null })
 
-    try {
-      const response = await window.piDesktop.session.getMessages()
-      // A newer switch/reload started while we waited — discard this history.
-      if (gen !== sessionLoadGeneration) return
+      get().clearMessages()
+      set({ sessionLoading: true })
+      void get().refreshSessionState()
+      void get().refreshSessionStats()
 
-      if (response && typeof response === 'object') {
-        const resp = response as {
-          success?: boolean
-          data?: {
-            messages?: unknown[]
-            truncatedFromStart?: boolean
-            totalMessageCount?: number
+      try {
+        const response = await window.piDesktop.session.getMessages()
+        // A newer switch/reload started while we waited — discard this history.
+        if (gen !== sessionLoadGeneration) return
+
+        if (response && typeof response === 'object') {
+          const resp = response as {
+            success?: boolean
+            data?: {
+              messages?: unknown[]
+              truncatedFromStart?: boolean
+              totalMessageCount?: number
+            }
           }
-        }
-        if (resp.success && resp.data?.messages) {
-          const rawMessages = resp.data.messages as unknown[]
-          const shippedCount = rawMessages.length
-          const loaded = await parseMessagesChunked(rawMessages, gen)
-          if (loaded === null || gen !== sessionLoadGeneration) return
-          const truncated = resp.data.truncatedFromStart === true
-          const total = typeof resp.data.totalMessageCount === 'number' ? resp.data.totalMessageCount : shippedCount
-          // Surface a one-line notice when older turns were dropped for perf.
-          // Use the raw shipped count (not parse survivors) for "latest N of M".
-          if (truncated && shippedCount > 0) {
-            loaded.unshift({
-              id: generateId(),
-              role: 'system',
-              content: t('store.messages.truncatedHistory', { count: shippedCount, total }),
-              timestamp: Date.now(),
-            })
+          if (resp.success && resp.data?.messages) {
+            const rawMessages = resp.data.messages as unknown[]
+            const shippedCount = rawMessages.length
+            const loaded = await parseMessagesChunked(rawMessages, gen)
+            if (loaded === null || gen !== sessionLoadGeneration) return
+            const truncated = resp.data.truncatedFromStart === true
+            const total = typeof resp.data.totalMessageCount === 'number' ? resp.data.totalMessageCount : shippedCount
+            // Surface a one-line notice when older turns were dropped for perf.
+            // Use the raw shipped count (not parse survivors) for "latest N of M".
+            if (truncated && shippedCount > 0) {
+              loaded.unshift({
+                id: generateId(),
+                role: 'system',
+                content: t('store.messages.truncatedHistory', { count: shippedCount, total }),
+                timestamp: Date.now(),
+              })
+            }
+            set({ messages: loaded, sessionLoading: false })
+          } else {
+            set({ sessionLoading: false })
           }
-          set({ messages: loaded, sessionLoading: false })
         } else {
           set({ sessionLoading: false })
         }
-      } else {
-        set({ sessionLoading: false })
+        if (refreshList) scheduleSessionListRefresh(get)
+      } catch {
+        if (gen === sessionLoadGeneration) set({ sessionLoading: false })
       }
-      if (refreshList) scheduleSessionListRefresh(get)
-    } catch {
-      if (gen === sessionLoadGeneration) set({ sessionLoading: false })
-    }
-    // History is on screen (or hydration failed visibly) — the queued prompt
-    // can now render its bubble and go out without being wiped.
-    if (queued && gen === sessionLoadGeneration && get().piStatus === 'running') {
-      await get().sendPrompt(queued.message, queued.options)
+      // History is on screen (or hydration failed visibly) — the queued prompt
+      // can now render its bubble and go out without being wiped.
+      if (queued && gen === sessionLoadGeneration && get().piStatus === 'running') {
+        await get().sendPrompt(queued.message, queued.options)
+      }
+    })()
+    activeSessionHydration = { key: targetKey, token: hydrationToken, promise }
+    try {
+      await promise
+    } finally {
+      if (activeSessionHydration?.token === hydrationToken) activeSessionHydration = null
     }
   },
 
