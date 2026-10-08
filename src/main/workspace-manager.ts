@@ -31,6 +31,7 @@ import {
 } from './git-worktree'
 import { extractGitHubPullRequestUrl, resolvePullRequestHeadBranch } from './git-conveyor'
 import { t, tEnglish } from '../shared/i18n'
+import { applyProjectPreflight } from './startup-preflight'
 
 /**
  * Manages project workspaces and their independent Pi session runtimes.
@@ -580,11 +581,14 @@ export class WorkspaceManager {
     // can resume it. An engine the caller named explicitly still wins.
     const ownerEngine = engineForBoundSession(startOptions)
     if (!startOptions.engine && ownerEngine) startOptions.engine = ownerEngine
+    // Preload deterministic project context before the first model call. The
+    // result is cached briefly per workspace, and failures are fail-open.
+    const preflightOptions = await applyProjectPreflight(startOptions, workspace.path, workspace.repoRoot ?? workspace.path)
     // Re-activating an evicted tab spawns a process again, so the budget has to
     // hold here too; an already-live runtime spawns nothing and needs no room.
     if (!this.isRuntimeLive(entry)) this.enforceLiveRuntimeBudget(runtimeId)
     this.touchRuntime(entry)
-    await entry.manager.start(startOptions)
+    await entry.manager.start(preflightOptions)
     // closeSessionRuntime() can win while startup is waiting for Pi. Do not
     // emit the now-detached entry after the closed marker was broadcast.
     if (this.sessionRuntimes.get(runtimeId) !== entry) {
